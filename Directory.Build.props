@@ -1,0 +1,30 @@
+<Project>
+
+  <!-- Shared compiler settings for every project in the repository. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CS1591: missing XML doc comment. Public API is documented, but we do
+         not want an incidental gap to fail the build. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <!-- Shared package metadata. Individual projects opt in with IsPackable. -->
+  <PropertyGroup>
+    <Authors>Pinqponq</Authors>
+    <Company>Pinqponq</Company>
+    <Product>Pinqponq.Identity</Product>
+    <Copyright>Copyright © Pinqponq</Copyright>
+    <RepositoryUrl>https://github.com/pinqponq/pinqnuqets</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>jwt;auth;identity;refresh-token;password-hashing;pbkdf2</PackageTags>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>
