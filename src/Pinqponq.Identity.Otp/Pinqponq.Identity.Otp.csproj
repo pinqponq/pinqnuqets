@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <PackageId>Pinqponq.Identity.Otp</PackageId>
+    <Description>E-posta veya SMS ile tek kullanımlık kod gönderme/doğrulama akışı; kanal seçimi (mail/sms) pakette route edilir. Saklama arayüzü tüketiciye bırakılır.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Pinqponq.Sms/Pinqponq.Sms.csproj" />
+    <ProjectReference Include="../Pinqponq.Mail/Pinqponq.Mail.csproj" />
+  </ItemGroup>
+
+</Project>

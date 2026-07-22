@@ -1,133 +1,131 @@
-# Pinqponq.Identity
+# PinqNugets — Pinqponq ortak altyapı paketleri
 
-JWT üretimi/doğrulaması, refresh token issue/rotate/revoke ve parola hash/verify
-gibi **jenerik kimlik doğrulama primitiflerini** tek pakette toplar. Proje-özel
-mantık içermez; 5 backend'de tekrarlanan bu altyapı ortak pakete taşınmıştır
-(Linear PIN-389).
+12 backend'de tekrarlanan **jenerik altyapı** kesitlerini (cache, SMS, mail, DB
+bağlantısı, mesajlaşma, kimlik doğrulama, hata yönetimi) tek monorepo'da
+`Pinqponq.*` NuGet paketlerine taşır. Amaç: **sürüm dağınıklığını** bitirmek,
+aynı bug'ların tekrarını önlemek ve isim/sözleşme dağınıklığını (ör.
+`ISmsService` vs `IGSMService`) tek standart arayüzle gidermek (Linear PIN-381).
 
-- **JWT** — `JsonWebTokenHandler` üzerinden üretim + doğrulama, **HMAC** ve **RSA** imza
-- **Refresh token** — kripto-güvenli üretim, issue / rotate / revoke, depoya yalnızca **hash** yazılır
-- **Parola** — ASP.NET Core PBKDF2 `PasswordHasher` sarmalayıcısı (versiyonlanmış format, rehash sinyali)
+Paketler **davranışı sabit, dış bağımlılığı sarmalayan** koddan oluşur;
+proje-özel iş mantığı (domain repository, mesaj contract'ları, OTP-rol kuralları)
+**paketlenmez**.
 
-Hedef: `net8.0` ve `net9.0`.
+- Hedef: `net8.0` ve `net9.0`
+- Bağımlılık sürümleri **Central Package Management** (`Directory.Packages.props`)
+  ile tek merkezden yönetilir.
 
-## Kurulum
+## Paketler
 
-```bash
-dotnet add package Pinqponq.Identity
-```
+| Paket | İşlev |
+|---|---|
+| **Pinqponq.Identity** | JWT üretimi/doğrulaması (HMAC+RSA), refresh token issue/rotate/revoke, PBKDF2 parola hash/verify |
+| **Pinqponq.Identity.Otp** | OTP üret/gönder/doğrula; mail/sms kanal routing; saklama arayüz (`IOtpStore`) |
+| **Pinqponq.Auth.Totp** | RFC 6238 TOTP 2FA; `otpauth://` provisioning URI |
+| **Pinqponq.Auth.Sso.Abstractions** | `IExternalAuthProvider` sözleşmesi |
+| **Pinqponq.Auth.Sso.Google** | Google id_token doğrulaması (`Google.Apis.Auth`) |
+| **Pinqponq.Cache** | Redis: get/set/remove/exists, dağıtık kilit, health-check |
+| **Pinqponq.Sms** | NetGSM SMS gönderimi (`ISmsSender`) + retry |
+| **Pinqponq.Mail** | SMTP mail gönderimi (`IEmailSender`, System.Net.Mail) |
+| **Pinqponq.Database.Postgres/Mongo/Mssql** | Bağlantı + retry + health-check (repository/entity hariç) |
+| **Pinqponq.Messaging.RabbitMq** | Publish/consume, connection/channel yönetimi, retry + dead-letter (DLX) |
+| **Pinqponq.ErrorHandling** | Global exception middleware + standart hata contract + Pinqloq-uyumlu yapılandırılmış log |
 
-## DI ile kayıt
+Her paket bir `AddPinqponqXxx(...)` DI uzantısı ve bir `XxxOptions` sınıfı sunar.
 
+## Hızlı kullanım
+
+### Identity — JWT, refresh token, parola
 ```csharp
-using Pinqponq.Identity.DependencyInjection;
-using Pinqponq.Identity.Jwt;
-
-builder.Services.AddPinqponqIdentity(
-    jwt =>
-    {
-        jwt.Issuer = "pinqponq";
-        jwt.Audience = "pinqponq-clients";
-        jwt.Lifetime = TimeSpan.FromMinutes(15);
-
-        // HMAC (simetrik) — en az 32 byte:
-        jwt.Algorithm = JwtSigningAlgorithm.HmacSha256;
-        jwt.SymmetricKey = builder.Configuration["Jwt:SymmetricKey"];
-
-        // veya RSA (asimetrik):
-        // jwt.Algorithm = JwtSigningAlgorithm.RsaSha256;
-        // jwt.RsaPrivateKeyPem = File.ReadAllText("private.pem"); // imzalama
-        // jwt.RsaPublicKeyPem  = File.ReadAllText("public.pem");  // doğrulama
-    },
-    refresh =>
-    {
-        refresh.Lifetime = TimeSpan.FromDays(14);
-    });
-
-// Refresh token DEPOSU uygulamaya özeldir — kendiniz kaydedersiniz:
-builder.Services.AddScoped<IRefreshTokenStore, MyEfRefreshTokenStore>();
-```
-
-> `IRefreshTokenStore` bilinçli olarak pakete dahil edilmedi; EF Core / Dapper /
-> Redis gibi kalıcı depolamayı tüketici uygulama sağlar.
-
-## JWT üret & doğrula
-
-```csharp
-public sealed class TokenEndpoints(IJwtTokenGenerator generator, IJwtTokenValidator validator)
+builder.Services.AddPinqponqIdentity(jwt =>
 {
-    public string Login(string userId)
-    {
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim(ClaimTypes.Role, "user"),
-        };
-        return generator.GenerateToken(claims);
-    }
-
-    public async Task<bool> IsValid(string token)
-    {
-        ClaimsPrincipal? principal = await validator.ValidateAsync(token);
-        return principal is not null; // geçersiz/expired token'da null döner
-    }
-}
+    jwt.Issuer = "pinqponq";
+    jwt.Audience = "pinqponq-clients";
+    jwt.Algorithm = JwtSigningAlgorithm.HmacSha256;
+    jwt.SymmetricKey = builder.Configuration["Jwt:SymmetricKey"]; // >= 32 byte
+});
+builder.Services.AddScoped<IRefreshTokenStore, MyRefreshTokenStore>(); // depolama uygulamaya ait
 ```
+`IJwtTokenGenerator` / `IJwtTokenValidator`, `IRefreshTokenService`,
+`IPasswordHasher`. Refresh token'ın yalnızca **hash**'i saklanır; `RotateAsync`
+eskiyi revoke edip reuse-detection zinciri kurar.
 
-## Parola hash & verify
-
+### Cache — Redis
 ```csharp
-public sealed class PasswordService(IPasswordHasher hasher)
-{
-    public string Register(string plaintext) => hasher.Hash(plaintext);
+builder.Services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379");
+builder.Services.AddHealthChecks().AddPinqponqRedis();
 
-    public bool SignIn(string storedHash, string plaintext)
-    {
-        var outcome = hasher.Verify(storedHash, plaintext);
-        return outcome is PasswordVerificationOutcome.Success
-            or PasswordVerificationOutcome.SuccessRehashNeeded;
-        // SuccessRehashNeeded → başarılı girişten sonra hash'i yenileyip tekrar saklayın.
-    }
-}
+await cache.SetAsync("k", myObj, TimeSpan.FromMinutes(5));
+await using var handle = await distributedLock.AcquireAsync("resource", TimeSpan.FromSeconds(30));
+if (handle.Acquired) { /* kritik bölge */ }
 ```
 
-## Refresh token: issue / rotate / revoke
-
+### Sms / Mail
 ```csharp
-public sealed class SessionService(IRefreshTokenService refreshTokens)
-{
-    // Ham token yalnızca burada bir kez elde edilir; istemciye onu döndürün.
-    public async Task<string> Issue(string userId)
-    {
-        var result = await refreshTokens.IssueAsync(userId);
-        return result.Token;
-    }
+builder.Services.AddPinqponqSms(o => { o.ApiUrl = "https://api.netgsm.com.tr/sms/send/get/"; o.UserCode = "..."; o.Password = "..."; });
+builder.Services.AddPinqponqMail(builder.Configuration, "Email");
 
-    // Eski token revoke edilir, yerine yenisi verilir (reuse-detection zinciri kurulur).
-    public async Task<string> Refresh(string presentedToken)
-    {
-        var rotated = await refreshTokens.RotateAsync(presentedToken);
-        return rotated.Token;
-    }
-
-    public Task Logout(string presentedToken) => refreshTokens.RevokeAsync(presentedToken);
-}
+await sms.SendAsync(new SmsMessage { To = "+90555...", Text = "..." });
+await mail.SendAsync(new EmailMessage { To = "a@b.com", Subject = "...", Body = "..." });
 ```
 
-Geçersiz/expired/revoke edilmiş token'da `RotateAsync` ve `RevokeAsync`,
-`InvalidRefreshTokenException` fırlatır.
+### OTP — mail/sms routing
+```csharp
+builder.Services.AddPinqponqSms(...);
+builder.Services.AddPinqponqMail(...);
+builder.Services.AddPinqponqOtp(o => o.Ttl = TimeSpan.FromMinutes(3));
+builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // Redis/EF — uygulamaya ait
 
-## Güvenlik notları
+await otp.GenerateAndSendAsync("user@example.com");           // Auto → email
+var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus.Success
+```
 
-- Refresh token'ın **ham değeri asla saklanmaz**; depoya yalnızca SHA-256 hash'i yazılır.
-- `RotateAsync` eski kaydı `RevokedAt` + `ReplacedByTokenHash` ile işaretler; bu zincir
-  token yeniden kullanımını (reuse) tespit etmek için kullanılabilir.
-- HMAC anahtarı en az 32 byte (256 bit) olmalıdır.
+### TOTP 2FA
+```csharp
+builder.Services.AddPinqponqTotp(o => o.Issuer = "Pinqponq");
+var secret = totp.GenerateSecret();
+var uri = totp.GetProvisioningUri(secret, "user@example.com"); // QR → Authenticator
+bool ok = totp.Validate(secret, userCode);
+```
+
+### Google SSO
+```csharp
+builder.Services.AddPinqponqGoogleSso(o => o.ClientIds.Add(builder.Configuration["Google:ClientId"]!));
+
+var result = await provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(idToken));
+if (result.Succeeded) { var email = result.User!.Email; }
+```
+
+### Database (Postgres/Mongo/Mssql)
+```csharp
+builder.Services.AddPinqponqPostgres(o => o.ConnectionString = cs);
+builder.Services.AddHealthChecks().AddPinqponqPostgres();
+await using var conn = await connectionFactory.OpenConnectionAsync(); // retry uygulanmış
+```
+
+### RabbitMQ
+```csharp
+builder.Services.AddPinqponqRabbitMq(o => { o.HostName = "rabbit"; o.UserName = "guest"; o.Password = "guest"; });
+builder.Services.AddRabbitMqConsumer<MyHandler>(o => { o.Queue = "chat-messages"; }); // DLX otomatik
+
+await publisher.PublishAsync(exchange: "", routingKey: "chat-messages", "payload");
+```
+
+### ErrorHandling
+```csharp
+builder.Services.AddPinqponqErrorHandling();
+// ...
+app.UsePinqponqErrorHandling(); // pipeline'ın başında
+```
+Yakalanan exception → standart `ErrorResponse` (camelCase) + `traceId`/`correlationId`
+ve alan adları Pinqloq'un beklediği yapılandırılmış formatta loglanır.
 
 ## Derleme & test
 
 ```bash
-dotnet build -c Release
+dotnet build -c Release   # net8.0 + net9.0
 dotnet test
-dotnet pack -c Release   # Pinqponq.Identity.<versiyon>.nupkg üretir
+dotnet pack -c Release    # her paket için .nupkg (CPM ile tek tutarlı sürüm)
 ```
+
+> Not: Bu paketler .NET SDK gerektirir. Sürüm tutarlılığı için tüm bağımlılık
+> versiyonları `Directory.Packages.props` içinde tek noktada tanımlıdır.
