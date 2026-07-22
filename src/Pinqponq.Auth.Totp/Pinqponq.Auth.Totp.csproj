@@ -6,14 +6,11 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <PackageId>Pinqponq.Identity</PackageId>
-    <Description>JWT üretimi/doğrulaması, refresh token issue/rotate/revoke ve parola hash/verify gibi jenerik auth primitiflerini tek pakette toplar.</Description>
+    <PackageId>Pinqponq.Auth.Totp</PackageId>
+    <Description>RFC 6238 TOTP tabanlı 2FA: secret üretimi, otpauth:// provisioning URI ve kod doğrulama. Google/Microsoft Authenticator uyumlu.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>

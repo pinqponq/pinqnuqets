@@ -6,15 +6,13 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <PackageId>Pinqponq.Identity</PackageId>
-    <Description>JWT üretimi/doğrulaması, refresh token issue/rotate/revoke ve parola hash/verify gibi jenerik auth primitiflerini tek pakette toplar.</Description>
+    <PackageId>Pinqponq.Mail</PackageId>
+    <Description>SMTP tabanlı mail gönderimini config'iyle birlikte sarmalayan paket (System.Net.Mail).</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 

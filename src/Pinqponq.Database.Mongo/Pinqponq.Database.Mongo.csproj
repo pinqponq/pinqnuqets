@@ -6,16 +6,16 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <PackageId>Pinqponq.Identity</PackageId>
-    <Description>JWT üretimi/doğrulaması, refresh token issue/rotate/revoke ve parola hash/verify gibi jenerik auth primitiflerini tek pakette toplar.</Description>
+    <PackageId>Pinqponq.Database.Mongo</PackageId>
+    <Description>MongoDB (MongoDB.Driver) bağlantı kurulumu ve health-check katmanı. Repository/entity içermez.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="Polly.Core" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
   </ItemGroup>
 
 </Project>

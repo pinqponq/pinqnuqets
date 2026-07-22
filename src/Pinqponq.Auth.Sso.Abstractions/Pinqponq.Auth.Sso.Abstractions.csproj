@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <PackageId>Pinqponq.Auth.Sso.Abstractions</PackageId>
+    <Description>Dış kimlik sağlayıcıların (Google, vb.) ortak sözleşmesi: IExternalAuthProvider ve taşıdığı modeller. Sağlayıcı implementasyon paketlerinin temeli.</Description>
+  </PropertyGroup>
+
+</Project>

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Pinqponq.Identity/Pinqponq.Identity.csproj" />
+    <ProjectReference Include="../../src/Pinqponq.Auth.Totp/Pinqponq.Auth.Totp.csproj" />
   </ItemGroup>
 
 </Project>
