@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a problem in a Pinqponq.* package
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - Pinqponq.Identity
+        - Pinqponq.Identity.Otp
+        - Pinqponq.Auth.Totp
+        - Pinqponq.Auth.Sso.Google
+        - Pinqponq.Cache
+        - Pinqponq.Sms
+        - Pinqponq.Mail
+        - Pinqponq.Database.Postgres
+        - Pinqponq.Database.Mongo
+        - Pinqponq.Database.Mssql
+        - Pinqponq.Messaging.RabbitMq
+        - Pinqponq.ErrorHandling
+        - Other / monorepo tooling
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal code or steps
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime
+      placeholder: net8.0 / net9.0

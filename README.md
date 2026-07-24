@@ -1,5 +1,8 @@
 # PinqNugets — Pinqponq ortak altyapı paketleri
 
+[![CI](https://github.com/pinqponq/pinqnuqets/actions/workflows/ci.yml/badge.svg)](https://github.com/pinqponq/pinqnuqets/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 12 backend'de tekrarlanan **jenerik altyapı** kesitlerini (cache, SMS, mail, DB
 bağlantısı, mesajlaşma, kimlik doğrulama, hata yönetimi) tek monorepo'da
 `Pinqponq.*` NuGet paketlerine taşır. Amaç: **sürüm dağınıklığını** bitirmek,
@@ -13,6 +16,7 @@ proje-özel iş mantığı (domain repository, mesaj contract'ları, OTP-rol kur
 - Hedef: `net8.0` ve `net9.0`
 - Bağımlılık sürümleri **Central Package Management** (`Directory.Packages.props`)
   ile tek merkezden yönetilir.
+- Lisans: [MIT](LICENSE)
 
 ## Paketler
 
@@ -121,11 +125,21 @@ ve alan adları Pinqloq'un beklediği yapılandırılmış formatta loglanır.
 
 ## Derleme & test
 
+Gereksinimler: .NET 8 + 9 SDK. Entegrasyon testleri için çalışan bir Docker
+ortamı (Testcontainers: Redis, RabbitMQ, PostgreSQL, MongoDB, SQL Server, MailHog).
+
 ```bash
 dotnet build -c Release   # net8.0 + net9.0
-dotnet test
+dotnet test -c Release --collect:"XPlat Code Coverage"
 dotnet pack -c Release    # her paket için .nupkg (CPM ile tek tutarlı sürüm)
 ```
 
-> Not: Bu paketler .NET SDK gerektirir. Sürüm tutarlılığı için tüm bağımlılık
-> versiyonları `Directory.Packages.props` içinde tek noktada tanımlıdır.
+> Not: Bağımlılık sürümleri `Directory.Packages.props` içinde tek noktada tanımlıdır.
+> Entegrasyon testleri `[Trait("Category", "Integration")]` ile işaretlenir.
+
+## Katkı & güvenlik
+
+- Katkı rehberi: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Davranış kuralları: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Güvenlik açığı bildirimi: [SECURITY.md](SECURITY.md)
+- Değişiklik günlüğü: [CHANGELOG.md](CHANGELOG.md)

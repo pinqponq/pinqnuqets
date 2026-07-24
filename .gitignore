@@ -26,10 +26,13 @@ packages/
 
 ## Test results
 [Tt]est[Rr]esult*/
+TestResults/
 *.trx
 *.coverage
-*.coverketon
+*.coveragexml
 coverage/
+coverage*.json
+coverage*.xml
 
 ## Rider / VS Code
 .idea/

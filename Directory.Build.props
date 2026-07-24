@@ -17,13 +17,14 @@
   <PropertyGroup>
     <Authors>Pinqponq</Authors>
     <Company>Pinqponq</Company>
-    <Product>Pinqponq.Identity</Product>
+    <Product>Pinqponq Nugets</Product>
     <Copyright>Copyright © Pinqponq</Copyright>
     <RepositoryUrl>https://github.com/pinqponq/pinqnuqets</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/pinqponq/pinqnuqets</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>jwt;auth;identity;refresh-token;password-hashing;pbkdf2</PackageTags>
+    <PackageTags>jwt;auth;identity;refresh-token;password-hashing;pbkdf2;redis;rabbitmq;otp;totp</PackageTags>
     <Version>0.1.0</Version>
   </PropertyGroup>
 

@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an enhancement for a Pinqponq.* package
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - Pinqponq.Identity
+        - Pinqponq.Identity.Otp
+        - Pinqponq.Auth.Totp
+        - Pinqponq.Auth.Sso.Google
+        - Pinqponq.Cache
+        - Pinqponq.Sms
+        - Pinqponq.Mail
+        - Pinqponq.Database.Postgres
+        - Pinqponq.Database.Mongo
+        - Pinqponq.Database.Mssql
+        - Pinqponq.Messaging.RabbitMq
+        - Pinqponq.ErrorHandling
+        - New package / cross-cutting
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Suggested API or behavior
+    validations:
+      required: true

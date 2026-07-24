@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Pinqponq.Auth.Sso.Abstractions/Pinqponq.Auth.Sso.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

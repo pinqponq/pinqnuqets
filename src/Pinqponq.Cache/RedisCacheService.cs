@@ -39,7 +39,12 @@ public sealed class RedisCacheService : ICacheService
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(value);
-        return Database.StringSetAsync(Prefixed(key), value, expiry ?? _options.DefaultTtl);
+
+        // StackExchange.Redis 2.10+ takes Expiration; TimeSpan? has no implicit conversion.
+        var ttl = expiry ?? _options.DefaultTtl;
+        return ttl is TimeSpan duration
+            ? Database.StringSetAsync(Prefixed(key), value, duration)
+            : Database.StringSetAsync(Prefixed(key), value);
     }
 
     /// <inheritdoc />
