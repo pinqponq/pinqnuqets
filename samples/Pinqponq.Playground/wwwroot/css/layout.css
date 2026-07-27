@@ -1,0 +1,228 @@
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main"
+    "dock dock";
+  height: 100dvh;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 0 var(--s-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+.brand__mark {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: var(--fs-lg);
+}
+
+.brand__mark span {
+  color: var(--accent);
+}
+
+.brand__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  font-family: var(--mono);
+}
+
+.topbar__infra {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1;
+  padding: var(--s-1) 0;
+  scrollbar-width: none;
+}
+
+.topbar__infra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Pills keep their size and the strip scrolls instead of squashing them. */
+.topbar__infra > * {
+  flex-shrink: 0;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+/* ---------- sidebar ---------- */
+
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar__search {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar__scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding: var(--s-2) 0 var(--s-5);
+}
+
+.sidebar__group {
+  padding: var(--s-4) var(--s-4) var(--s-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---------- main ---------- */
+
+.main {
+  grid-area: main;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.main__inner {
+  max-width: 900px;
+  padding: var(--s-5) var(--s-5) var(--s-7);
+  margin: 0 auto;
+}
+
+/* ---------- log dock ---------- */
+
+.dock {
+  grid-area: dock;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  height: var(--dock-h);
+  min-height: 40px;
+  max-height: 80dvh;
+}
+
+.dock[data-collapsed="true"] {
+  height: 40px;
+}
+
+.dock[data-collapsed="true"] .dock__body,
+.dock[data-collapsed="true"] .dock__filters {
+  display: none;
+}
+
+.dock__grip {
+  height: 5px;
+  margin-top: -3px;
+  cursor: row-resize;
+  background: transparent;
+  transition: background var(--speed);
+}
+
+.dock__grip:hover,
+.dock__grip:active {
+  background: var(--accent-soft);
+}
+
+.dock__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-3);
+  height: 40px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.dock__filters {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dock__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.dock__body {
+  flex: 1;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  min-height: 0;
+}
+
+/* ---------- responsive ---------- */
+
+@media (width <= 1024px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "main"
+      "dock";
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: var(--topbar-h) auto 0 0;
+    width: min(320px, 86vw);
+    z-index: 40;
+    transform: translateX(-102%);
+    transition: transform var(--speed) ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app[data-nav="open"] .sidebar {
+    transform: none;
+  }
+
+  .app[data-nav="open"]::after {
+    content: "";
+    position: fixed;
+    inset: var(--topbar-h) 0 0;
+    background: var(--overlay);
+    z-index: 30;
+  }
+
+  .main__inner {
+    padding: var(--s-4) var(--s-4) var(--s-6);
+  }
+}
+
+@media (width > 1024px) {
+  .nav-toggle {
+    display: none;
+  }
+}
