@@ -13,16 +13,6 @@
     <!-- Identity (PIN-389) -->
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
-    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
-
-    <!-- Shared Microsoft.Extensions.* -->
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
 
     <!-- Resiliency (Wave 1: Cache, Sms, Database, Messaging) -->
     <PackageVersion Include="Polly.Core" Version="8.4.2" />
@@ -32,9 +22,15 @@
 
     <!-- Mail (PIN-384): System.Net.Mail (BCL) — no external package, matches the ported impl. -->
 
-    <!-- Database (PIN-385/386/387) -->
+    <!-- Database (PIN-385/386/387).
+         MongoDB.Driver 3.6.0 pulled SharpCompress 0.30.1 (GHSA-6c8g-7p36-r338) and
+         Snappier 1.0.0 (GHSA-pggp-6c3x-2xmx). From .NET 9 the SDK audits transitive
+         packages too, so those became build errors under TreatWarningsAsErrors. 3.10.0 is
+         the driver's own fix — it ships SharpCompress 0.48.1 and Snappier 1.3.1. Pinning
+         the two transitively instead would pair the old driver with dependency majors it
+         was never tested against. -->
     <PackageVersion Include="Npgsql" Version="8.0.5" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.6.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
 
     <!-- Messaging (PIN-388): async v7 API, matches consumers -->
@@ -43,19 +39,12 @@
     <!-- SSO Google (PIN-392) -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.70.0" />
 
-    <!-- Test stack -->
+    <!-- Test stack. FluentAssertions stays on 6.x: 7.0 moved to a commercial licence. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.11" />
-
 
     <!-- Testcontainers -->
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
@@ -64,6 +53,65 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.MongoDb" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
+  </ItemGroup>
+
+  <!-- Microsoft.Extensions.* and Microsoft.AspNetCore.* ship in lockstep with the runtime,
+       so each target framework takes its own major. Pinning all of them at 8.0.x would hand
+       a .NET 10 application assemblies built against the .NET 8 abstractions, and would pair
+       Pinqponq.ErrorHandling.Tests' 8.0.x test host with the ASP.NET Core 10 shared framework
+       its FrameworkReference resolves to.
+
+       Transitive pinning is on, so every group has to list every package: a name missing
+       from one framework's group fails restore there with NU1010. Keep the three in sync. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.18" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.10" />
   </ItemGroup>
 
 </Project>
