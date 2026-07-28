@@ -13,7 +13,8 @@ Paketler **davranışı sabit, dış bağımlılığı sarmalayan** koddan oluş
 proje-özel iş mantığı (domain repository, mesaj contract'ları, OTP-rol kuralları)
 **paketlenmez**.
 
-- Hedef: `net8.0` ve `net9.0`
+- Hedef: `net8.0`, `net9.0`, `net10.0` — .NET 8 ve sonrası. Liste tek noktada
+  (`Directory.Build.props` içindeki `PinqponqTargetFrameworks`) tanımlıdır.
 - Bağımlılık sürümleri **Central Package Management** (`Directory.Packages.props`)
   ile tek merkezden yönetilir.
 - Lisans: [MIT](LICENSE)
@@ -63,6 +64,9 @@ builder.Services.AddScoped<IAccessTokenRevocationStore, MyJtiStore>();
 // IAccessTokenRevocationService.RevokeAccessTokenAsync(token) → jti'yi store'a yazar
 // JwtTokenValidator store kayıtlıysa revoked jti için null döner
 ```
+
+Yalnızca JWT ve parola özetleme kullanan uygulamalar `IRefreshTokenStore`
+kaydetmeyebilir; eksik store `IRefreshTokenService` ilk çözümlendiğinde bildirilir.
 
 ### Cache — Redis
 ```csharp
@@ -129,6 +133,8 @@ builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // TryConsumeAsync + TryRem
 await otp.GenerateAndSendAsync("user@example.com");           // Auto → email
 var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus.Success
 ```
+Gönderici yalnızca kullanılan kanal için gerekir: sadece e-posta gönderen bir
+uygulama `AddPinqponqSms` çağırmak zorunda değildir.
 
 ### TOTP 2FA
 ```csharp
@@ -190,13 +196,30 @@ app.UsePinqponqErrorHandling(); // pipeline'ın başında
 Yakalanan exception → standart `ErrorResponse` (camelCase) + `traceId`/`correlationId`
 ve alan adları Pinqloq'un beklediği yapılandırılmış formatta loglanır.
 
-## Derleme & test
+## Playground — paketleri ve loglarını tarayıcıdan deneyin
 
-Gereksinimler: .NET 8 + 9 SDK. Entegrasyon testleri için çalışan bir Docker
-ortamı (Testcontainers: Redis, RabbitMQ, PostgreSQL, MongoDB, SQL Server, MailHog).
+`samples/Pinqponq.Playground`, 13 paketin tamamını gerçek bağımlılıklara karşı çalıştıran
+bir test konsoludur. Her çalıştırma hem sonucu hem de paketin o sırada ürettiği
+**yapılandırılmış log kayıtlarını** gösterir — `ErrorHandling`'in `traceId`/`correlationId`
+alan adları ancak ham hâlleriyle görülünce doğrulanabilir.
 
 ```bash
-dotnet build -c Release   # net8.0 + net9.0
+dotnet run --project samples/Pinqponq.Playground   # → http://127.0.0.1:5199
+```
+
+Açılışta hiçbir konteyner başlatılmaz; 47 senaryonun 32'si Docker olmadan çalışır. Redis,
+Postgres, RabbitMQ, Mongo, MailHog ve SQL Server üst şeritten tek tıkla (Testcontainers
+ile) kaldırılır. Ayrıntılar: [samples/README.md](samples/README.md).
+
+## Derleme & test
+
+Gereksinimler: .NET 10 SDK — tüm hedefleri derlemeye tek başına yeter. Testleri her
+hedefte **çalıştırmak** için ayrıca .NET 8 ve .NET 9 runtime'ları gerekir. Entegrasyon
+testleri için çalışan bir Docker ortamı (Testcontainers: Redis, RabbitMQ, PostgreSQL,
+MongoDB, SQL Server, MailHog).
+
+```bash
+dotnet build -c Release   # net8.0 + net9.0 + net10.0
 dotnet test -c Release --collect:"XPlat Code Coverage"
 dotnet pack -c Release    # her paket için .nupkg (CPM ile tek tutarlı sürüm)
 ```

@@ -18,14 +18,19 @@ public sealed class TotpService : ITotpService
     private static readonly DateTimeOffset UnixEpoch = DateTimeOffset.UnixEpoch;
 
     private readonly TotpOptions _options;
-    private readonly ITotpReplayStore _replayStore;
+    private readonly ITotpReplayStore? _replayStore;
 
-    /// <summary>Creates the service from configured options and a replay store.</summary>
-    public TotpService(IOptions<TotpOptions> options, ITotpReplayStore replayStore)
+    /// <summary>Creates the service from configured options and an optional replay store.</summary>
+    /// <remarks>
+    /// The replay store belongs to the consuming application and is only needed by
+    /// <see cref="ValidateAsync"/>; it may be <see langword="null"/>. Calling
+    /// <see cref="ValidateAsync"/> without one throws, naming the registration to add.
+    /// </remarks>
+    public TotpService(IOptions<TotpOptions> options, ITotpReplayStore? replayStore = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
-        _replayStore = replayStore ?? throw new ArgumentNullException(nameof(replayStore));
+        _replayStore = replayStore;
     }
 
     /// <inheritdoc />
@@ -76,13 +81,19 @@ public sealed class TotpService : ITotpService
     {
         ArgumentException.ThrowIfNullOrEmpty(subjectKey);
 
+        var store = _replayStore ?? throw new InvalidOperationException(
+            $"{nameof(ValidateAsync)} needs an {nameof(ITotpReplayStore)}, which this package does "
+            + "not provide. Register the application's own store, for example "
+            + $"services.AddScoped<{nameof(ITotpReplayStore)}, MyReplayStore>(); or use the "
+            + $"synchronous {nameof(Validate)} for a crypto-only check without replay protection.");
+
         var counter = TryMatchCounter(secret, code, timestamp);
         if (counter is null)
         {
             return false;
         }
 
-        return await _replayStore
+        return await store
             .TryAcceptAsync(subjectKey, counter.Value, cancellationToken)
             .ConfigureAwait(false);
     }

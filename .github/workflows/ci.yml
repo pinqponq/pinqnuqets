@@ -22,9 +22,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
+          # The newest SDK builds every target framework; the older entries are here for
+          # their runtimes, which `dotnet test` needs to execute those legs.
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
 
       - name: Restore
         run: dotnet restore Pinqponq.Nugets.sln

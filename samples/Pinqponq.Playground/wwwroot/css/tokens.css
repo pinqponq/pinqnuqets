@@ -1,0 +1,163 @@
+/*
+ * Design tokens. Dark first — this is a console you keep open next to an editor — with a
+ * light theme of equal quality. The OS preference decides by default; the header toggle
+ * writes data-theme on <html> and wins over it.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, from furthest back to nearest front. */
+  --bg: #0c0f13;
+  --surface: #12161c;
+  --surface-2: #171d24;
+  --surface-3: #1e252e;
+  --overlay: rgb(6 8 11 / 72%);
+
+  --border: #232b35;
+  --border-strong: #313b48;
+
+  --text: #e7ecf2;
+  --text-muted: #98a5b4;
+  --text-faint: #6a7686;
+
+  --accent: #5eead4;
+  --accent-strong: #2dd4bf;
+  --accent-contrast: #04231f;
+  --accent-soft: rgb(94 234 212 / 12%);
+
+  --ok: #4ade80;
+  --ok-soft: rgb(74 222 128 / 13%);
+  --warn: #fbbf24;
+  --warn-soft: rgb(251 191 36 / 13%);
+  --err: #f87171;
+  --err-soft: rgb(248 113 113 / 13%);
+  --info: #7dd3fc;
+  --info-soft: rgb(125 211 252 / 13%);
+  --neutral-soft: rgb(152 165 180 / 12%);
+
+  --focus: #7dd3fc;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 60%);
+  --shadow-lg: 0 24px 60px -12px rgb(0 0 0 / 70%);
+
+  /* 8px scale, with two half steps for dense controls. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-4: 14px;
+  --r-full: 999px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 19px;
+  --fs-2xl: 24px;
+
+  --sidebar-w: 288px;
+  --topbar-h: 52px;
+  --dock-h: 300px;
+
+  --speed: 140ms;
+}
+
+:root[data-theme="light"],
+html:not([data-theme="dark"]) {
+  /* Placeholder so the cascade below is easy to follow; overridden per theme. */
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #f1f3f6;
+    --surface-3: #e7eaef;
+    --overlay: rgb(20 24 30 / 40%);
+
+    --border: #e0e4ea;
+    --border-strong: #c8cfd8;
+
+    --text: #171d24;
+    --text-muted: #5a6675;
+    --text-faint: #8794a3;
+
+    --accent: #0d9488;
+    --accent-strong: #0f766e;
+    --accent-contrast: #ffffff;
+    --accent-soft: rgb(13 148 136 / 10%);
+
+    --ok: #15803d;
+    --ok-soft: rgb(21 128 61 / 10%);
+    --warn: #b45309;
+    --warn-soft: rgb(180 83 9 / 10%);
+    --err: #dc2626;
+    --err-soft: rgb(220 38 38 / 10%);
+    --info: #0369a1;
+    --info-soft: rgb(3 105 161 / 10%);
+    --neutral-soft: rgb(90 102 117 / 10%);
+
+    --focus: #0369a1;
+
+    --shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
+    --shadow-md: 0 8px 24px -10px rgb(16 24 40 / 18%);
+    --shadow-lg: 0 24px 60px -16px rgb(16 24 40 / 24%);
+  }
+}
+
+/* The explicit toggle must beat the media query in both directions. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e7eaef;
+  --overlay: rgb(20 24 30 / 40%);
+
+  --border: #e0e4ea;
+  --border-strong: #c8cfd8;
+
+  --text: #171d24;
+  --text-muted: #5a6675;
+  --text-faint: #8794a3;
+
+  --accent: #0d9488;
+  --accent-strong: #0f766e;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgb(13 148 136 / 10%);
+
+  --ok: #15803d;
+  --ok-soft: rgb(21 128 61 / 10%);
+  --warn: #b45309;
+  --warn-soft: rgb(180 83 9 / 10%);
+  --err: #dc2626;
+  --err-soft: rgb(220 38 38 / 10%);
+  --info: #0369a1;
+  --info-soft: rgb(3 105 161 / 10%);
+  --neutral-soft: rgb(90 102 117 / 10%);
+
+  --focus: #0369a1;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
+  --shadow-md: 0 8px 24px -10px rgb(16 24 40 / 18%);
+  --shadow-lg: 0 24px 60px -16px rgb(16 24 40 / 24%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

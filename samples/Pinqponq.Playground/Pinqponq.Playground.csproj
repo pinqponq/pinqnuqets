@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Deliberately not $(PinqponqTargetFrameworks): a single TFM plus roll-forward means
+         a plain `dotnet run` works on whichever supported runtime is installed, without a
+         -f flag. Staying on the lowest one also keeps the console an honest check that the
+         packages work there — it compiles under the C# version net8.0 pins, which is what
+         catches syntax the oldest supported toolchain would reject. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>LatestMajor</RollForward>
+    <IsPackable>false</IsPackable>
+    <UserSecretsId>pinqponq-playground</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The playground exercises the packages from source, so a regression in src/
+         breaks the console immediately rather than one release later. -->
+    <ProjectReference Include="..\..\src\Pinqponq.Auth.Sso.Abstractions\Pinqponq.Auth.Sso.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Auth.Sso.Google\Pinqponq.Auth.Sso.Google.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Auth.Totp\Pinqponq.Auth.Totp.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Cache\Pinqponq.Cache.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Database.Mongo\Pinqponq.Database.Mongo.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Database.Mssql\Pinqponq.Database.Mssql.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Database.Postgres\Pinqponq.Database.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.ErrorHandling\Pinqponq.ErrorHandling.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Identity\Pinqponq.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Identity.Otp\Pinqponq.Identity.Otp.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Mail\Pinqponq.Mail.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Messaging.RabbitMq\Pinqponq.Messaging.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Sms\Pinqponq.Sms.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="Testcontainers.MongoDb" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <!-- The error-handling middleware captures IOptions when the pipeline is built, so
+         per-run option changes need a throwaway pipeline rather than a shared branch. -->
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+</Project>

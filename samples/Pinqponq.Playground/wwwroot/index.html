@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Pinqponq Playground — paket ve log test konsolu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230c0f13'/><circle cx='16' cy='16' r='7' fill='none' stroke='%235eead4' stroke-width='3'/></svg>">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <button class="btn btn--ghost btn--icon nav-toggle" id="nav-toggle" aria-label="Gezinmeyi aç/kapat" aria-expanded="false">☰</button>
+
+      <div class="brand">
+        <span class="brand__mark">pinq<span>ponq</span></span>
+        <span class="brand__meta" id="brand-meta">playground</span>
+      </div>
+
+      <div class="topbar__infra" id="infra-bar" role="group" aria-label="Altyapı servisleri"></div>
+
+      <div class="topbar__actions">
+        <button class="btn btn--ghost" id="palette-open" aria-label="Senaryo ara">
+          Ara <kbd id="palette-kbd">Ctrl K</kbd>
+        </button>
+        <button class="btn btn--ghost btn--icon" id="theme-toggle" aria-label="Temayı değiştir" title="Temayı değiştir">◐</button>
+      </div>
+    </header>
+
+    <nav class="sidebar" id="sidebar" aria-label="Paketler ve senaryolar">
+      <div class="sidebar__search">
+        <label class="visually-hidden" for="sidebar-filter">Senaryo filtrele</label>
+        <input class="input" id="sidebar-filter" type="search" placeholder="Senaryo filtrele…" autocomplete="off">
+      </div>
+      <div class="sidebar__scroll" id="sidebar-list"></div>
+    </nav>
+
+    <main class="main" id="main">
+      <div class="main__inner" id="main-inner"></div>
+    </main>
+
+    <section class="dock" id="dock" aria-label="Log konsolu">
+      <div class="dock__grip" id="dock-grip" role="separator" aria-orientation="horizontal" tabindex="0"
+           aria-label="Log konsolunu yeniden boyutlandır"></div>
+      <div class="dock__bar">
+        <button class="btn btn--ghost" id="dock-toggle" aria-expanded="true">
+          <span id="dock-caret">▾</span> Loglar <span class="badge" id="log-count">0</span>
+        </button>
+
+        <div class="dock__filters" id="log-filters">
+          <button class="chip" data-level="Trace" aria-pressed="false">Trace</button>
+          <button class="chip" data-level="Debug" aria-pressed="false">Debug</button>
+          <button class="chip" data-level="Information" aria-pressed="true">Info</button>
+          <button class="chip" data-level="Warning" aria-pressed="true">Warn</button>
+          <button class="chip" data-level="Error" aria-pressed="true">Error</button>
+          <label class="visually-hidden" for="log-search">Loglarda ara</label>
+          <input class="input" id="log-search" type="search" placeholder="Logda ara…" style="height:24px;max-width:200px">
+          <button class="chip" id="log-run-filter" hidden></button>
+        </div>
+
+        <button class="btn btn--ghost" id="log-pause" aria-pressed="false" title="Akışı duraklat">⏸</button>
+        <button class="btn btn--ghost btn--danger" id="log-clear" title="Logları temizle">Temizle</button>
+      </div>
+      <div class="dock__body" id="log-body" role="log" aria-live="off"></div>
+    </section>
+  </div>
+
+  <div class="palette" id="palette" hidden role="dialog" aria-modal="true" aria-label="Senaryo ara">
+    <div class="palette__panel">
+      <label class="visually-hidden" for="palette-input">Senaryo ara</label>
+      <input class="palette__input" id="palette-input" type="text" placeholder="Senaryo veya paket ara…" autocomplete="off">
+      <div class="palette__list" id="palette-list" role="listbox"></div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

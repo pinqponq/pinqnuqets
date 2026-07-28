@@ -15,22 +15,27 @@ namespace Pinqponq.Identity.Otp;
 public sealed class OtpService : IOtpService
 {
     private readonly IOtpStore _store;
-    private readonly ISmsSender _smsSender;
-    private readonly IEmailSender _emailSender;
+    private readonly ISmsSender? _smsSender;
+    private readonly IEmailSender? _emailSender;
     private readonly IOtpSendRateLimiter _rateLimiter;
     private readonly OtpOptions _options;
 
     /// <summary>Creates the service from its store, channel senders and options.</summary>
+    /// <remarks>
+    /// A sender is only needed for the channel the application actually uses, so either
+    /// one may be <see langword="null"/>. Routing a code to a channel whose sender is
+    /// missing throws at that point rather than at registration.
+    /// </remarks>
     public OtpService(
         IOtpStore store,
-        ISmsSender smsSender,
-        IEmailSender emailSender,
+        ISmsSender? smsSender,
+        IEmailSender? emailSender,
         IOtpSendRateLimiter rateLimiter,
         IOptions<OtpOptions> options)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
-        _smsSender = smsSender ?? throw new ArgumentNullException(nameof(smsSender));
-        _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
+        _smsSender = smsSender;
+        _emailSender = emailSender;
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
@@ -117,7 +122,7 @@ public sealed class OtpService : IOtpService
             : channel;
 
         return resolved == OtpChannel.Email
-            ? _emailSender.SendAsync(
+            ? Required(_emailSender, nameof(IEmailSender), "AddPinqponqMail").SendAsync(
                 new EmailMessage
                 {
                     To = recipient,
@@ -125,10 +130,16 @@ public sealed class OtpService : IOtpService
                     Body = Format(_options.EmailBodyTemplate, code),
                 },
                 cancellationToken)
-            : _smsSender.SendAsync(
+            : Required(_smsSender, nameof(ISmsSender), "AddPinqponqSms").SendAsync(
                 new SmsMessage { To = recipient, Text = Format(_options.SmsTemplate, code) },
                 cancellationToken);
     }
+
+    private static TSender Required<TSender>(TSender? sender, string contract, string registration)
+        where TSender : class =>
+        sender ?? throw new InvalidOperationException(
+            $"Delivering this code needs an {contract}, which is not registered. "
+            + $"Call {registration} during startup, or route the code to the other channel.");
 
     private string BuildKey(string recipient, string purpose)
     {

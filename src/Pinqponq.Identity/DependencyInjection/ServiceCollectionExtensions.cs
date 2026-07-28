@@ -18,7 +18,9 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <remarks>
     /// <see cref="IRefreshTokenStore"/> is intentionally not registered — the consuming
-    /// application must provide its own storage implementation.
+    /// application must provide its own storage implementation. Applications that only
+    /// want JWTs and password hashing may leave it unregistered; the missing store is
+    /// then reported when <see cref="IRefreshTokenService"/> is first resolved.
     /// </remarks>
     /// <param name="services">The service collection.</param>
     /// <param name="configureJwt">Configures <see cref="JwtOptions"/>.</param>
@@ -55,14 +57,32 @@ public static class ServiceCollectionExtensions
         // Scoped so optional IAccessTokenRevocationStore can be Scoped without captive dependency.
         services.TryAddScoped<IJwtTokenValidator, JwtTokenValidator>();
 
-        // Requires a consumer-registered IAccessTokenRevocationStore when resolved.
-        services.TryAddScoped<IAccessTokenRevocationService, AccessTokenRevocationService>();
+        // Access-token revocation (store provided by the consumer). Registered through a
+        // factory rather than by implementation type so container validation does not abort
+        // startup for applications that never revoke an access token; the missing
+        // IAccessTokenRevocationStore is reported when IAccessTokenRevocationService is resolved.
+        services.TryAddScoped<IAccessTokenRevocationService>(sp => new AccessTokenRevocationService(
+            sp.GetService<IAccessTokenRevocationStore>() ?? throw new InvalidOperationException(
+                $"{nameof(IAccessTokenRevocationService)} needs an {nameof(IAccessTokenRevocationStore)}, "
+                + "which this package does not provide. Register the application's own storage, for "
+                + $"example services.AddScoped<{nameof(IAccessTokenRevocationStore)}, MyRevocationStore>()."),
+            sp.GetRequiredService<IOptions<JwtOptions>>(),
+            sp.GetRequiredService<JwtSigningKeyResolver>()));
 
         // Passwords.
         services.TryAddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
-        // Refresh tokens (store provided by the consumer).
-        services.TryAddScoped<IRefreshTokenService, RefreshTokenService>();
+        // Refresh tokens (store provided by the consumer). Registered through a factory
+        // rather than by implementation type: ASP.NET Core validates every type-registered
+        // descriptor when it builds the container in Development, so registering the
+        // implementation type would abort startup for every application that uses this
+        // package for JWTs and password hashing but never issues a refresh token.
+        services.TryAddScoped<IRefreshTokenService>(sp => new RefreshTokenService(
+            sp.GetService<IRefreshTokenStore>() ?? throw new InvalidOperationException(
+                $"{nameof(IRefreshTokenService)} needs an {nameof(IRefreshTokenStore)}, which "
+                + "this package does not provide. Register the application's own storage, for "
+                + $"example services.AddScoped<{nameof(IRefreshTokenStore)}, MyRefreshTokenStore>()."),
+            sp.GetRequiredService<IOptions<RefreshTokenOptions>>()));
 
         return services;
     }

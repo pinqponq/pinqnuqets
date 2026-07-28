@@ -19,6 +19,8 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Unconditionally: without a configure action nothing else would register the
+        // options services, and the defaults this package ships would be unresolvable.
         var options = services.AddOptions<TotpOptions>();
         if (configure is not null)
         {
@@ -29,8 +31,13 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<TotpOptions>, TotpOptionsValidator>());
 
-        // Scoped so consumer ITotpReplayStore can be Scoped without captive dependency.
-        services.TryAddScoped<ITotpService, TotpService>();
+        // A factory rather than the implementation type: the ITotpReplayStore belongs to the
+        // consuming application and is only needed by ValidateAsync, so a type registration
+        // would abort container validation in Development for the sync/crypto-only use. Scoped
+        // so the consumer's ITotpReplayStore can be Scoped without a captive dependency.
+        services.TryAddScoped<ITotpService>(sp => new TotpService(
+            sp.GetRequiredService<IOptions<TotpOptions>>(),
+            sp.GetService<ITotpReplayStore>()));
         return services;
     }
 }
