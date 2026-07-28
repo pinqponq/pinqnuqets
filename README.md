@@ -53,6 +53,9 @@ builder.Services.AddScoped<IRefreshTokenStore, MyRefreshTokenStore>(); // depola
 `IPasswordHasher`. Refresh token'ın yalnızca **hash**'i saklanır; `RotateAsync`
 eskiyi revoke edip reuse-detection zinciri kurar.
 
+Yalnızca JWT ve parola özetleme kullanan uygulamalar `IRefreshTokenStore`
+kaydetmeyebilir; eksik store `IRefreshTokenService` ilk çözümlendiğinde bildirilir.
+
 ### Cache — Redis
 ```csharp
 builder.Services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379");
@@ -82,6 +85,8 @@ builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // Redis/EF — uygulamaya 
 await otp.GenerateAndSendAsync("user@example.com");           // Auto → email
 var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus.Success
 ```
+Gönderici yalnızca kullanılan kanal için gerekir: sadece e-posta gönderen bir
+uygulama `AddPinqponqSms` çağırmak zorunda değildir.
 
 ### TOTP 2FA
 ```csharp

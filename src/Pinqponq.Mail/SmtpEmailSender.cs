@@ -9,6 +9,11 @@ namespace Pinqponq.Mail;
 /// </summary>
 public sealed class SmtpEmailSender : IEmailSender
 {
+    // Held as a field rather than written inline: a collection expression argument makes
+    // string.Split ambiguous between its char[] and string overloads under the C# 12
+    // compiler, so the package fails to build on the .NET 8 SDK.
+    private static readonly char[] RecipientSeparators = [',', ';'];
+
     private readonly SmtpOptions _options;
 
     /// <summary>Creates the sender from configured SMTP options.</summary>
@@ -80,7 +85,7 @@ public sealed class SmtpEmailSender : IEmailSender
     private static void AddRecipients(MailAddressCollection collection, string addresses)
     {
         var addressList = addresses.Split(
-            [',', ';'],
+            RecipientSeparators,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (var address in addressList)

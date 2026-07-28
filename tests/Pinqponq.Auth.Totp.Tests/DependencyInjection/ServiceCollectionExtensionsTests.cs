@@ -18,4 +18,19 @@ public sealed class ServiceCollectionExtensionsTests
         totp.Should().NotBeNull();
         totp.GenerateSecret().Should().NotBeNullOrWhiteSpace();
     }
+
+    /// <summary>
+    /// The configure action is optional, so the extension has to register the options
+    /// services itself — nothing else in a bare collection does.
+    /// </summary>
+    [Fact]
+    public void AddPinqponqTotp_resolves_with_defaults_when_left_unconfigured()
+    {
+        var services = new ServiceCollection();
+        services.AddPinqponqTotp();
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredService<ITotpService>().GenerateSecret().Should().NotBeNullOrWhiteSpace();
+    }
 }
