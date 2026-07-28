@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
     <IsTestProject>true</IsTestProject>
+    <!-- The shared framework below already carries DI and logging; see tests/Directory.Build.targets. -->
+    <PinqponqUsesAspNetCore>true</PinqponqUsesAspNetCore>
   </PropertyGroup>
 
   <ItemGroup>

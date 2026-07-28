@@ -47,4 +47,4 @@ body:
     id: runtime
     attributes:
       label: Runtime
-      placeholder: net8.0 / net9.0
+      placeholder: net8.0 / net9.0 / net10.0

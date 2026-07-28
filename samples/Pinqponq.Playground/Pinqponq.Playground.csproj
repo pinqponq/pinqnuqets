@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <!-- Single TFM plus roll-forward so a plain `dotnet run` works on either the
-         .NET 8 or the .NET 9 runtime without a -f flag. -->
+    <!-- Deliberately not $(PinqponqTargetFrameworks): a single TFM plus roll-forward means
+         a plain `dotnet run` works on whichever supported runtime is installed, without a
+         -f flag. Staying on the lowest one also keeps the console an honest check that the
+         packages work there — it compiles under the C# version net8.0 pins, which is what
+         catches syntax the oldest supported toolchain would reject. -->
     <TargetFramework>net8.0</TargetFramework>
     <RollForward>LatestMajor</RollForward>
     <IsPackable>false</IsPackable>

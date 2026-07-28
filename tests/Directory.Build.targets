@@ -17,6 +17,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <!-- DI and logging come free with the ASP.NET Core shared framework, so a project that
+       carries that FrameworkReference must not also reference them as packages: from .NET 10
+       the SDK prunes framework-provided packages and reports the redundant reference as
+       NU1510, which TreatWarningsAsErrors turns into a build error. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Pinqponq.TestSupport' AND '$(PinqponqUsesAspNetCore)' != 'true'">
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>

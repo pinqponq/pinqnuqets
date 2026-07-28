@@ -15,6 +15,9 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Unconditionally: without a configure action nothing else would register the
+        // options services, and the defaults this package ships would be unresolvable.
+        services.AddOptions<TotpOptions>();
         if (configure is not null)
         {
             services.Configure(configure);

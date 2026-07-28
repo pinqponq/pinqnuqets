@@ -48,4 +48,49 @@ public sealed class ServiceCollectionExtensionsTests
 
         services.Should().NotContain(d => d.ServiceType == typeof(IRefreshTokenStore));
     }
+
+    /// <summary>
+    /// ASP.NET Core builds its container with these options in Development. An
+    /// application that uses this package for JWTs and password hashing but never issues
+    /// a refresh token must still start.
+    /// </summary>
+    [Fact]
+    public void AddPinqponqIdentity_passes_container_validation_without_a_store()
+    {
+        var services = new ServiceCollection();
+        services.AddPinqponqIdentity(jwt =>
+        {
+            jwt.Issuer = "pinqponq";
+            jwt.Audience = "clients";
+            jwt.SymmetricKey = "0123456789abcdef0123456789abcdef";
+        });
+
+        var build = () => services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true,
+        });
+
+        build.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Resolving_the_refresh_token_service_without_a_store_names_what_is_missing()
+    {
+        var services = new ServiceCollection();
+        services.AddPinqponqIdentity(jwt =>
+        {
+            jwt.Issuer = "pinqponq";
+            jwt.Audience = "clients";
+            jwt.SymmetricKey = "0123456789abcdef0123456789abcdef";
+        });
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var resolve = scope.ServiceProvider.GetRequiredService<IRefreshTokenService>;
+
+        resolve.Should().Throw<InvalidOperationException>()
+            .WithMessage($"*{nameof(IRefreshTokenStore)}*");
+    }
 }

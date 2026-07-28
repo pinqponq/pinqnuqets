@@ -13,7 +13,8 @@ Paketler **davranışı sabit, dış bağımlılığı sarmalayan** koddan oluş
 proje-özel iş mantığı (domain repository, mesaj contract'ları, OTP-rol kuralları)
 **paketlenmez**.
 
-- Hedef: `net8.0` ve `net9.0`
+- Hedef: `net8.0`, `net9.0`, `net10.0` — .NET 8 ve sonrası. Liste tek noktada
+  (`Directory.Build.props` içindeki `PinqponqTargetFrameworks`) tanımlıdır.
 - Bağımlılık sürümleri **Central Package Management** (`Directory.Packages.props`)
   ile tek merkezden yönetilir.
 - Lisans: [MIT](LICENSE)
@@ -53,6 +54,9 @@ builder.Services.AddScoped<IRefreshTokenStore, MyRefreshTokenStore>(); // depola
 `IPasswordHasher`. Refresh token'ın yalnızca **hash**'i saklanır; `RotateAsync`
 eskiyi revoke edip reuse-detection zinciri kurar.
 
+Yalnızca JWT ve parola özetleme kullanan uygulamalar `IRefreshTokenStore`
+kaydetmeyebilir; eksik store `IRefreshTokenService` ilk çözümlendiğinde bildirilir.
+
 ### Cache — Redis
 ```csharp
 builder.Services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379");
@@ -82,6 +86,8 @@ builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // Redis/EF — uygulamaya 
 await otp.GenerateAndSendAsync("user@example.com");           // Auto → email
 var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus.Success
 ```
+Gönderici yalnızca kullanılan kanal için gerekir: sadece e-posta gönderen bir
+uygulama `AddPinqponqSms` çağırmak zorunda değildir.
 
 ### TOTP 2FA
 ```csharp
@@ -140,11 +146,13 @@ ile) kaldırılır. Ayrıntılar: [samples/README.md](samples/README.md).
 
 ## Derleme & test
 
-Gereksinimler: .NET 8 + 9 SDK. Entegrasyon testleri için çalışan bir Docker
-ortamı (Testcontainers: Redis, RabbitMQ, PostgreSQL, MongoDB, SQL Server, MailHog).
+Gereksinimler: .NET 10 SDK — tüm hedefleri derlemeye tek başına yeter. Testleri her
+hedefte **çalıştırmak** için ayrıca .NET 8 ve .NET 9 runtime'ları gerekir. Entegrasyon
+testleri için çalışan bir Docker ortamı (Testcontainers: Redis, RabbitMQ, PostgreSQL,
+MongoDB, SQL Server, MailHog).
 
 ```bash
-dotnet build -c Release   # net8.0 + net9.0
+dotnet build -c Release   # net8.0 + net9.0 + net10.0
 dotnet test -c Release --collect:"XPlat Code Coverage"
 dotnet pack -c Release    # her paket için .nupkg (CPM ile tek tutarlı sürüm)
 ```

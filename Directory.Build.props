@@ -1,5 +1,13 @@
 <Project>
 
+  <!-- Supported target frameworks: .NET 8 and every release after it. Projects opt in
+       with <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>, so adding the
+       next runtime is a single edit here. The Playground opts out deliberately — see its
+       csproj. -->
+  <PropertyGroup>
+    <PinqponqTargetFrameworks>net8.0;net9.0;net10.0</PinqponqTargetFrameworks>
+  </PropertyGroup>
+
   <!-- Shared compiler settings for every project in the repository. -->
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
@@ -11,6 +19,19 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <!-- Every target framework compiles the same source, so the oldest one is the real
+       language ceiling. Pinning it per framework makes the build produce the same result
+       on any SDK: without this, `latest` silently compiles the net8.0 leg with whatever
+       newer compiler happens to be installed, and syntax that net8.0 consumers' toolchains
+       reject builds green here. That is exactly how the CS0121 break in Pinqponq.Mail
+       reached master. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <LangVersion>13.0</LangVersion>
   </PropertyGroup>
 
   <!-- Shared package metadata. Individual projects opt in with IsPackable. -->

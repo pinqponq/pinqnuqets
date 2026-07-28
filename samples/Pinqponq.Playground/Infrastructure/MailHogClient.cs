@@ -163,7 +163,11 @@ public sealed partial class MailHogClient(IHttpClientFactory httpClientFactory, 
             var current = value[i];
             if (current != '=')
             {
-                bytes.AddRange(Encoding.UTF8.GetBytes([current]));
+                // Typed rather than inline: an untyped collection expression makes
+                // Encoding.GetBytes ambiguous between its char[] and string overloads
+                // under the C# 12 compiler.
+                char[] single = [current];
+                bytes.AddRange(Encoding.UTF8.GetBytes(single));
                 continue;
             }
 
