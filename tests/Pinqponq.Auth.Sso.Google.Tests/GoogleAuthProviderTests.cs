@@ -28,6 +28,31 @@ public sealed class GoogleAuthProviderTests
     }
 
     [Fact]
+    public void RequireEmailVerified_defaults_to_true()
+    {
+        new GoogleAuthOptions().RequireEmailVerified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RequireNonce_defaults_to_false()
+    {
+        new GoogleAuthOptions().RequireNonce.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RequireNonce_true_with_empty_nonce_fails()
+    {
+        var options = new GoogleAuthOptions { RequireNonce = true };
+        options.ClientIds.Add("client.apps.googleusercontent.com");
+        var provider = new GoogleAuthProvider(Options.Create(options));
+
+        var result = await provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken("x.y.z"));
+
+        result.Succeeded.Should().BeFalse();
+        result.Error.Should().Be("Invalid Google id_token.");
+    }
+
+    [Fact]
     public async Task Empty_id_token_fails()
     {
         var result = await Create("client.apps.googleusercontent.com")
@@ -45,13 +70,35 @@ public sealed class GoogleAuthProviderTests
     }
 
     [Fact]
+    public async Task Cancelled_token_throws()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var act = () => Create("client.apps.googleusercontent.com")
+            .AuthenticateAsync(ExternalAuthRequest.FromIdToken("x.y.z"), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task Malformed_token_fails()
     {
         var result = await Create("client.apps.googleusercontent.com")
             .AuthenticateAsync(ExternalAuthRequest.FromIdToken("not.a.valid.jwt"));
 
         result.Succeeded.Should().BeFalse();
-        result.Error.Should().Contain("Invalid Google id_token");
+        result.Error.Should().Be("Invalid Google id_token.");
+    }
+
+    [Fact]
+    public async Task Authorization_code_without_id_token_fails_explicitly()
+    {
+        var result = await Create("client.apps.googleusercontent.com")
+            .AuthenticateAsync(ExternalAuthRequest.FromAuthorizationCode("code", "https://app/cb"));
+
+        result.Succeeded.Should().BeFalse();
+        result.Error.Should().Contain("not supported");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Pinqponq.Auth.Sso.Abstractions;
 
 namespace Pinqponq.Auth.Sso.Google.DependencyInjection;
@@ -19,7 +20,12 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<GoogleAuthOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<GoogleAuthOptions>, GoogleAuthOptionsValidator>());
+
         services.TryAddSingleton<IExternalAuthProvider, GoogleAuthProvider>();
         return services;
     }

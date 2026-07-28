@@ -14,9 +14,14 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddSingleton<IOtpStore, InMemoryOtpStore>();
         services.AddSingleton<Pinqponq.Sms.ISmsSender, CapturingSmsSender>();
         services.AddSingleton<Pinqponq.Mail.IEmailSender, CapturingEmailSender>();
-        services.AddPinqponqOtp(o => o.Ttl = TimeSpan.FromMinutes(2));
+        services.AddPinqponqOtp(o =>
+        {
+            o.Ttl = TimeSpan.FromMinutes(2);
+            o.HashPepper = "0123456789abcdef0123456789abcdef";
+        });
 
         using var sp = services.BuildServiceProvider();
         sp.GetService<IOtpService>().Should().NotBeNull();
+        sp.GetService<IOtpSendRateLimiter>().Should().BeOfType<AllowAllOtpSendRateLimiter>();
     }
 }

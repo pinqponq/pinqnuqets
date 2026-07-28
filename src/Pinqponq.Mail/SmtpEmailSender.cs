@@ -46,6 +46,11 @@ public sealed class SmtpEmailSender : IEmailSender
         };
 
         AddRecipients(mailMessage.To, message.To);
+        if (mailMessage.To.Count == 0)
+        {
+            throw new ArgumentException("Recipient email address is required.", nameof(message));
+        }
+
         if (!string.IsNullOrWhiteSpace(message.Cc))
         {
             AddRecipients(mailMessage.CC, message.Cc);
@@ -58,21 +63,54 @@ public sealed class SmtpEmailSender : IEmailSender
 
         if (message.Attachments is { Count: > 0 })
         {
+            if (string.IsNullOrWhiteSpace(_options.AttachmentRoot))
+            {
+                throw new ArgumentException(
+                    $"{nameof(SmtpOptions.AttachmentRoot)} must be configured when sending attachments.",
+                    nameof(message));
+            }
+
+            var root = Path.GetFullPath(_options.AttachmentRoot);
+            var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                             + Path.DirectorySeparatorChar;
+
             foreach (var attachmentPath in message.Attachments)
             {
-                if (File.Exists(attachmentPath))
+                if (string.IsNullOrWhiteSpace(attachmentPath))
                 {
-                    mailMessage.Attachments.Add(new Attachment(attachmentPath));
+                    throw new ArgumentException("Attachment path must not be empty.", nameof(message));
                 }
+
+                var resolvedPath = Path.GetFullPath(attachmentPath);
+                if (!resolvedPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(resolvedPath, root, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(
+                        $"Attachment path is outside the configured root: '{attachmentPath}'.",
+                        nameof(message));
+                }
+
+                if (!File.Exists(resolvedPath))
+                {
+                    throw new ArgumentException(
+                        $"Attachment file was not found: '{attachmentPath}'.",
+                        nameof(message));
+                }
+
+                mailMessage.Attachments.Add(new Attachment(resolvedPath));
             }
         }
 
         using var smtpClient = new SmtpClient(_options.SmtpHost)
         {
             Port = _options.SmtpPort,
-            Credentials = new NetworkCredential(_options.SmtpUsername, _options.SmtpPassword),
             EnableSsl = _options.EnableSsl,
         };
+
+        if (!string.IsNullOrWhiteSpace(_options.SmtpUsername))
+        {
+            smtpClient.Credentials = new NetworkCredential(_options.SmtpUsername, _options.SmtpPassword);
+        }
 
         await smtpClient.SendMailAsync(mailMessage, cancellationToken).ConfigureAwait(false);
     }

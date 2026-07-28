@@ -26,8 +26,9 @@ public sealed class RedisCacheService : ICacheService
     public async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
+        cancellationToken.ThrowIfCancellationRequested();
         var value = await Database.StringGetAsync(Prefixed(key)).ConfigureAwait(false);
-        return value.IsNullOrEmpty ? null : value.ToString();
+        return value.IsNull ? null : value.ToString();
     }
 
     /// <inheritdoc />
@@ -39,8 +40,8 @@ public sealed class RedisCacheService : ICacheService
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(value);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        // StackExchange.Redis 2.10+ takes Expiration; TimeSpan? has no implicit conversion.
         var ttl = expiry ?? _options.DefaultTtl;
         return ttl is TimeSpan duration
             ? Database.StringSetAsync(Prefixed(key), value, duration)
@@ -48,10 +49,26 @@ public sealed class RedisCacheService : ICacheService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Returns <see langword="default"/> when the key is missing or the stored payload
+    /// cannot be deserialized as <typeparamref name="T"/>.
+    /// </remarks>
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         var json = await GetStringAsync(key, cancellationToken).ConfigureAwait(false);
-        return json is null ? default : JsonSerializer.Deserialize<T>(json);
+        if (json is null)
+        {
+            return default;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     /// <inheritdoc />
@@ -70,6 +87,7 @@ public sealed class RedisCacheService : ICacheService
     public Task<bool> RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
+        cancellationToken.ThrowIfCancellationRequested();
         return Database.KeyDeleteAsync(Prefixed(key));
     }
 
@@ -77,6 +95,7 @@ public sealed class RedisCacheService : ICacheService
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
+        cancellationToken.ThrowIfCancellationRequested();
         return Database.KeyExistsAsync(Prefixed(key));
     }
 

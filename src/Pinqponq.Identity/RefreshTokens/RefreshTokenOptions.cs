@@ -13,4 +13,12 @@ public sealed class RefreshTokenOptions
     /// Defaults to 32 (256 bits of entropy).
     /// </summary>
     public int TokenByteLength { get; set; } = 32;
+
+    /// <summary>
+    /// After a token is rotated, presenting it again within this window does not
+    /// revoke the whole family (covers concurrent double-submit). After the grace
+    /// expires, reuse always revokes every token for the subject.
+    /// Defaults to 5 seconds.
+    /// </summary>
+    public TimeSpan ReuseDetectionGrace { get; set; } = TimeSpan.FromSeconds(5);
 }

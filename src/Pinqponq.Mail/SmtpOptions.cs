@@ -25,4 +25,10 @@ public sealed class SmtpOptions
 
     /// <summary>Whether to use SSL/TLS. Defaults to true.</summary>
     public bool EnableSsl { get; set; } = true;
+
+    /// <summary>
+    /// Optional root directory that attachment paths must resolve under.
+    /// When set, paths outside this root are rejected.
+    /// </summary>
+    public string? AttachmentRoot { get; set; }
 }

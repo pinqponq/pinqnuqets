@@ -11,7 +11,10 @@ public interface ICacheService
     /// <summary>Sets a raw string value with an optional expiry (falls back to the configured default).</summary>
     Task SetStringAsync(string key, string value, TimeSpan? expiry = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Gets and deserializes a value, or default when the key is absent.</summary>
+    /// <summary>
+    /// Gets and deserializes a value, or default when the key is absent or the payload
+    /// is not valid JSON for <typeparamref name="T"/>.
+    /// </summary>
     Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
 
     /// <summary>Serializes and sets a value with an optional expiry.</summary>

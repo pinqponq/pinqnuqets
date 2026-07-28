@@ -10,11 +10,52 @@ public sealed class TotpServiceTests
     // RFC 6238 Appendix B test seed: ASCII "12345678901234567890" in Base32.
     private const string Rfc6238Sha1Secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
 
-    private static TotpService Create(Action<TotpOptions>? configure = null)
+    private static TotpService Create(
+        Action<TotpOptions>? configure = null,
+        ITotpReplayStore? replayStore = null)
     {
         var options = new TotpOptions();
         configure?.Invoke(options);
-        return new TotpService(Options.Create(options));
+        return new TotpService(Options.Create(options), replayStore ?? new AllowAllReplayStore());
+    }
+
+    [Fact]
+    public async Task ValidateAsync_rejects_replay_of_same_counter()
+    {
+        var store = new InMemoryReplayStore();
+        var totp = Create(replayStore: store);
+        var secret = totp.GenerateSecret();
+        var now = DateTimeOffset.UtcNow;
+        var code = totp.ComputeCode(secret, now);
+
+        (await totp.ValidateAsync(secret, code, "user-1", now)).Should().BeTrue();
+        (await totp.ValidateAsync(secret, code, "user-1", now)).Should().BeFalse();
+        (await totp.ValidateAsync(secret, code, "user-2", now)).Should().BeTrue();
+    }
+
+    private sealed class AllowAllReplayStore : ITotpReplayStore
+    {
+        public Task<bool> TryAcceptAsync(
+            string subjectKey,
+            long counter,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+    }
+
+    private sealed class InMemoryReplayStore : ITotpReplayStore
+    {
+        private readonly HashSet<(string Subject, long Counter)> _accepted = [];
+
+        public Task<bool> TryAcceptAsync(
+            string subjectKey,
+            long counter,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_accepted)
+            {
+                return Task.FromResult(_accepted.Add((subjectKey, counter)));
+            }
+        }
     }
 
     [Theory]

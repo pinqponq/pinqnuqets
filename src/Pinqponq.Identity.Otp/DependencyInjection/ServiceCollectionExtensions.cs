@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Identity.Otp.DependencyInjection;
 
@@ -19,11 +20,17 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        var options = services.AddOptions<OtpOptions>();
         if (configure is not null)
         {
-            services.Configure(configure);
+            options.Configure(configure);
         }
 
+        options.ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<OtpOptions>, OtpOptionsValidator>());
+
+        services.TryAddSingleton<IOtpSendRateLimiter, AllowAllOtpSendRateLimiter>();
         services.TryAddScoped<IOtpService, OtpService>();
         return services;
     }

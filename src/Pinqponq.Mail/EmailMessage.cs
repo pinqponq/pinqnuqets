@@ -24,6 +24,6 @@ public sealed class EmailMessage
     /// <summary>Whether the body is HTML. Defaults to true.</summary>
     public bool IsBodyHtml { get; set; } = true;
 
-    /// <summary>Optional file paths to attach; missing files are skipped.</summary>
+    /// <summary>Optional file paths to attach; missing paths cause <see cref="ArgumentException"/>.</summary>
     public List<string>? Attachments { get; set; }
 }

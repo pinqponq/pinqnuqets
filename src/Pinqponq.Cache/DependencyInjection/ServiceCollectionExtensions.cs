@@ -22,12 +22,21 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<RedisOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<RedisOptions>, RedisOptionsValidator>());
 
         services.TryAddSingleton<IConnectionMultiplexer>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<RedisOptions>>().Value;
-            return ConnectionMultiplexer.Connect(options.ConnectionString);
+            var configuration = ConfigurationOptions.Parse(options.ConnectionString);
+            configuration.AbortOnConnectFail = false;
+            return ConnectionMultiplexer.ConnectAsync(configuration)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         });
 
         services.TryAddSingleton<ICacheService, RedisCacheService>();

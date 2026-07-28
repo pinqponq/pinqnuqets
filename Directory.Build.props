@@ -24,8 +24,10 @@
     <PackageProjectUrl>https://github.com/pinqponq/pinqnuqets</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>jwt;auth;identity;refresh-token;password-hashing;pbkdf2;redis;rabbitmq;otp;totp</PackageTags>
-    <Version>0.1.0</Version>
+    <!-- Tags shared by every package; each project appends its own via $(PackageTags). -->
+    <PackageTags>pinqponq;dotnet;backend;infrastructure</PackageTags>
+    <PackageReleaseNotes>https://github.com/pinqponq/pinqnuqets/blob/master/CHANGELOG.md</PackageReleaseNotes>
+    <Version>0.2.1</Version>
   </PropertyGroup>
 
 </Project>

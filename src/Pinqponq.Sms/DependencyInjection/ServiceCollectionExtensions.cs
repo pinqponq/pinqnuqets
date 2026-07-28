@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Sms.DependencyInjection;
 
@@ -18,8 +19,18 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
-        services.AddHttpClient(NetGsmSmsSender.HttpClientName);
+        services.AddOptions<SmsOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<SmsOptions>, SmsOptionsValidator>());
+
+        services.AddHttpClient(NetGsmSmsSender.HttpClientName)
+            .ConfigureHttpClient((sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<SmsOptions>>().Value;
+                client.Timeout = options.HttpTimeout;
+            });
         services.TryAddScoped<ISmsSender, NetGsmSmsSender>();
         return services;
     }

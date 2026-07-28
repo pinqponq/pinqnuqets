@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Sms</PackageId>
+    <Title>Pinqponq SMS</Title>
     <Description>SMS gönderim davranışını (NetGSM) sarmalayan gönderim paketi. Standart ISmsSender arayüzü.</Description>
+    <PackageTags>$(PackageTags);sms;netgsm;messaging;notification;sms-sender</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

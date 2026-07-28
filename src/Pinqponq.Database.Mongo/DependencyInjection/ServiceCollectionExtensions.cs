@@ -22,7 +22,11 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<MongoOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<MongoOptions>, MongoOptionsValidator>());
 
         services.TryAddSingleton<IMongoClient>(sp =>
         {

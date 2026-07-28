@@ -36,15 +36,41 @@ public sealed class RefreshTokenService : IRefreshTokenService
         string presentedToken,
         CancellationToken cancellationToken = default)
     {
-        var existing = await GetActiveOrThrowAsync(presentedToken, cancellationToken).ConfigureAwait(false);
+        ArgumentException.ThrowIfNullOrEmpty(presentedToken);
 
-        var replacement = await CreateAndStoreAsync(existing.Subject, cancellationToken).ConfigureAwait(false);
+        var hash = Hash(presentedToken);
+        var now = DateTimeOffset.UtcNow;
 
-        existing.RevokedAt = DateTimeOffset.UtcNow;
-        existing.ReplacedByTokenHash = replacement.Descriptor.TokenHash;
-        await _store.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
+        if (!await _store.TryRevokeActiveAsync(hash, now, cancellationToken).ConfigureAwait(false))
+        {
+            await RejectInactiveOrUnknownAsync(hash, now, cancellationToken).ConfigureAwait(false);
+        }
 
-        return replacement;
+        var existing = await _store.FindByHashAsync(hash, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidRefreshTokenException();
+
+        var raw = GenerateRawToken(_options.TokenByteLength);
+        var replacementEntity = new RefreshToken
+        {
+            TokenHash = Hash(raw),
+            Subject = existing.Subject,
+            CreatedAt = now,
+            ExpiresAt = now.Add(_options.Lifetime),
+        };
+
+        try
+        {
+            await _store.CompleteRotationAsync(hash, replacementEntity, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            await _store.RevokeAllForSubjectAsync(existing.Subject, CancellationToken.None)
+                .ConfigureAwait(false);
+            throw;
+        }
+
+        return new RefreshTokenResult { Token = raw, Descriptor = replacementEntity };
     }
 
     /// <inheritdoc />
@@ -52,27 +78,36 @@ public sealed class RefreshTokenService : IRefreshTokenService
         string presentedToken,
         CancellationToken cancellationToken = default)
     {
-        var existing = await GetActiveOrThrowAsync(presentedToken, cancellationToken).ConfigureAwait(false);
-
-        existing.RevokedAt = DateTimeOffset.UtcNow;
-        await _store.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<RefreshToken> GetActiveOrThrowAsync(
-        string presentedToken,
-        CancellationToken cancellationToken)
-    {
         ArgumentException.ThrowIfNullOrEmpty(presentedToken);
 
         var hash = Hash(presentedToken);
+        var now = DateTimeOffset.UtcNow;
+
+        if (!await _store.TryRevokeActiveAsync(hash, now, cancellationToken).ConfigureAwait(false))
+        {
+            await RejectInactiveOrUnknownAsync(hash, now, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RejectInactiveOrUnknownAsync(
+        string hash,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
         var token = await _store.FindByHashAsync(hash, cancellationToken).ConfigureAwait(false);
 
-        if (token is null || !token.IsActive(DateTimeOffset.UtcNow))
+        // Reuse of a rotated token after the grace window → compromise: revoke family.
+        // Within the grace window, concurrent double-submit must not kill the replacement.
+        if (token is not null
+            && token.RevokedAt is not null
+            && !string.IsNullOrEmpty(token.ReplacedByTokenHash)
+            && now - token.RevokedAt.Value > _options.ReuseDetectionGrace)
         {
-            throw new InvalidRefreshTokenException();
+            await _store.RevokeAllForSubjectAsync(token.Subject, cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        return token;
+        throw new InvalidRefreshTokenException();
     }
 
     private async Task<RefreshTokenResult> CreateAndStoreAsync(

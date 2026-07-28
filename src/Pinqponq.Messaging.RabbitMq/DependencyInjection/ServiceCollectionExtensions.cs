@@ -21,7 +21,12 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<RabbitMqOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>());
+
         services.TryAddSingleton<IRabbitMqConnection, RabbitMqConnection>();
         services.TryAddSingleton<IMessagePublisher, RabbitMqPublisher>();
         return services;

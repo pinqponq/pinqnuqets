@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using global::Google.Apis.Auth;
 using Microsoft.Extensions.Options;
 using Pinqponq.Auth.Sso.Abstractions;
@@ -31,22 +33,58 @@ public sealed class GoogleAuthProvider : IExternalAuthProvider
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!string.IsNullOrWhiteSpace(request.AuthorizationCode)
+            && string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            return ExternalAuthResult.Failure(
+                "Google authorization-code exchange is not supported; present an id_token.");
+        }
 
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
             return ExternalAuthResult.Failure("An id_token is required for Google authentication.");
         }
 
-        var settings = new GoogleJsonWebSignature.ValidationSettings();
-        if (_options.ClientIds.Count > 0)
+        if (_options.ClientIds.Count == 0)
         {
-            settings.Audience = _options.ClientIds;
+            return ExternalAuthResult.Failure(
+                "GoogleAuthOptions.ClientIds must contain at least one audience.");
+        }
+
+        if (_options.RequireNonce && string.IsNullOrEmpty(request.Nonce))
+        {
+            return ExternalAuthResult.Failure("Invalid Google id_token.");
+        }
+
+        var settings = new GoogleJsonWebSignature.ValidationSettings
+        {
+            Audience = _options.ClientIds,
+        };
+
+        if (!string.IsNullOrWhiteSpace(_options.HostedDomain))
+        {
+            settings.HostedDomain = _options.HostedDomain;
         }
 
         try
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings)
                 .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!string.IsNullOrEmpty(request.Nonce)
+                && !FixedTimeEquals(request.Nonce, payload.Nonce))
+            {
+                return ExternalAuthResult.Failure("Invalid Google id_token.");
+            }
+
+            if (_options.RequireEmailVerified && !payload.EmailVerified)
+            {
+                return ExternalAuthResult.Failure("Invalid Google id_token.");
+            }
 
             var user = new ExternalUserInfo
             {
@@ -62,9 +100,21 @@ public sealed class GoogleAuthProvider : IExternalAuthProvider
 
             return ExternalAuthResult.Success(user);
         }
-        catch (InvalidJwtException ex)
+        catch (InvalidJwtException)
         {
-            return ExternalAuthResult.Failure($"Invalid Google id_token: {ex.Message}");
+            return ExternalAuthResult.Failure("Invalid Google id_token.");
         }
+    }
+
+    private static bool FixedTimeEquals(string expected, string? actual)
+    {
+        if (actual is null)
+        {
+            return false;
+        }
+
+        var a = Encoding.UTF8.GetBytes(expected);
+        var b = Encoding.UTF8.GetBytes(actual);
+        return a.Length == b.Length && CryptographicOperations.FixedTimeEquals(a, b);
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Mail.DependencyInjection;
 
@@ -17,7 +18,12 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<SmtpOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<SmtpOptions>, SmtpOptionsValidator>());
+
         services.TryAddScoped<IEmailSender, SmtpEmailSender>();
         return services;
     }
@@ -39,7 +45,12 @@ public static class ServiceCollectionExtensions
                 $"Configuration section '{sectionName}' not found. Add SMTP configuration to appsettings.");
         }
 
-        services.Configure<SmtpOptions>(section);
+        services.AddOptions<SmtpOptions>()
+            .Bind(section)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<SmtpOptions>, SmtpOptionsValidator>());
+
         services.TryAddScoped<IEmailSender, SmtpEmailSender>();
         return services;
     }

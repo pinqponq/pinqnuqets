@@ -15,8 +15,8 @@ public sealed class ErrorHandlingOptions
     public bool IncludeExceptionMessage { get; set; }
 
     /// <summary>
-    /// Optional override mapping an exception to an HTTP status code. Return null to fall
-    /// back to the built-in mapping.
+    /// Optional override mapping an exception to both an HTTP status code and a response
+    /// code. Return <see langword="null"/> to fall back to the built-in mapping.
     /// </summary>
-    public Func<Exception, int?>? StatusCodeResolver { get; set; }
+    public Func<Exception, ExceptionStatusMapping?>? StatusMappingResolver { get; set; }
 }

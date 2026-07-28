@@ -8,17 +8,24 @@ namespace Pinqponq.Auth.Totp;
 /// <summary>
 /// Default RFC 6238 implementation of <see cref="ITotpService"/>.
 /// </summary>
+/// <remarks>
+/// Use <see cref="ValidateAsync"/> with an application-supplied <see cref="ITotpReplayStore"/>
+/// to reject replay of the same code within a time step. Sync <see cref="Validate"/> is
+/// crypto-only and does not consult the store.
+/// </remarks>
 public sealed class TotpService : ITotpService
 {
     private static readonly DateTimeOffset UnixEpoch = DateTimeOffset.UnixEpoch;
 
     private readonly TotpOptions _options;
+    private readonly ITotpReplayStore _replayStore;
 
-    /// <summary>Creates the service from configured options.</summary>
-    public TotpService(IOptions<TotpOptions> options)
+    /// <summary>Creates the service from configured options and a replay store.</summary>
+    public TotpService(IOptions<TotpOptions> options, ITotpReplayStore replayStore)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
+        _replayStore = replayStore ?? throw new ArgumentNullException(nameof(replayStore));
     }
 
     /// <inheritdoc />
@@ -56,11 +63,35 @@ public sealed class TotpService : ITotpService
     }
 
     /// <inheritdoc />
-    public bool Validate(string secret, string code, DateTimeOffset? timestamp = null)
+    public bool Validate(string secret, string code, DateTimeOffset? timestamp = null) =>
+        TryMatchCounter(secret, code, timestamp) is not null;
+
+    /// <inheritdoc />
+    public async Task<bool> ValidateAsync(
+        string secret,
+        string code,
+        string subjectKey,
+        DateTimeOffset? timestamp = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(subjectKey);
+
+        var counter = TryMatchCounter(secret, code, timestamp);
+        if (counter is null)
+        {
+            return false;
+        }
+
+        return await _replayStore
+            .TryAcceptAsync(subjectKey, counter.Value, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private long? TryMatchCounter(string secret, string code, DateTimeOffset? timestamp)
     {
         if (string.IsNullOrEmpty(secret) || string.IsNullOrWhiteSpace(code))
         {
-            return false;
+            return null;
         }
 
         var key = Base32.Decode(secret);
@@ -69,14 +100,15 @@ public sealed class TotpService : ITotpService
 
         for (var offset = -window; offset <= window; offset++)
         {
-            var candidate = ComputeCodeForCounter(key, current + offset);
+            var candidateCounter = current + offset;
+            var candidate = ComputeCodeForCounter(key, candidateCounter);
             if (FixedTimeEquals(candidate, code.Trim()))
             {
-                return true;
+                return candidateCounter;
             }
         }
 
-        return false;
+        return null;
     }
 
     private long CounterFor(DateTimeOffset timestamp)
@@ -138,7 +170,7 @@ public sealed class TotpService : ITotpService
         TotpAlgorithm.Sha1 => "SHA1",
         TotpAlgorithm.Sha256 => "SHA256",
         TotpAlgorithm.Sha512 => "SHA512",
-        _ => "SHA1",
+        _ => throw new InvalidOperationException($"Unsupported algorithm '{algorithm}'."),
     };
 
     private static bool FixedTimeEquals(string a, string b)

@@ -13,12 +13,17 @@ public sealed class JwtTokenValidator : IJwtTokenValidator
 {
     private readonly JsonWebTokenHandler _handler = new();
     private readonly TokenValidationParameters _parameters;
+    private readonly IAccessTokenRevocationStore? _revocationStore;
 
     /// <summary>Creates the validator from configured options and a key resolver.</summary>
-    public JwtTokenValidator(IOptions<JwtOptions> options, JwtSigningKeyResolver keyResolver)
+    public JwtTokenValidator(
+        IOptions<JwtOptions> options,
+        JwtSigningKeyResolver keyResolver,
+        IAccessTokenRevocationStore? revocationStore = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(keyResolver);
+        _revocationStore = revocationStore;
 
         var o = options.Value;
         _parameters = new TokenValidationParameters
@@ -51,6 +56,17 @@ public sealed class JwtTokenValidator : IJwtTokenValidator
         if (!result.IsValid || result.ClaimsIdentity is null)
         {
             return null;
+        }
+
+        if (_revocationStore is not null)
+        {
+            var jti = result.ClaimsIdentity.FindFirst(JwtRegisteredClaimNames.Jti)?.Value
+                ?? result.ClaimsIdentity.FindFirst("jti")?.Value;
+            if (!string.IsNullOrEmpty(jti)
+                && await _revocationStore.IsRevokedAsync(jti, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
         }
 
         return new ClaimsPrincipal(result.ClaimsIdentity);

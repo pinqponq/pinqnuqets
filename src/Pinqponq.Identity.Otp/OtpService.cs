@@ -17,6 +17,7 @@ public sealed class OtpService : IOtpService
     private readonly IOtpStore _store;
     private readonly ISmsSender _smsSender;
     private readonly IEmailSender _emailSender;
+    private readonly IOtpSendRateLimiter _rateLimiter;
     private readonly OtpOptions _options;
 
     /// <summary>Creates the service from its store, channel senders and options.</summary>
@@ -24,11 +25,13 @@ public sealed class OtpService : IOtpService
         IOtpStore store,
         ISmsSender smsSender,
         IEmailSender emailSender,
+        IOtpSendRateLimiter rateLimiter,
         IOptions<OtpOptions> options)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _smsSender = smsSender ?? throw new ArgumentNullException(nameof(smsSender));
         _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
+        _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
     }
@@ -45,10 +48,22 @@ public sealed class OtpService : IOtpService
 
         var code = GenerateNumericCode(_options.CodeLength);
         var now = DateTimeOffset.UtcNow;
+        var key = BuildKey(recipient, purpose);
+
+        if (_options.MinSendInterval > TimeSpan.Zero)
+        {
+            var acquired = await _rateLimiter
+                .TryAcquireAsync(key, _options.MinSendInterval, cancellationToken)
+                .ConfigureAwait(false);
+            if (!acquired)
+            {
+                throw new OtpSendRateLimitedException();
+            }
+        }
 
         var record = new OtpRecord
         {
-            Key = BuildKey(recipient, purpose),
+            Key = key,
             CodeHash = Hash(code, recipient),
             Recipient = recipient,
             CreatedAt = now,
@@ -57,11 +72,22 @@ public sealed class OtpService : IOtpService
         };
 
         await _store.SaveAsync(record, cancellationToken).ConfigureAwait(false);
-        await SendAsync(recipient, code, channel, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await SendAsync(recipient, code, channel, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Delivery failed — remove only this code (CAS) so a concurrent generate is kept.
+            // Use CancellationToken.None so a cancelled send still rolls back.
+            await _store.TryRemoveAsync(key, record.CodeHash, CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <inheritdoc />
-    public async Task<OtpVerifyStatus> VerifyAsync(
+    public Task<OtpVerifyStatus> VerifyAsync(
         string recipient,
         string code,
         string purpose = "default",
@@ -71,33 +97,17 @@ public sealed class OtpService : IOtpService
         ArgumentException.ThrowIfNullOrEmpty(purpose);
 
         var key = BuildKey(recipient, purpose);
-        var record = await _store.FindAsync(key, cancellationToken).ConfigureAwait(false);
-        if (record is null)
-        {
-            return OtpVerifyStatus.NotFound;
-        }
+        // Whitespace/null codes never match a real HMAC/SHA digest.
+        var codeHash = string.IsNullOrWhiteSpace(code)
+            ? string.Empty
+            : Hash(code.Trim(), recipient);
 
-        if (DateTimeOffset.UtcNow >= record.ExpiresAt)
-        {
-            await _store.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-            return OtpVerifyStatus.Expired;
-        }
-
-        if (record.Attempts >= _options.MaxAttempts)
-        {
-            await _store.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-            return OtpVerifyStatus.TooManyAttempts;
-        }
-
-        if (!FixedTimeEquals(record.CodeHash, Hash(code, recipient)))
-        {
-            record.Attempts++;
-            await _store.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
-            return OtpVerifyStatus.Mismatch;
-        }
-
-        await _store.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-        return OtpVerifyStatus.Success;
+        return _store.TryConsumeAsync(
+            key,
+            codeHash,
+            _options.MaxAttempts,
+            DateTimeOffset.UtcNow,
+            cancellationToken);
     }
 
     private Task SendAsync(string recipient, string code, OtpChannel channel, CancellationToken cancellationToken)
@@ -120,8 +130,21 @@ public sealed class OtpService : IOtpService
                 cancellationToken);
     }
 
-    private static string BuildKey(string recipient, string purpose) =>
-        $"otp:{purpose}:{recipient.Trim().ToLowerInvariant()}";
+    private string BuildKey(string recipient, string purpose)
+    {
+        var material = $"{purpose}\0{recipient.Trim().ToLowerInvariant()}";
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(material));
+        return "otp:" + Convert.ToHexString(digest);
+    }
+
+    private string Hash(string code, string recipient)
+    {
+        var normalized = $"{recipient.Trim().ToLowerInvariant()}:{code}";
+        var key = Encoding.UTF8.GetBytes(_options.HashPepper);
+        var data = Encoding.UTF8.GetBytes(normalized);
+        var digest = HMACSHA256.HashData(key, data);
+        return Convert.ToHexString(digest);
+    }
 
     private static bool IsEmail(string recipient) => recipient.Contains('@', StringComparison.Ordinal);
 
@@ -130,6 +153,11 @@ public sealed class OtpService : IOtpService
 
     private static string GenerateNumericCode(int length)
     {
+        if (length <= 0)
+        {
+            throw new InvalidOperationException($"{nameof(OtpOptions.CodeLength)} must be greater than zero.");
+        }
+
         var builder = new StringBuilder(length);
         for (var i = 0; i < length; i++)
         {
@@ -138,13 +166,4 @@ public sealed class OtpService : IOtpService
 
         return builder.ToString();
     }
-
-    private static string Hash(string code, string recipient)
-    {
-        var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"{recipient.Trim().ToLowerInvariant()}:{code}"));
-        return Convert.ToHexString(digest);
-    }
-
-    private static bool FixedTimeEquals(string a, string b) =>
-        CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(a), Encoding.ASCII.GetBytes(b));
 }

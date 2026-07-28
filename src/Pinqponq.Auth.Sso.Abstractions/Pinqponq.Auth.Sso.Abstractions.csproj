@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Auth.Sso.Abstractions</PackageId>
+    <Title>Pinqponq SSO Abstractions</Title>
     <Description>Dış kimlik sağlayıcıların (Google, vb.) ortak sözleşmesi: IExternalAuthProvider ve taşıdığı modeller. Sağlayıcı implementasyon paketlerinin temeli.</Description>
+    <PackageTags>$(PackageTags);sso;oauth;oidc;authentication;external-auth;abstractions;auth</PackageTags>
   </PropertyGroup>
 
 </Project>

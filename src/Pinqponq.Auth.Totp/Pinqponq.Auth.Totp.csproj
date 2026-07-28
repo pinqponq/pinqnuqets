@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Auth.Totp</PackageId>
+    <Title>Pinqponq TOTP</Title>
     <Description>RFC 6238 TOTP tabanlı 2FA: secret üretimi, otpauth:// provisioning URI ve kod doğrulama. Google/Microsoft Authenticator uyumlu.</Description>
+    <PackageTags>$(PackageTags);totp;2fa;mfa;rfc6238;authenticator;otp;auth;security</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

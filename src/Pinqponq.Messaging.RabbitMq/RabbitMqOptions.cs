@@ -28,4 +28,16 @@ public sealed class RabbitMqOptions
 
     /// <summary>Base delay for exponential backoff between publish retries. Defaults to 200ms.</summary>
     public TimeSpan PublishRetryBaseDelay { get; set; } = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// When <see langword="true"/>, the connection uses TLS (AMQPS). Defaults to
+    /// <see langword="false"/>. Typical TLS port is 5671.
+    /// </summary>
+    public bool UseSsl { get; set; }
+
+    /// <summary>
+    /// Optional TLS server name for certificate validation. When empty, the broker
+    /// <see cref="HostName"/> is used.
+    /// </summary>
+    public string? SslServerName { get; set; }
 }

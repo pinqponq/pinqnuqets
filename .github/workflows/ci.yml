@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -40,6 +40,12 @@ jobs:
           --collect:"XPlat Code Coverage"
           --results-directory ./TestResults
           --logger "trx;LogFileName=test-results.trx"
+        env:
+          # Integration tests use Testcontainers; fail fast if Docker is unavailable.
+          DOCKER_HOST: unix:///var/run/docker.sock
+
+      - name: Pack
+        run: dotnet pack Pinqponq.Nugets.sln -c Release --no-build -o ./artifacts/nupkg
 
       - name: Upload coverage
         if: always()
@@ -50,3 +56,13 @@ jobs:
             ./TestResults/**/coverage.cobertura.xml
             ./TestResults/**/*.trx
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload packages
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ./artifacts/nupkg/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

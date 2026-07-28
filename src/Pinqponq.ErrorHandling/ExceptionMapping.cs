@@ -27,8 +27,11 @@ internal static class ExceptionMapping
         StatusCodes.Status401Unauthorized => "Authentication is required.",
         StatusCodes.Status403Forbidden => "Access is denied.",
         StatusCodes.Status404NotFound => "The requested resource was not found.",
+        StatusCodes.Status409Conflict => "The request conflicts with the current state.",
+        StatusCodes.Status422UnprocessableEntity => "The request could not be processed.",
         StatusCodes.Status501NotImplemented => "The requested operation is not implemented.",
         StatusCodes.Status504GatewayTimeout => "The operation timed out.",
+        _ when statusCode is >= 400 and < 500 => "The request was invalid.",
         _ => "An unexpected error occurred.",
     };
 }

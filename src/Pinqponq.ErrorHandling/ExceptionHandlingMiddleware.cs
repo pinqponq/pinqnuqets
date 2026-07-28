@@ -43,7 +43,6 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            // Client disconnected — nothing to return.
             if (!context.Response.HasStarted)
             {
                 context.Response.StatusCode = ClientClosedRequestStatusCode;
@@ -57,52 +56,69 @@ public sealed class ExceptionHandlingMiddleware
 
     private async Task HandleAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, responseCode) = Resolve(exception);
-        var correlationId = ResolveCorrelationId(context);
-
-        // Structured record: field names match what Pinqloq expects (traceId + correlationId).
-        var isServerError = statusCode >= StatusCodes.Status500InternalServerError;
-        _logger.Log(
-            isServerError ? LogLevel.Error : LogLevel.Warning,
-            exception,
-            "Request failed. {ResponseCode} {StatusCode} {Method} {Path} traceId={TraceId} correlationId={CorrelationId}",
-            responseCode,
-            statusCode,
-            context.Request.Method,
-            context.Request.Path.Value,
-            context.TraceIdentifier,
-            correlationId);
-
-        if (context.Response.HasStarted)
+        try
         {
-            return;
+            var (statusCode, responseCode) = Resolve(exception);
+            var correlationId = ResolveCorrelationId(context);
+
+            var isServerError = statusCode >= StatusCodes.Status500InternalServerError;
+            _logger.Log(
+                isServerError ? LogLevel.Error : LogLevel.Warning,
+                exception,
+                "Request failed. {ResponseCode} {StatusCode} {Method} {Path} traceId={TraceId} correlationId={CorrelationId}",
+                responseCode,
+                statusCode,
+                context.Request.Method,
+                context.Request.Path.Value,
+                context.TraceIdentifier,
+                correlationId);
+
+            if (context.Response.HasStarted)
+            {
+                return;
+            }
+
+            var body = new ErrorResponse
+            {
+                Status = false,
+                StatusCode = statusCode,
+                ResponseCode = responseCode,
+                Message = _options.IncludeExceptionMessage
+                    ? exception.Message
+                    : ExceptionMapping.DefaultMessage(statusCode),
+                TraceId = correlationId,
+            };
+
+            context.Response.Clear();
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = statusCode;
+            await context.Response.WriteAsync(JsonSerializer.Serialize(body, JsonOptions), CancellationToken.None)
+                .ConfigureAwait(false);
         }
-
-        var body = new ErrorResponse
+        catch (Exception writeEx)
         {
-            Status = false,
-            StatusCode = statusCode,
-            ResponseCode = responseCode,
-            Message = _options.IncludeExceptionMessage
-                ? exception.Message
-                : ExceptionMapping.DefaultMessage(statusCode),
-            TraceId = correlationId,
-        };
-
-        context.Response.Clear();
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = statusCode;
-        await context.Response.WriteAsync(JsonSerializer.Serialize(body, JsonOptions), context.RequestAborted)
-            .ConfigureAwait(false);
+            _logger.LogError(writeEx, "Failed to write the error response.");
+        }
     }
 
     private (int StatusCode, string ResponseCode) Resolve(Exception exception)
     {
-        var overridden = _options.StatusCodeResolver?.Invoke(exception);
-        if (overridden is int status)
+        if (exception is OperationCanceledException)
         {
-            var (_, code) = ExceptionMapping.Map(exception);
-            return (status, code);
+            return (StatusCodes.Status504GatewayTimeout, "timeout");
+        }
+
+        try
+        {
+            var overridden = _options.StatusMappingResolver?.Invoke(exception);
+            if (overridden is ExceptionStatusMapping mapping)
+            {
+                return (mapping.StatusCode, mapping.ResponseCode);
+            }
+        }
+        catch (Exception resolverEx)
+        {
+            _logger.LogError(resolverEx, "StatusMappingResolver threw; falling back to default mapping.");
         }
 
         return ExceptionMapping.Map(exception);

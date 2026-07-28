@@ -24,10 +24,27 @@ public interface ITotpService
 
     /// <summary>
     /// Validates a code against the secret, tolerating clock drift within the configured
-    /// validation window.
+    /// validation window. Does not check replay — prefer <see cref="ValidateAsync"/> when
+    /// an <see cref="ITotpReplayStore"/> is configured.
     /// </summary>
     /// <param name="secret">The Base32 secret.</param>
     /// <param name="code">The code presented by the user.</param>
     /// <param name="timestamp">Optional time; defaults to the current UTC time.</param>
     bool Validate(string secret, string code, DateTimeOffset? timestamp = null);
+
+    /// <summary>
+    /// Validates a code and records the matched counter in <see cref="ITotpReplayStore"/>
+    /// so the same step cannot be reused.
+    /// </summary>
+    /// <param name="secret">The Base32 secret.</param>
+    /// <param name="code">The code presented by the user.</param>
+    /// <param name="subjectKey">Stable key for the user/credential (replay store key).</param>
+    /// <param name="timestamp">Optional time; defaults to the current UTC time.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    Task<bool> ValidateAsync(
+        string secret,
+        string code,
+        string subjectKey,
+        DateTimeOffset? timestamp = null,
+        CancellationToken cancellationToken = default);
 }

@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Database.Postgres</PackageId>
+    <Title>Pinqponq Database Postgres</Title>
     <Description>Postgres (Npgsql) bağlantı kurulumu, retry/resiliency ve health-check katmanı. Repository/entity içermez.</Description>
+    <PackageTags>$(PackageTags);postgres;postgresql;npgsql;database;connection;health-check;resiliency</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

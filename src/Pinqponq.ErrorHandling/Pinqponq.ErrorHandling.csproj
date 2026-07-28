@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.ErrorHandling</PackageId>
+    <Title>Pinqponq Error Handling</Title>
     <Description>Global exception middleware + standart hata response contract; log çıktısı Pinqloq'un beklediği yapılandırılmış formatta (correlation/trace id, alan adları) üretilir.</Description>
+    <PackageTags>$(PackageTags);error-handling;exception;middleware;aspnetcore;error-response;correlation-id</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

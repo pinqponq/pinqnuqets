@@ -7,12 +7,15 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Cache</PackageId>
+    <Title>Pinqponq Cache</Title>
     <Description>Redis cache sağlayıcısını sarmalar: get/set/remove/exists, dağıtık kilit ve health-check. StackExchange.Redis tek sürüm.</Description>
+    <PackageTags>$(PackageTags);redis;cache;distributed-cache;distributed-lock;stackexchange-redis;fencing-token;health-check</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />

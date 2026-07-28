@@ -60,6 +60,83 @@ public sealed class RabbitMqPublisherTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task Publish_to_missing_queue_throws()
+    {
+        var missing = $"missing-{Guid.NewGuid():N}";
+        await using var connection = new RabbitMqConnection(Microsoft.Extensions.Options.Options.Create(Options()));
+        var options = Options();
+        options.PublishRetryCount = 1;
+        var publisher = new RabbitMqPublisher(connection, Microsoft.Extensions.Options.Options.Create(options));
+
+        var act = () => publisher.PublishAsync(exchange: "", routingKey: missing, "orphan");
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Failing_handler_with_dlx_off_eventually_drops_after_max_redelivery()
+    {
+        var queue = $"fail-{Guid.NewGuid():N}";
+        var attempts = 0;
+
+        await using (var bootstrap = new RabbitMqConnection(Microsoft.Extensions.Options.Options.Create(Options())))
+        await using (var channel = await bootstrap.CreateChannelAsync())
+        {
+            await channel.QueueDeclareAsync(queue, durable: true, exclusive: false, autoDelete: false);
+        }
+
+        var host = Host.CreateDefaultBuilder()
+            .ConfigureLogging(l => l.ClearProviders())
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton(new AttemptCounter(() => Interlocked.Increment(ref attempts)));
+                services.AddPinqponqRabbitMq(o =>
+                {
+                    o.HostName = _fixture.HostName;
+                    o.Port = _fixture.Port;
+                    o.UserName = _fixture.UserName;
+                    o.Password = _fixture.Password;
+                    o.PublishRetryCount = 1;
+                });
+                services.AddRabbitMqConsumer<FailingHandler>(o =>
+                {
+                    o.Queue = queue;
+                    o.EnableDeadLetter = false;
+                    o.MaxRedeliveryCount = 2;
+                });
+            })
+            .Build();
+
+        await host.StartAsync();
+        try
+        {
+            var publisher = host.Services.GetRequiredService<IMessagePublisher>();
+            await publisher.PublishAsync("", queue, "poison");
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            while (Volatile.Read(ref attempts) < 3 && !cts.IsCancellationRequested)
+            {
+                await Task.Delay(100, cts.Token);
+            }
+
+            Volatile.Read(ref attempts).Should().BeGreaterThanOrEqualTo(3);
+
+            await using var connection = new RabbitMqConnection(Microsoft.Extensions.Options.Options.Create(Options()));
+            await using var channel = await connection.CreateChannelAsync();
+            // Give the consumer a moment to drop the poison message.
+            await Task.Delay(500);
+            var leftover = await channel.BasicGetAsync(queue, autoAck: true);
+            leftover.Should().BeNull("poison message should be dropped after MaxRedeliveryCount");
+        }
+        finally
+        {
+            await host.StopAsync();
+            host.Dispose();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Consumer_handles_published_message()
     {
         var queue = $"cq-{Guid.NewGuid():N}";
@@ -95,11 +172,27 @@ public sealed class RabbitMqPublisherTests
         await host.StartAsync();
         try
         {
-            // Allow the hosted consumer to finish BasicConsume.
-            await Task.Delay(1500);
-
             var publisher = host.Services.GetRequiredService<IMessagePublisher>();
-            await publisher.PublishAsync("", queue, "from-consumer-test");
+
+            // Retry publish until the consumer has finished BasicConsume (hosted lifetime).
+            using var readyCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            Exception? lastPublishError = null;
+            while (!readyCts.IsCancellationRequested)
+            {
+                try
+                {
+                    await publisher.PublishAsync("", queue, "from-consumer-test", readyCts.Token);
+                    lastPublishError = null;
+                    break;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    lastPublishError = ex;
+                    await Task.Delay(100, readyCts.Token);
+                }
+            }
+
+            lastPublishError.Should().BeNull("consumer should accept publishes within the readiness window");
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var message = await tcs.Task.WaitAsync(cts.Token);
@@ -118,6 +211,20 @@ public sealed class RabbitMqPublisherTests
         {
             tcs.TrySetResult(message);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class AttemptCounter(Func<int> onAttempt)
+    {
+        public int Next() => onAttempt();
+    }
+
+    private sealed class FailingHandler(AttemptCounter counter) : IMessageHandler
+    {
+        public Task HandleAsync(string message, CancellationToken cancellationToken)
+        {
+            counter.Next();
+            throw new InvalidOperationException("handler failed");
         }
     }
 }

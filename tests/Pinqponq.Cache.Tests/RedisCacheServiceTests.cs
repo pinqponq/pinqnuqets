@@ -90,6 +90,32 @@ public sealed class RedisCacheServiceTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task Corrupt_json_returns_default()
+    {
+        var (cache, mux, _) = Create();
+        await using (mux)
+        {
+            var key = $"bad-{Guid.NewGuid():N}";
+            await cache.SetStringAsync(key, "{not-json");
+            (await cache.GetAsync<Sample>(key)).Should().BeNull();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Empty_string_roundtrips()
+    {
+        var (cache, mux, _) = Create();
+        await using (mux)
+        {
+            var key = $"empty-{Guid.NewGuid():N}";
+            await cache.SetStringAsync(key, "");
+            (await cache.GetStringAsync(key)).Should().Be("");
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Distributed_lock_acquire_and_contention()
     {
         var options = Options.Create(new RedisOptions
@@ -103,13 +129,34 @@ public sealed class RedisCacheServiceTests
 
         await using var first = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
         first.Acquired.Should().BeTrue();
+        first.Token.Should().NotBeNullOrWhiteSpace();
+        first.FencingToken.Should().NotBeNull();
 
         await using var second = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
         second.Acquired.Should().BeFalse();
+        second.FencingToken.Should().BeNull();
 
         await first.DisposeAsync();
         await using var third = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
         third.Acquired.Should().BeTrue();
+        third.FencingToken.Should().BeGreaterThan(first.FencingToken!.Value);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Distributed_lock_TryExtend_succeeds_while_held()
+    {
+        var options = Options.Create(new RedisOptions
+        {
+            ConnectionString = _fixture.ConnectionString,
+            InstanceName = $"lock-ext-{Guid.NewGuid():N}:",
+        });
+        await using var mux = await ConnectionMultiplexer.ConnectAsync(_fixture.ConnectionString);
+        var locks = new RedisDistributedLock(mux, options);
+
+        await using var handle = await locks.AcquireAsync("res-ext", TimeSpan.FromSeconds(5));
+        handle.Acquired.Should().BeTrue();
+        (await handle.TryExtendAsync(TimeSpan.FromSeconds(30))).Should().BeTrue();
     }
 
     [Fact]

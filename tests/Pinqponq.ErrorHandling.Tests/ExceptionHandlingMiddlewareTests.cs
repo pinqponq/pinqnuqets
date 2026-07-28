@@ -130,17 +130,20 @@ public sealed class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
-    public async Task StatusCodeResolver_overrides_status()
+    public async Task StatusMappingResolver_overrides_status_and_response_code()
     {
         var (host, client) = await StartAsync(o =>
-            o.StatusCodeResolver = ex => ex is InvalidOperationException ? 422 : null);
+            o.StatusMappingResolver = ex => ex is InvalidOperationException
+                ? new ExceptionStatusMapping(422, "unprocessable")
+                : null);
         using (host)
         {
             var response = await client.GetAsync("/");
             response.StatusCode.Should().Be((HttpStatusCode)422);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
             body!.StatusCode.Should().Be(422);
-            body.ResponseCode.Should().Be("bad_request");
+            body.ResponseCode.Should().Be("unprocessable");
+            body.Message.Should().Be("The request could not be processed.");
         }
     }
 
@@ -155,6 +158,19 @@ public sealed class ExceptionHandlingMiddlewareTests
             doc.RootElement.TryGetProperty("statusCode", out _).Should().BeTrue();
             doc.RootElement.TryGetProperty("responseCode", out _).Should().BeTrue();
             doc.RootElement.TryGetProperty("traceId", out _).Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task Non_abort_cancellation_maps_to_504()
+    {
+        var (host, client) = await StartAsync(next: _ => throw new OperationCanceledException());
+        using (host)
+        {
+            var response = await client.GetAsync("/");
+            response.StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
+            var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            body!.ResponseCode.Should().Be("timeout");
         }
     }
 

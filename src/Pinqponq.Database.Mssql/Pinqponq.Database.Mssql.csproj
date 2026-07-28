@@ -7,7 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Pinqponq.Database.Mssql</PackageId>
+    <Title>Pinqponq Database MSSQL</Title>
     <Description>MSSQL (Microsoft.Data.SqlClient) bağlantı kurulumu, retry/resiliency ve health-check katmanı. Repository/entity içermez.</Description>
+    <PackageTags>$(PackageTags);mssql;sqlserver;sql-server;database;connection;health-check;resiliency</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

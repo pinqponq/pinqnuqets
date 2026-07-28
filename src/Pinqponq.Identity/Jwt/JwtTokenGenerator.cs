@@ -29,6 +29,12 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
         ArgumentNullException.ThrowIfNull(claims);
 
         var now = issuedAt ?? DateTimeOffset.UtcNow;
+        var claimList = claims as IList<Claim> ?? claims.ToList();
+        if (!claimList.Any(c => c.Type is JwtRegisteredClaimNames.Jti or "jti"))
+        {
+            claimList = claimList.Append(
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))).ToList();
+        }
 
         var descriptor = new SecurityTokenDescriptor
         {
@@ -37,7 +43,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
             IssuedAt = now.UtcDateTime,
             NotBefore = now.UtcDateTime,
             Expires = now.Add(_options.Lifetime).UtcDateTime,
-            Subject = new ClaimsIdentity(claims),
+            Subject = new ClaimsIdentity(claimList),
             SigningCredentials = _keyResolver.CreateSigningCredentials(),
         };
 

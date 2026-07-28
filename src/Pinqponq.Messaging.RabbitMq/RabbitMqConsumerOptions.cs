@@ -23,4 +23,11 @@ public sealed class RabbitMqConsumerOptions
 
     /// <summary>Dead-letter queue name. Defaults to <c>{Queue}.dead</c>.</summary>
     public string? DeadLetterQueue { get; set; }
+
+    /// <summary>
+    /// When <see cref="EnableDeadLetter"/> is <see langword="false"/>, maximum republish
+    /// attempts for a failing message before it is dropped (<c>nack requeue:false</c>).
+    /// Defaults to 5.
+    /// </summary>
+    public int MaxRedeliveryCount { get; set; } = 5;
 }

@@ -10,6 +10,9 @@ namespace Pinqponq.Identity.Passwords;
 /// </summary>
 public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
+    /// <summary>Maximum accepted password length to mitigate hashing DoS.</summary>
+    public const int MaxPasswordLength = 1024;
+
     private static readonly object User = new();
 
     private readonly PasswordHasher<object> _inner;
@@ -31,7 +34,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     /// <inheritdoc />
     public string Hash(string password)
     {
-        ArgumentException.ThrowIfNullOrEmpty(password);
+        ValidatePassword(password);
         return _inner.HashPassword(User, password);
     }
 
@@ -39,7 +42,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     public PasswordVerificationOutcome Verify(string hashedPassword, string providedPassword)
     {
         ArgumentException.ThrowIfNullOrEmpty(hashedPassword);
-        ArgumentException.ThrowIfNullOrEmpty(providedPassword);
+        ValidatePassword(providedPassword);
 
         return _inner.VerifyHashedPassword(User, hashedPassword, providedPassword) switch
         {
@@ -47,5 +50,16 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             PasswordVerificationResult.SuccessRehashNeeded => PasswordVerificationOutcome.SuccessRehashNeeded,
             _ => PasswordVerificationOutcome.Failed,
         };
+    }
+
+    private static void ValidatePassword(string password)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(password);
+        if (password.Length > MaxPasswordLength)
+        {
+            throw new ArgumentException(
+                $"Password must not exceed {MaxPasswordLength} characters.",
+                nameof(password));
+        }
     }
 }

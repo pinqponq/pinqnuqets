@@ -31,18 +31,32 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configureJwt);
 
-        services.Configure(configureJwt);
+        services.AddOptions<JwtOptions>()
+            .Configure(configureJwt)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>());
+
+        var refresh = services.AddOptions<RefreshTokenOptions>();
         if (configureRefreshTokens is not null)
         {
-            services.Configure(configureRefreshTokens);
+            refresh.Configure(configureRefreshTokens);
         }
+
+        refresh.ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<RefreshTokenOptions>, RefreshTokenOptionsValidator>());
 
         // JWT: the resolver is derived from the bound options so signing and validation
         // stay consistent.
         services.TryAddSingleton(sp =>
             new JwtSigningKeyResolver(sp.GetRequiredService<IOptions<JwtOptions>>().Value));
         services.TryAddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
-        services.TryAddSingleton<IJwtTokenValidator, JwtTokenValidator>();
+        // Scoped so optional IAccessTokenRevocationStore can be Scoped without captive dependency.
+        services.TryAddScoped<IJwtTokenValidator, JwtTokenValidator>();
+
+        // Requires a consumer-registered IAccessTokenRevocationStore when resolved.
+        services.TryAddScoped<IAccessTokenRevocationService, AccessTokenRevocationService>();
 
         // Passwords.
         services.TryAddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

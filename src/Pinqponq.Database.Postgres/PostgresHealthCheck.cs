@@ -4,15 +4,18 @@ using Npgsql;
 namespace Pinqponq.Database.Postgres;
 
 /// <summary>
-/// Health check that opens a Postgres connection and runs <c>SELECT 1</c>.
+/// Health check that opens a connection from the shared <see cref="NpgsqlDataSource"/>
+/// and runs <c>SELECT 1</c> without the application retry pipeline.
 /// </summary>
 public sealed class PostgresHealthCheck : IHealthCheck
 {
-    private readonly IPostgresConnectionFactory _connectionFactory;
+    private readonly NpgsqlDataSource _dataSource;
 
-    /// <summary>Creates the health check over the connection factory.</summary>
-    public PostgresHealthCheck(IPostgresConnectionFactory connectionFactory) =>
-        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+    /// <summary>Creates the health check over the shared data source.</summary>
+    public PostgresHealthCheck(NpgsqlDataSource dataSource)
+    {
+        _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+    }
 
     /// <inheritdoc />
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -21,8 +24,8 @@ public sealed class PostgresHealthCheck : IHealthCheck
     {
         try
         {
-            await using var connection =
-                await _connectionFactory.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken)
+                .ConfigureAwait(false);
             await using var command = new NpgsqlCommand("SELECT 1", connection);
             await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
             return HealthCheckResult.Healthy();

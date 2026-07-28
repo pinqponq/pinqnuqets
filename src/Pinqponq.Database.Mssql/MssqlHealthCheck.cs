@@ -1,18 +1,23 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Database.Mssql;
 
 /// <summary>
-/// Health check that opens a SQL Server connection and runs <c>SELECT 1</c>.
+/// Health check that opens a SQL Server connection once and runs <c>SELECT 1</c>
+/// without the application retry pipeline.
 /// </summary>
 public sealed class MssqlHealthCheck : IHealthCheck
 {
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly MssqlOptions _options;
 
-    /// <summary>Creates the health check over the connection factory.</summary>
-    public MssqlHealthCheck(ISqlConnectionFactory connectionFactory) =>
-        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+    /// <summary>Creates the health check over configured options.</summary>
+    public MssqlHealthCheck(IOptions<MssqlOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        _options = options.Value;
+    }
 
     /// <inheritdoc />
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -21,8 +26,8 @@ public sealed class MssqlHealthCheck : IHealthCheck
     {
         try
         {
-            await using var connection =
-                await _connectionFactory.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await using var connection = new SqlConnection(_options.ConnectionString);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1";
             await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);

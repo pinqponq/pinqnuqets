@@ -26,7 +26,8 @@ public sealed class RefreshToken
 
     /// <summary>
     /// Hash of the token that replaced this one during rotation. Together with
-    /// <see cref="RevokedAt"/> this forms a chain that enables reuse detection.
+    /// <see cref="RevokedAt"/> this forms a chain that enables reuse detection
+    /// when an ancestor is presented after a descendant was already rotated.
     /// </summary>
     public string? ReplacedByTokenHash { get; set; }
 

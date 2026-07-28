@@ -18,7 +18,11 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        services.Configure(configure);
+        services.AddOptions<MssqlOptions>()
+            .Configure(configure)
+            .ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<MssqlOptions>, MssqlOptionsValidator>());
 
         services.TryAddSingleton<ISqlConnectionFactory>(sp =>
             new SqlConnectionFactory(sp.GetRequiredService<IOptions<MssqlOptions>>().Value));

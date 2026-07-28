@@ -10,7 +10,7 @@ namespace Pinqponq.Sms.Tests;
 public sealed class NetGsmSmsSenderTests
 {
     private static NetGsmSmsSender Create(
-        CapturingHttpHandler handler,
+        HttpMessageHandler handler,
         Action<SmsOptions>? configure = null)
     {
         var options = new SmsOptions
@@ -52,7 +52,11 @@ public sealed class NetGsmSmsSenderTests
     public async Task SendAsync_with_empty_ApiUrl_is_noop()
     {
         var handler = new CapturingHttpHandler();
-        var sender = Create(handler, o => o.ApiUrl = "");
+        var sender = Create(handler, o =>
+        {
+            o.ApiUrl = "";
+            o.AllowNoOp = true;
+        });
 
         await sender.SendAsync(new SmsMessage { To = "555", Text = "x" });
 
@@ -90,14 +94,49 @@ public sealed class NetGsmSmsSenderTests
     }
 
     [Fact]
-    public async Task SendAsync_To_without_digits_is_noop()
+    public async Task SendAsync_empty_Text_throws()
     {
         var handler = new CapturingHttpHandler();
         var sender = Create(handler);
 
-        await sender.SendAsync(new SmsMessage { To = "abc", Text = "x" });
+        var act = () => sender.SendAsync(new SmsMessage { To = "555", Text = "  " });
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*text*");
+    }
 
+    [Fact]
+    public async Task SendAsync_To_without_digits_throws()
+    {
+        var handler = new CapturingHttpHandler();
+        var sender = Create(handler);
+
+        var act = () => sender.SendAsync(new SmsMessage { To = "abc", Text = "x" });
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*digit*");
         handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SendAsync_NetGsm_business_error_body_throws()
+    {
+        var handler = new CapturingHttpHandler().RespondWith(System.Net.HttpStatusCode.OK, "30");
+        var sender = Create(handler, o =>
+        {
+            o.RetryCount = 5;
+            o.RetryBaseDelay = TimeSpan.FromMilliseconds(1);
+        });
+
+        var act = () => sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" });
+        await act.Should().ThrowAsync<NetGsmRejectedException>().WithMessage("*NetGSM*");
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SendAsync_NetGsm_success_body_with_job_id_succeeds()
+    {
+        var handler = new CapturingHttpHandler().RespondWith(System.Net.HttpStatusCode.OK, "00 1234567890");
+        var sender = Create(handler);
+
+        await sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" });
+        handler.Requests.Should().ContainSingle();
     }
 
     [Fact]
@@ -124,9 +163,119 @@ public sealed class NetGsmSmsSenderTests
         services.Should().Contain(d => d.ServiceType == typeof(ISmsSender));
     }
 
-    private sealed class StubHttpClientFactory(CapturingHttpHandler handler) : IHttpClientFactory
+    [Fact]
+    public async Task SendAsync_caller_cancellation_is_not_retried()
+    {
+        var handler = new CancellingHttpHandler();
+        var sender = Create(handler, o =>
+        {
+            o.RetryCount = 5;
+            o.RetryBaseDelay = TimeSpan.FromMilliseconds(1);
+        });
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var act = () => sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" }, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        handler.RequestCount.Should().BeLessThanOrEqualTo(1);
+    }
+
+    [Fact]
+    public void SmsOptionsValidator_requires_https_and_rejects_noop_when_disallowed()
+    {
+        var validator = new SmsOptionsValidator();
+
+        validator.Validate(null, new SmsOptions
+        {
+            ApiUrl = "http://insecure.example/",
+            UserCode = "u",
+            Password = "p",
+        }).Succeeded.Should().BeFalse();
+
+        validator.Validate(null, new SmsOptions
+        {
+            ApiUrl = "",
+            AllowNoOp = false,
+        }).Succeeded.Should().BeFalse();
+
+        validator.Validate(null, new SmsOptions
+        {
+            ApiUrl = "",
+            AllowNoOp = true,
+        }).Succeeded.Should().BeTrue();
+
+        validator.Validate(null, new SmsOptions
+        {
+            ApiUrl = "https://api.example/",
+            UserCode = "u",
+            Password = "p",
+        }).Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AllowNoOp_defaults_to_false()
+    {
+        new SmsOptions().AllowNoOp.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendAsync_RestV2_posts_basic_auth_and_json_body()
+    {
+        var handler = new CapturingHttpHandler()
+            .RespondWith(System.Net.HttpStatusCode.OK, """{"code":"00"}""", "application/json");
+        var sender = Create(handler, o =>
+        {
+            o.Transport = SmsTransport.RestV2;
+            o.ApiUrl = null;
+            o.MsgHeader = "PINQ";
+        });
+
+        await sender.SendAsync(new SmsMessage { To = "+90 555 111 2233", Text = "Merhaba" });
+
+        handler.LastRequest.Should().NotBeNull();
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.ToString().Should().Be(SmsOptions.DefaultRestV2ApiUrl);
+        handler.LastRequest.Headers.Authorization.Should().NotBeNull();
+        handler.LastRequest.Headers.Authorization!.Scheme.Should().Be("Basic");
+        handler.LastRequest.Headers.Authorization.Parameter.Should().Be(
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("user1:secret")));
+        handler.LastRequestBody.Should().Contain("\"msgheader\":\"PINQ\"");
+        handler.LastRequestBody.Should().Contain("\"msg\":\"Merhaba\"");
+        handler.LastRequestBody.Should().Contain("\"no\":\"905551112233\"");
+    }
+
+    [Fact]
+    public void SmsOptionsValidator_RestV2_allows_empty_ApiUrl_with_default_https()
+    {
+        var validator = new SmsOptionsValidator();
+
+        validator.Validate(null, new SmsOptions
+        {
+            Transport = SmsTransport.RestV2,
+            ApiUrl = null,
+            UserCode = "u",
+            Password = "p",
+        }).Succeeded.Should().BeTrue();
+    }
+
+    private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
             new(handler, disposeHandler: false) { BaseAddress = new Uri("https://unused/") };
+    }
+
+    private sealed class CancellingHttpHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new TaskCanceledException("cancelled", null, cancellationToken);
+        }
     }
 }

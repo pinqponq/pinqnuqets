@@ -30,8 +30,8 @@ proje-özel iş mantığı (domain repository, mesaj contract'ları, OTP-rol kur
 | **Pinqponq.Cache** | Redis: get/set/remove/exists, dağıtık kilit, health-check |
 | **Pinqponq.Sms** | NetGSM SMS gönderimi (`ISmsSender`) + retry |
 | **Pinqponq.Mail** | SMTP mail gönderimi (`IEmailSender`, System.Net.Mail) |
-| **Pinqponq.Database.Postgres/Mongo/Mssql** | Bağlantı + retry + health-check (repository/entity hariç) |
-| **Pinqponq.Messaging.RabbitMq** | Publish/consume, connection/channel yönetimi, retry + dead-letter (DLX) |
+| **Pinqponq.Database.Postgres/Mongo/Mssql** | Bağlantı + (Postgres/Mssql) retry + health-check (repository/entity hariç) |
+| **Pinqponq.Messaging.RabbitMq** | Publish (confirms + mandatory) / consume, reconnect, DLX veya MaxRedelivery |
 | **Pinqponq.ErrorHandling** | Global exception middleware + standart hata contract + Pinqloq-uyumlu yapılandırılmış log |
 
 Her paket bir `AddPinqponqXxx(...)` DI uzantısı ve bir `XxxOptions` sınıfı sunar.
@@ -49,9 +49,20 @@ builder.Services.AddPinqponqIdentity(jwt =>
 });
 builder.Services.AddScoped<IRefreshTokenStore, MyRefreshTokenStore>(); // depolama uygulamaya ait
 ```
-`IJwtTokenGenerator` / `IJwtTokenValidator`, `IRefreshTokenService`,
-`IPasswordHasher`. Refresh token'ın yalnızca **hash**'i saklanır; `RotateAsync`
-eskiyi revoke edip reuse-detection zinciri kurar.
+`IJwtTokenGenerator` (singleton) / `IJwtTokenValidator` (scoped — revocation store ile
+aynı lifetime), `IRefreshTokenService`, `IPasswordHasher`. Refresh token'ın yalnızca
+**hash**'i saklanır; `RotateAsync`
+`TryRevokeActiveAsync` + `CompleteRotationAsync` (add+link atomik) kullanır.
+Rotate edilmiş bir token, `ReuseDetectionGrace` (default 5s) **sonrasında**
+yeniden sunulursa `RevokeAllForSubjectAsync` ile subject ailesi iptal edilir
+(grace içinde concurrent double-submit family revoke tetiklemez).
+Access token'lara otomatik `jti` eklenir; logout için isteğe bağlı store:
+
+```csharp
+builder.Services.AddScoped<IAccessTokenRevocationStore, MyJtiStore>();
+// IAccessTokenRevocationService.RevokeAccessTokenAsync(token) → jti'yi store'a yazar
+// JwtTokenValidator store kayıtlıysa revoked jti için null döner
+```
 
 ### Cache — Redis
 ```csharp
@@ -59,14 +70,43 @@ builder.Services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379");
 builder.Services.AddHealthChecks().AddPinqponqRedis();
 
 await cache.SetAsync("k", myObj, TimeSpan.FromMinutes(5));
-await using var handle = await distributedLock.AcquireAsync("resource", TimeSpan.FromSeconds(30));
-if (handle.Acquired) { /* kritik bölge */ }
+await using var handle = await distributedLock.AcquireAsync(
+    "resource",
+    TimeSpan.FromSeconds(30),
+    new DistributedLockAcquireOptions
+    {
+        IssueFencingToken = true,
+        RenewInterval = TimeSpan.FromSeconds(10), // watchdog; null = kapalı
+    });
+if (handle.Acquired)
+{
+    // handle.FencingToken — DB tarafında enforce uygulamaya aittir
+    await handle.TryExtendAsync(TimeSpan.FromSeconds(30));
+}
 ```
 
 ### Sms / Mail
 ```csharp
-builder.Services.AddPinqponqSms(o => { o.ApiUrl = "https://api.netgsm.com.tr/sms/send/get/"; o.UserCode = "..."; o.Password = "..."; });
-builder.Services.AddPinqponqMail(builder.Configuration, "Email");
+builder.Services.AddPinqponqSms(o =>
+{
+    // Legacy GET (default):
+    // o.Transport = SmsTransport.GetQuery;
+    // o.ApiUrl = "https://api.netgsm.com.tr/sms/send/get/";
+    // o.Password = "..."; // GET query'de gider — URL loglamayın
+
+    o.Transport = SmsTransport.RestV2; // POST + Basic Auth; ApiUrl boşsa default HTTPS
+    o.UserCode = "...";
+    o.Password = "...";
+    o.MsgHeader = "PINQ";
+    // o.AllowNoOp = true; // yalnızca GetQuery + local; default false
+});
+builder.Services.AddPinqponqMail(o =>
+{
+    o.SmtpHost = "localhost";
+    o.SmtpPort = 1025;
+    o.FromEmail = "noreply@example.com";
+    o.AttachmentRoot = @"D:\secure-attachments"; // ek gönderirken zorunlu
+});
 
 await sms.SendAsync(new SmsMessage { To = "+90555...", Text = "..." });
 await mail.SendAsync(new EmailMessage { To = "a@b.com", Subject = "...", Body = "..." });
@@ -76,8 +116,15 @@ await mail.SendAsync(new EmailMessage { To = "a@b.com", Subject = "...", Body = 
 ```csharp
 builder.Services.AddPinqponqSms(...);
 builder.Services.AddPinqponqMail(...);
-builder.Services.AddPinqponqOtp(o => o.Ttl = TimeSpan.FromMinutes(3));
-builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // Redis/EF — uygulamaya ait
+builder.Services.AddPinqponqOtp(o =>
+{
+    o.Ttl = TimeSpan.FromMinutes(3);
+    o.MinSendInterval = TimeSpan.FromSeconds(30); // IOtpSendRateLimiter'a geçer
+    o.HashPepper = builder.Configuration["Otp:HashPepper"]!; // >= 32 karakter
+});
+builder.Services.AddScoped<IOtpStore, MyOtpStore>(); // TryConsumeAsync + TryRemoveAsync atomik olmalı
+// Default limiter no-op; Redis vb. ile değiştirin:
+// builder.Services.AddSingleton<IOtpSendRateLimiter, RedisOtpSendRateLimiter>();
 
 await otp.GenerateAndSendAsync("user@example.com");           // Auto → email
 var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus.Success
@@ -85,32 +132,52 @@ var status = await otp.VerifyAsync("user@example.com", code); // OtpVerifyStatus
 
 ### TOTP 2FA
 ```csharp
-builder.Services.AddPinqponqTotp(o => o.Issuer = "Pinqponq");
+builder.Services.AddPinqponqTotp(o => o.Issuer = "Pinqponq"); // ITotpService scoped
+builder.Services.AddScoped<ITotpReplayStore, MyTotpReplayStore>(); // ctor bağımlılığı
 var secret = totp.GenerateSecret();
 var uri = totp.GetProvisioningUri(secret, "user@example.com"); // QR → Authenticator
-bool ok = totp.Validate(secret, userCode);
+bool ok = await totp.ValidateAsync(secret, userCode, subjectKey: userId);
+// Sync Validate hâlâ mevcut (replay yok); production'da ValidateAsync tercih edin.
 ```
 
 ### Google SSO
 ```csharp
-builder.Services.AddPinqponqGoogleSso(o => o.ClientIds.Add(builder.Configuration["Google:ClientId"]!));
+builder.Services.AddPinqponqGoogleSso(o =>
+{
+    o.ClientIds.Add(builder.Configuration["Google:ClientId"]!);
+    o.RequireEmailVerified = true; // default
+    // o.RequireNonce = true; // browser OIDC için
+    // o.HostedDomain = "example.com";
+});
 
 var result = await provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(idToken));
 if (result.Succeeded) { var email = result.User!.Email; }
+// Email ile otomatik account-link yapmadan önce Google otoritesini (hd / gmail) değerlendirin.
 ```
 
 ### Database (Postgres/Mongo/Mssql)
 ```csharp
 builder.Services.AddPinqponqPostgres(o => o.ConnectionString = cs);
-builder.Services.AddHealthChecks().AddPinqponqPostgres();
-await using var conn = await connectionFactory.OpenConnectionAsync(); // retry uygulanmış
+builder.Services.AddHealthChecks().AddPinqponqPostgres(); // shared NpgsqlDataSource üzerinden
+await using var conn = await connectionFactory.OpenConnectionAsync(); // Postgres/Mssql: retry
 ```
 
 ### RabbitMQ
 ```csharp
-builder.Services.AddPinqponqRabbitMq(o => { o.HostName = "rabbit"; o.UserName = "guest"; o.Password = "guest"; });
-builder.Services.AddRabbitMqConsumer<MyHandler>(o => { o.Queue = "chat-messages"; }); // DLX otomatik
+builder.Services.AddPinqponqRabbitMq(o =>
+{
+    o.HostName = "rabbit";
+    o.UserName = "guest";
+    o.Password = "guest";
+    // o.UseSsl = true; o.Port = 5671; // AMQPS
+});
+builder.Services.AddRabbitMqConsumer<MyHandler>(o =>
+{
+    o.Queue = "chat-messages"; // DLX default açık
+    // o.EnableDeadLetter = false; o.MaxRedeliveryCount = 5; // DLX kapalıysa poison limiti
+});
 
+// Publish: publisher confirms + mandatory — route edilemeyen mesaj exception fırlatır.
 await publisher.PublishAsync(exchange: "", routingKey: "chat-messages", "payload");
 ```
 
