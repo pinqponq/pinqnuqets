@@ -1,0 +1,78 @@
+# Sabit portlu alternatif ortam.
+#
+# Konsol servisleri normalde kendisi (Testcontainers ile, rastgele portlarda) kaldırır.
+# Bu dosya, konteynerleri konsolun ömründen bağımsız tutmak istediğinizde kullanılır:
+#
+#   docker compose -f samples/Pinqponq.Playground/docker-compose.yml up -d
+#   dotnet run --project samples/Pinqponq.Playground
+#
+# Ardından appsettings.json içindeki Playground:ExternalServices bölümüne aşağıdaki
+# değerleri girin; ilgili servisler "Harici" olarak işaretlenir ve konteyner başlatılmaz:
+#
+#   "postgres": "Host=localhost;Port=5432;Database=playground;Username=playground;Password=playground"
+#   "redis":    "localhost:6379"
+#   "mongo":    "mongodb://localhost:27017"
+#   "rabbitmq": "amqp://guest:guest@localhost:5672"
+#   "mailhog":  "localhost:1025:8025"
+#   "mssql":    "Server=localhost,1433;Database=master;User Id=sa;Password=Playground!2024;TrustServerCertificate=true"
+#
+# İmaj etiketleri tests/Pinqponq.TestSupport/Fixtures/ ile aynı tutulmuştur.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_USER: playground
+      POSTGRES_PASSWORD: playground
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playground"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+
+  rabbitmq:
+    # Fixture'larla eşleşsin diye alpine etiketi kullanılıyor; bu imajda yönetim arayüzü
+    # (:15672) yoktur. Arayüz gerekiyorsa rabbitmq:3.13-management-alpine kullanın.
+    image: rabbitmq:3.13-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # Ağır imaj (~1,5 GB) ve ARM64 desteği yok; yalnızca istendiğinde başlatılır:
+  #   docker compose --profile mssql up -d
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
+    profiles: ["mssql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Playground!2024"
+    ports:
+      - "1433:1433"

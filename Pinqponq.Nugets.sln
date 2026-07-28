@@ -61,6 +61,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Auth.Sso.Abstracti
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Auth.Sso.Google.Tests", "tests\Pinqponq.Auth.Sso.Google.Tests\Pinqponq.Auth.Sso.Google.Tests.csproj", "{396D1148-AA55-43A8-9CC1-0C1A02B0A567}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{5D20AA90-6969-D8BD-9DCD-8634F4692FDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Playground", "samples\Pinqponq.Playground\Pinqponq.Playground.csproj", "{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -395,6 +399,18 @@ Global
 		{396D1148-AA55-43A8-9CC1-0C1A02B0A567}.Release|x64.Build.0 = Release|Any CPU
 		{396D1148-AA55-43A8-9CC1-0C1A02B0A567}.Release|x86.ActiveCfg = Release|Any CPU
 		{396D1148-AA55-43A8-9CC1-0C1A02B0A567}.Release|x86.Build.0 = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|x64.Build.0 = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Debug|x86.Build.0 = Debug|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|x64.ActiveCfg = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|x64.Build.0 = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|x86.ActiveCfg = Release|Any CPU
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -427,5 +443,6 @@ Global
 		{67FED629-AB56-457C-9D12-8433A13EEA96} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{363CE6EA-EFB4-4678-92D1-947DF92540E8} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{396D1148-AA55-43A8-9CC1-0C1A02B0A567} = {6680480A-6991-59BE-B5B7-2EA328F05698}
+		{E1DEEAFD-5EA8-497A-A6FB-5B38E29D4272} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 EndGlobal

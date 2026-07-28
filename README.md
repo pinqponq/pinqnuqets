@@ -123,6 +123,21 @@ app.UsePinqponqErrorHandling(); // pipeline'ın başında
 Yakalanan exception → standart `ErrorResponse` (camelCase) + `traceId`/`correlationId`
 ve alan adları Pinqloq'un beklediği yapılandırılmış formatta loglanır.
 
+## Playground — paketleri ve loglarını tarayıcıdan deneyin
+
+`samples/Pinqponq.Playground`, 13 paketin tamamını gerçek bağımlılıklara karşı çalıştıran
+bir test konsoludur. Her çalıştırma hem sonucu hem de paketin o sırada ürettiği
+**yapılandırılmış log kayıtlarını** gösterir — `ErrorHandling`'in `traceId`/`correlationId`
+alan adları ancak ham hâlleriyle görülünce doğrulanabilir.
+
+```bash
+dotnet run --project samples/Pinqponq.Playground   # → http://127.0.0.1:5199
+```
+
+Açılışta hiçbir konteyner başlatılmaz; 47 senaryonun 32'si Docker olmadan çalışır. Redis,
+Postgres, RabbitMQ, Mongo, MailHog ve SQL Server üst şeritten tek tıkla (Testcontainers
+ile) kaldırılır. Ayrıntılar: [samples/README.md](samples/README.md).
+
 ## Derleme & test
 
 Gereksinimler: .NET 8 + 9 SDK. Entegrasyon testleri için çalışan bir Docker
