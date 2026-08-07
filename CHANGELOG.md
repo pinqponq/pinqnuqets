@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-07
+
 ### Added
 
 - Source Link and symbol packages (`snupkg`) for nuget.org debugging
@@ -135,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial monorepo release of `Pinqponq.*` infrastructure NuGet packages
   (Identity, OTP, TOTP, SSO, Cache, Sms, Mail, Database, RabbitMQ, ErrorHandling)
 
+[1.0.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.1
 [1.0.0]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.0
 [0.2.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pinqponq/pinqnuqets/releases/tag/v0.2.0
