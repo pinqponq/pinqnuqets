@@ -52,4 +52,16 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
 
+  <!-- Source Link + symbol packages for open-source debugging on nuget.org.
+       .NET SDK embeds GitHub Source Link when PublishRepositoryUrl is set. -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
 </Project>
