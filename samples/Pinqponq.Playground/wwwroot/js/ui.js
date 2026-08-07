@@ -8,7 +8,7 @@ export function el(tag, attrs = {}, ...children) {
     if (value === null || value === undefined || value === false) continue;
     if (key === 'class') node.className = value;
     else if (key === 'text') node.textContent = value;
-    else if (key === 'html') throw new Error('innerHTML kullanılmıyor');
+    else if (key === 'html') throw new Error('innerHTML is not used');
     else if (key.startsWith('on') && typeof value === 'function') {
       node.addEventListener(key.slice(2).toLowerCase(), value);
     } else if (key === 'dataset') {
@@ -50,12 +50,12 @@ export function formatTime(iso) {
 }
 
 const SERVICE_STATE_LABELS = {
-  Stopped: 'durdu',
-  Starting: 'başlatılıyor',
-  Ready: 'hazır',
-  Failed: 'hata',
-  DockerUnavailable: 'Docker yok',
-  External: 'harici',
+  Stopped: 'stopped',
+  Starting: 'starting',
+  Ready: 'ready',
+  Failed: 'failed',
+  DockerUnavailable: 'Docker unavailable',
+  External: 'external',
 };
 
 export function serviceStateLabel(state) {
@@ -63,9 +63,9 @@ export function serviceStateLabel(state) {
 }
 
 const RUN_STATUS = {
-  passed: { label: 'geçti', badge: 'badge--ok' },
-  failed: { label: 'kaldı', badge: 'badge--err' },
-  skipped: { label: 'atlandı', badge: 'badge--warn' },
+  passed: { label: 'passed', badge: 'badge--ok' },
+  failed: { label: 'failed', badge: 'badge--err' },
+  skipped: { label: 'skipped', badge: 'badge--warn' },
 };
 
 export function runStatus(status) {
@@ -82,13 +82,13 @@ export function toast(message, variant = '') {
   }, 4200);
 }
 
-export async function copyToClipboard(value, label = 'Kopyalandı') {
+export async function copyToClipboard(value, label = 'Copied') {
   try {
     await navigator.clipboard.writeText(value);
     toast(label, 'ok');
   } catch {
     // Clipboard access needs a secure context; fall back to a selectable prompt.
-    toast('Panoya kopyalanamadı — metni elle seçin.', 'err');
+    toast('Could not copy to clipboard — select the text manually.', 'err');
   }
 }
 
@@ -98,10 +98,10 @@ export function copyButton(getValue) {
     {
       class: 'copy-btn',
       type: 'button',
-      title: 'Panoya kopyala',
+      title: 'Copy to clipboard',
       onClick: () => copyToClipboard(getValue()),
     },
-    'kopyala',
+    'copy',
   );
 }
 

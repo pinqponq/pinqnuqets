@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Mail</PackageId>
     <Title>Pinqponq Mail</Title>
-    <Description>SMTP tabanlı mail gönderimini config'iyle birlikte sarmalayan paket (System.Net.Mail).</Description>
+    <Description>SMTP-based email sending wrapper with configuration (System.Net.Mail).</Description>
     <PackageTags>$(PackageTags);email;smtp;mail;mail-sender;notification</PackageTags>
   </PropertyGroup>
 

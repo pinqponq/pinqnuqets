@@ -7,7 +7,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(path, options);
   } catch (cause) {
-    throw new Error('Sunucuya ulaşılamadı. Uygulama hâlâ çalışıyor mu?', { cause });
+    throw new Error('Could not reach the server. Is the app still running?', { cause });
   }
 
   if (response.status === 204) return null;
@@ -24,7 +24,7 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const message =
-      (payload && (payload.message || payload.reason)) || `İstek başarısız (${response.status})`;
+      (payload && (payload.message || payload.reason)) || `Request failed (${response.status})`;
     const error = new Error(message);
     error.status = response.status;
     error.payload = payload;

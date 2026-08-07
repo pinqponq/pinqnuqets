@@ -31,12 +31,12 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
           el(
             'div',
             {},
-            el('div', { class: 'banner__title' }, 'Docker çalışmıyor'),
+            el('div', { class: 'banner__title' }, 'Docker is not running'),
             el(
               'div',
               { class: 'banner__text' },
-              `${infra.dockerError ?? 'Daemon yanıt vermedi'}. Konteyner gerektiren senaryolar bekleyecek; ` +
-                `${availableCount} senaryo yine de çalıştırılabilir. Docker'ı başlattıktan sonra üstteki bir servise tıklayıp "Başlat" deyin.`,
+              `${infra.dockerError ?? 'The daemon did not respond'}. Scenarios that need a container will wait; ` +
+                `${availableCount} scenarios can still be run. After starting Docker, click a service above and choose "Start".`,
             ),
           ),
         ),
@@ -54,25 +54,25 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
           el(
             'p',
             { style: 'color:var(--text-muted);max-width:68ch' },
-            'Bu konsol reponun 13 paketini gerçek bağımlılıklara karşı çalıştırır ve her ' +
-              'çalıştırmanın ürettiği yapılandırılmış log kayıtlarını sonucun yanında gösterir. ' +
-              'Soldan bir senaryo seçin; options alanlarını değiştirip davranışın nasıl değiştiğini görün.',
+            'This console runs the repo\'s 13 packages against real dependencies and shows ' +
+              'the structured log records each run produces alongside the result. ' +
+              'Pick a scenario on the left; change its option fields to see how the behavior changes.',
           ),
           el(
             'div',
             { class: 'row' },
-            el('span', { class: 'badge badge--accent' }, `${catalog.packages.length} paket`),
-            el('span', { class: 'badge' }, `${scenarioCount} senaryo`),
-            el('span', { class: 'badge badge--ok' }, `${availableCount} şu an çalıştırılabilir`),
+            el('span', { class: 'badge badge--accent' }, `${catalog.packages.length} packages`),
+            el('span', { class: 'badge' }, `${scenarioCount} scenarios`),
+            el('span', { class: 'badge badge--ok' }, `${availableCount} runnable now`),
           ),
           el(
             'div',
             { class: 'row' },
-            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'İpuçları:'),
+            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'Tips:'),
             el('kbd', {}, 'Ctrl K'),
-            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'senaryo ara'),
+            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'search scenarios'),
             el('kbd', {}, 'Ctrl ↵'),
-            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'çalıştır'),
+            el('span', { style: 'color:var(--text-faint);font-size:var(--fs-xs)' }, 'run'),
           ),
         ),
       ),
@@ -101,7 +101,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
                   'div',
                   { class: 'row', style: 'margin-bottom:2px' },
                   el('strong', { style: 'font-size:var(--fs-sm)' }, pkg.id),
-                  el('span', { class: 'badge' }, `${pkg.scenarios.length} senaryo`),
+                  el('span', { class: 'badge' }, `${pkg.scenarios.length} scenarios`),
                 ),
                 el('div', { style: 'color:var(--text-muted);font-size:var(--fs-sm)' }, pkg.summary),
               ),
@@ -120,12 +120,12 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
 
     const badges = el('div', { class: 'scenario-head__eyebrow' });
     badges.append(el('span', { class: 'badge badge--accent' }, scenario.packageId));
-    if (scenario.negativePath) badges.append(el('span', { class: 'badge badge--warn' }, 'negatif yol'));
-    if (scenario.needsInternet) badges.append(el('span', { class: 'badge badge--info' }, 'internet gerekir'));
+    if (scenario.negativePath) badges.append(el('span', { class: 'badge badge--warn' }, 'negative path'));
+    if (scenario.needsInternet) badges.append(el('span', { class: 'badge badge--info' }, 'needs internet'));
     for (const service of scenario.requiredServices) {
       const ready = !scenario.blockedBy.includes(service);
       badges.append(
-        el('span', { class: `badge ${ready ? 'badge--ok' : 'badge--err'}` }, `${service}${ready ? '' : ' • hazır değil'}`),
+        el('span', { class: `badge ${ready ? 'badge--ok' : 'badge--err'}` }, `${service}${ready ? '' : ' • not ready'}`),
       );
     }
 
@@ -145,7 +145,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
     const runButton = el(
       'button',
       { class: 'btn btn--primary btn--lg', type: 'submit', disabled: !scenario.available },
-      'Çalıştır',
+      'Run',
     );
 
     const runBar = el(
@@ -153,7 +153,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
       { class: 'run-bar' },
       runButton,
       !scenario.available
-        ? el('span', { class: 'badge badge--err' }, `Gereken servis hazır değil: ${scenario.blockedBy.join(', ')}`)
+        ? el('span', { class: 'badge badge--err' }, `Required service not ready: ${scenario.blockedBy.join(', ')}`)
         : null,
       el('span', { class: 'run-bar__hint' }, el('kbd', {}, 'Ctrl ↵')),
     );
@@ -164,7 +164,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
         { class: 'card__body' },
         scenario.fields.length > 0
           ? fields
-          : el('div', { style: 'color:var(--text-faint);font-size:var(--fs-sm)' }, 'Bu senaryonun ayarlanabilir alanı yok.'),
+          : el('div', { style: 'color:var(--text-faint);font-size:var(--fs-sm)' }, 'This scenario has no configurable fields.'),
         runBar,
       ),
     );
@@ -236,7 +236,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
           id,
           name: field.name,
           value: field.default ?? '',
-          placeholder: field.required ? 'zorunlu' : '',
+          placeholder: field.required ? 'required' : '',
           autocomplete: 'off',
         });
     }
@@ -259,7 +259,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
     if (running) return;
     running = true;
     button.disabled = true;
-    button.textContent = 'Çalışıyor…';
+    button.textContent = 'Running…';
     onStatusChange?.(scenario.id, 'running');
 
     clear(resultHost).append(
@@ -290,7 +290,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
     } finally {
       running = false;
       button.disabled = !scenario.available;
-      button.textContent = 'Çalıştır';
+      button.textContent = 'Run';
     }
   }
 
@@ -304,12 +304,12 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
         'div',
         { class: 'card__head' },
         el('span', { class: `badge ${status.badge}` }, status.label),
-        el('span', { class: 'card__title' }, 'Sonuç'),
+        el('span', { class: 'card__title' }, 'Result'),
         el(
           'div',
           { class: 'result__meta' },
           el('span', {}, formatMs(result.durationMs)),
-          el('span', {}, `${result.steps.length} adım`),
+          el('span', {}, `${result.steps.length} steps`),
           el(
             'button',
             {
@@ -345,13 +345,13 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
           ),
         );
       }
-      bodyStack.append(el('div', {}, el('div', { class: 'section-title' }, 'Adımlar'), steps));
+      bodyStack.append(el('div', {}, el('div', { class: 'section-title' }, 'Steps'), steps));
     }
 
     if (result.artifacts.length > 0) {
       const artifacts = el('div', {});
       for (const artifact of result.artifacts) artifacts.append(renderArtifact(artifact));
-      bodyStack.append(el('div', {}, el('div', { class: 'section-title' }, 'Çıktılar'), artifacts));
+      bodyStack.append(el('div', {}, el('div', { class: 'section-title' }, 'Artifacts'), artifacts));
     }
 
     card.append(bodyStack);
@@ -363,7 +363,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
     const body = el('div', { class: 'artifact__body' });
 
     if (artifact.value === null || artifact.value === undefined) {
-      body.append(el('div', { class: 'artifact__text', style: 'color:var(--text-faint)' }, '(boş)'));
+      body.append(el('div', { class: 'artifact__text', style: 'color:var(--text-faint)' }, '(empty)'));
     } else if (artifact.kind === 'table' && Array.isArray(artifact.value) && artifact.value.length > 0) {
       body.append(renderTable(artifact.value));
     } else if (artifact.kind === 'text' || artifact.kind === 'token' || artifact.kind === 'uri') {
@@ -389,7 +389,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
 
   // Column keys arrive as camelCase identifiers; split them so headers stay readable.
   function humanize(key) {
-    return key.replace(/([a-zçğıöşü])([A-ZÇĞİÖŞÜ])/g, '$1 $2').toLowerCase();
+    return key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
   }
 
   function renderTable(rows) {
@@ -419,7 +419,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
   }
 
   function renderMissing(id) {
-    clear(host).append(emptyState('Senaryo bulunamadı', id));
+    clear(host).append(emptyState('Scenario not found', id));
   }
 
   return { render, renderWelcome, renderMissing, get current() { return current; } };

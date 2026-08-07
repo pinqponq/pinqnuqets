@@ -45,6 +45,7 @@
     <PackageProjectUrl>https://github.com/pinqponq/pinqnuqets</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>pinqnuqets-dark.png</PackageIcon>
     <!-- Tags shared by every package; each project appends its own via $(PackageTags). -->
     <PackageTags>pinqponq;dotnet;backend;infrastructure</PackageTags>
     <PackageReleaseNotes>https://github.com/pinqponq/pinqnuqets/blob/master/CHANGELOG.md</PackageReleaseNotes>

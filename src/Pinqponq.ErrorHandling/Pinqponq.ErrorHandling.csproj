@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.ErrorHandling</PackageId>
     <Title>Pinqponq Error Handling</Title>
-    <Description>Global exception middleware + standart hata response contract; log çıktısı Pinqloq'un beklediği yapılandırılmış formatta (correlation/trace id, alan adları) üretilir.</Description>
+    <Description>Global exception middleware plus a standard error response contract; log output uses Pinqloq's structured format (correlation/trace id, field names).</Description>
     <PackageTags>$(PackageTags);error-handling;exception;middleware;aspnetcore;error-response;correlation-id</PackageTags>
   </PropertyGroup>
 

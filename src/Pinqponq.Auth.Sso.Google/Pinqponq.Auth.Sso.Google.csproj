@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Auth.Sso.Google</PackageId>
     <Title>Pinqponq Google SSO</Title>
-    <Description>Google OAuth2/OIDC id_token doğrulaması ile giriş implementasyonu (IExternalAuthProvider).</Description>
+    <Description>Sign-in implementation via Google OAuth2/OIDC id_token validation (IExternalAuthProvider).</Description>
     <PackageTags>$(PackageTags);sso;google;oauth2;oidc;google-signin;id-token;authentication;auth</PackageTags>
   </PropertyGroup>
 

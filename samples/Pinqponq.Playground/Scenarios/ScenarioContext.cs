@@ -71,8 +71,30 @@ public sealed class ScenarioContext
 
     public CancellationToken CancellationToken { get; }
 
-    /// <summary>URL of the built-in fake NetGSM endpoint.</summary>
-    public string FakeSmsUrl => new Uri(BaseAddress, "/fake-netgsm/sms/send/get").ToString();
+    /// <summary>
+    /// HTTPS URL of the built-in fake NetGSM GET endpoint.
+    /// </summary>
+    /// <remarks>
+    /// <c>SmsOptionsValidator</c> requires HTTPS. The console listens on HTTP only; the
+    /// named client's <see cref="Infrastructure.LoopbackHttpsRewriteHandler"/> rewrites
+    /// loopback HTTPS back to HTTP before the request leaves the process.
+    /// </remarks>
+    public string FakeSmsUrl => LoopbackHttps(BaseAddress, "/fake-netgsm/sms/send/get");
+
+    /// <summary>HTTPS URL of the built-in fake NetGSM RestV2 POST endpoint.</summary>
+    public string FakeSmsRestV2Url => LoopbackHttps(BaseAddress, "/fake-netgsm/sms/rest/v2/send");
+
+    private static string LoopbackHttps(Uri baseAddress, string path)
+    {
+        var builder = new UriBuilder(baseAddress)
+        {
+            Scheme = Uri.UriSchemeHttps,
+            Path = path,
+            Query = string.Empty,
+            Fragment = string.Empty,
+        };
+        return builder.Uri.ToString();
+    }
 
     internal IReadOnlyList<ScenarioStep> Steps => _steps;
 
@@ -251,7 +273,7 @@ public sealed class ScenarioInputs(ScenarioDescriptor descriptor, IReadOnlyDicti
 
     /// <summary>Required non-empty text.</summary>
     public string Text(string name) =>
-        Resolve(name) ?? throw new ScenarioAssertionException($"'{name}' alanı zorunlu.");
+        Resolve(name) ?? throw new ScenarioAssertionException($"'{name}' is required.");
 
     /// <summary>Optional text; null when neither a value nor a default is present.</summary>
     public string? TextOrNull(string name) => Resolve(name);
@@ -259,7 +281,7 @@ public sealed class ScenarioInputs(ScenarioDescriptor descriptor, IReadOnlyDicti
     public int Int(string name) =>
         int.TryParse(Resolve(name), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value
-            : throw new ScenarioAssertionException($"'{name}' sayısal olmalı.");
+            : throw new ScenarioAssertionException($"'{name}' must be numeric.");
 
     public bool Bool(string name) =>
         Resolve(name) is { } raw && bool.TryParse(raw, out var value) && value;
@@ -271,7 +293,7 @@ public sealed class ScenarioInputs(ScenarioDescriptor descriptor, IReadOnlyDicti
         where TEnum : struct, Enum =>
         System.Enum.TryParse<TEnum>(Resolve(name), ignoreCase: true, out var value)
             ? value
-            : throw new ScenarioAssertionException($"'{name}' geçersiz bir seçenek.");
+            : throw new ScenarioAssertionException($"'{name}' is not a valid option.");
 
     private string? Resolve(string name)
     {

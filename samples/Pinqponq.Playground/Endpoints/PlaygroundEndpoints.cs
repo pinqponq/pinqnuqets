@@ -65,7 +65,7 @@ public static class PlaygroundEndpoints
         {
             if (!catalog.Contains(id))
             {
-                return Results.NotFound(new { message = $"Bilinmeyen senaryo: {id}" });
+                return Results.NotFound(new { message = $"Unknown scenario: {id}" });
             }
 
             var baseAddress = new Uri($"{http.Request.Scheme}://{http.Request.Host}");
@@ -169,7 +169,7 @@ public static class PlaygroundEndpoints
             if (!mailhog.IsAvailable)
             {
                 return Results.Json(
-                    new { reason = "mailhog-hazir-degil", message = "MailHog servisi çalışmıyor." },
+                    new { reason = "mailhog-not-ready", message = "The MailHog service is not running." },
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
@@ -181,7 +181,7 @@ public static class PlaygroundEndpoints
             if (!mailhog.IsAvailable)
             {
                 return Results.Json(
-                    new { reason = "mailhog-hazir-degil" },
+                    new { reason = "mailhog-not-ready" },
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
@@ -205,14 +205,68 @@ public static class PlaygroundEndpoints
                 http.Request.QueryString.Value ?? string.Empty,
                 ScenarioRunContext.RunId);
 
-            return record.ResponseStatus == 200
-                ? Results.Text("00", "text/plain")
-                : Results.Text("sunucu hatası", "text/plain", Encoding.UTF8, StatusCodes.Status500InternalServerError);
+            return FakeNetGsmResponse(record);
+        });
+
+        app.MapPost("/fake-netgsm/sms/rest/v2/send", async (HttpContext http, FakeNetGsmState state) =>
+        {
+            using var reader = new StreamReader(http.Request.Body, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync(http.RequestAborted);
+            string? gsmNo = null;
+            string? message = null;
+            string? msgHeader = null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(body) ? "{}" : body);
+                if (doc.RootElement.TryGetProperty("msgheader", out var header))
+                {
+                    msgHeader = header.GetString();
+                }
+
+                if (doc.RootElement.TryGetProperty("messages", out var messages)
+                    && messages.ValueKind == JsonValueKind.Array
+                    && messages.GetArrayLength() > 0)
+                {
+                    var first = messages[0];
+                    if (first.TryGetProperty("no", out var no))
+                    {
+                        gsmNo = no.GetString();
+                    }
+
+                    if (first.TryGetProperty("msg", out var msg))
+                    {
+                        message = msg.GetString();
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Still record the raw body so the console can show what arrived.
+            }
+
+            var auth = http.Request.Headers.Authorization.ToString();
+            var userCode = auth.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase)
+                ? "(Basic)"
+                : null;
+
+            var record = state.Record(
+                userCode,
+                gsmNo,
+                message,
+                msgHeader,
+                rawQuery: string.Empty,
+                ScenarioRunContext.RunId,
+                method: "POST",
+                body: body);
+
+            return FakeNetGsmResponse(record);
         });
 
         app.MapGet("/api/sms", (FakeNetGsmState state) => Results.Ok(new
         {
             failuresRemaining = state.FailuresRemaining,
+            rejectsRemaining = state.RejectsRemaining,
             requests = state.Requests,
         }));
 
@@ -228,6 +282,12 @@ public static class PlaygroundEndpoints
             return Results.NoContent();
         });
     }
+
+    private static IResult FakeNetGsmResponse(FakeSmsRequest record) =>
+        record.ResponseStatus == 200
+            ? Results.Text(record.ResponseBody, "text/plain")
+            : Results.Text("server error", "text/plain", Encoding.UTF8, StatusCodes.Status500InternalServerError);
+
 
     private static void MapErrorSandbox(IApplicationBuilder app)
     {

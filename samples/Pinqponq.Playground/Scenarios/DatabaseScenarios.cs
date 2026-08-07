@@ -30,9 +30,9 @@ public static class DatabaseScenarios
         {
             Id = "postgres.query",
             PackageId = "Pinqponq.Database.Postgres",
-            Title = "Bağlan ve sorgu çalıştır",
-            Summary = "IPostgresConnectionFactory üzerinden bağlantı açar, sunucu sürümünü okur "
-                      + "ve geçici bir tabloya yazıp okur.",
+            Title = "Connect and run a query",
+            Summary = "Opens a connection via IPostgresConnectionFactory, reads the server version, "
+                      + "and writes to and reads from a temp table.",
             RequiredServices = [DevServiceIds.Postgres],
         },
         async context =>
@@ -42,14 +42,14 @@ public static class DatabaseScenarios
 
             var factory = host.GetRequiredService<IPostgresConnectionFactory>();
             await using var connection = await factory.OpenConnectionAsync(context.CancellationToken);
-            context.Step("Bağlantı açıldı");
+            context.Step("Connection opened");
 
             await using (var version = connection.CreateCommand())
             {
                 version.CommandText = "SELECT version()";
                 var value = await version.ExecuteScalarAsync(context.CancellationToken);
-                context.Artifact("sunucu sürümü", value?.ToString(), "text");
-                context.Require("Sürüm okundu", value is not null);
+                context.Artifact("server version", value?.ToString(), "text");
+                context.Require("Version read", value is not null);
             }
 
             await using (var create = connection.CreateCommand())
@@ -60,13 +60,13 @@ public static class DatabaseScenarios
                 await create.ExecuteNonQueryAsync(context.CancellationToken);
             }
 
-            context.Step("Geçici tablo oluşturuldu ve dolduruldu");
+            context.Step("Temp table created and populated");
 
             await using var select = connection.CreateCommand();
             select.CommandText = "SELECT name FROM playground WHERE id = 1";
             var name = await select.ExecuteScalarAsync(context.CancellationToken);
 
-            context.Require("Yazılan satır okundu", name?.ToString() == "pinqponq", name?.ToString());
+            context.Require("The written row was read back", name?.ToString() == "pinqponq", name?.ToString());
         });
 
     private static Scenario PostgresHealth() => new(
@@ -75,8 +75,8 @@ public static class DatabaseScenarios
             Id = "postgres.health",
             PackageId = "Pinqponq.Database.Postgres",
             Title = "Postgres health-check",
-            Summary = "Önce çalışan konteynere karşı Healthy, ardından kapalı bir porta karşı "
-                      + "Unhealthy sonucu üretir.",
+            Summary = "Produces Healthy against the running container first, then Unhealthy "
+                      + "against a closed port.",
             RequiredServices = [DevServiceIds.Postgres],
         },
         async context =>
@@ -90,9 +90,9 @@ public static class DatabaseScenarios
 
             var healthyReport = await healthy.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Çalışan sunucu Healthy", healthyReport.Status == HealthStatus.Healthy,
+            context.Require("Running server is Healthy", healthyReport.Status == HealthStatus.Healthy,
                 healthyReport.Status.ToString());
-            context.Artifact("sağlıklı rapor", HealthProjection.Project(healthyReport));
+            context.Artifact("healthy report", HealthProjection.Project(healthyReport));
 
             await using var broken = context.Host(services =>
             {
@@ -107,9 +107,9 @@ public static class DatabaseScenarios
 
             var brokenReport = await broken.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Kapalı port Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
+            context.Require("Closed port is Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
                 brokenReport.Status.ToString());
-            context.Artifact("sağlıksız rapor", HealthProjection.Project(brokenReport));
+            context.Artifact("unhealthy report", HealthProjection.Project(brokenReport));
         });
 
     private static Scenario PostgresRetry() => new(
@@ -117,12 +117,12 @@ public static class DatabaseScenarios
         {
             Id = "postgres.retry",
             PackageId = "Pinqponq.Database.Postgres",
-            Title = "Bağlantı hatasında tekrar dener",
-            Summary = "Ulaşılamayan bir sunucuya farklı RetryCount değerleriyle bağlanmayı dener. "
-                      + "Polly'nin OnRetry olayı paket dışına açılmadığı için kanıt süre "
-                      + "karşılaştırmasıdır: daha çok deneme belirgin biçimde daha uzun sürer. "
-                      + "Ayrıca RetryCount=0 verilemeyeceğini de gösterir — Polly en az bir "
-                      + "deneme ister ve boru hattı kurulurken hata verir.",
+            Title = "Retries on connection failure",
+            Summary = "Attempts to connect to an unreachable server with different RetryCount "
+                      + "values. Since Polly's OnRetry event isn't exposed outside the package, "
+                      + "the proof is a time comparison: more attempts take noticeably longer. Also "
+                      + "shows RetryCount=0 is rejected — Polly requires at least one attempt and "
+                      + "throws while building the pipeline.",
             NegativePath = true,
             Fields =
             [
@@ -141,32 +141,32 @@ public static class DatabaseScenarios
 
             var zero = await MeasureFailureAsync(context, Unreachable, 0, baseDelay);
             context.Require(
-                "RetryCount=0 kabul edilmiyor",
+                "RetryCount=0 is rejected",
                 zero.ExceptionType?.Contains("Validation", StringComparison.OrdinalIgnoreCase) == true
                 || zero.Exception?.Message.Contains("MaxRetryAttempts", StringComparison.Ordinal) == true,
                 zero.Exception?.Message);
 
             var single = await MeasureFailureAsync(context, Unreachable, 1, baseDelay);
             context.Step($"RetryCount=1 → {single.ElapsedMs} ms", single.ExceptionType);
-            context.Require("Tek denemeli çağrı hata verdi", single.Exception is not null);
+            context.Require("The single-attempt call failed", single.Exception is not null);
 
             var many = await MeasureFailureAsync(context, Unreachable, retryCount, baseDelay);
             context.Step($"RetryCount={retryCount} → {many.ElapsedMs} ms", many.ExceptionType);
-            context.Require("Çok denemeli çağrı da sonunda hata verdi", many.Exception is not null);
+            context.Require("The multi-attempt call also eventually failed", many.Exception is not null);
 
             context.Require(
-                "Daha çok deneme ölçülebilir ek süre getirdi",
+                "More attempts added a measurable amount of extra time",
                 many.ElapsedMs > single.ElapsedMs,
                 $"{single.ElapsedMs} ms → {many.ElapsedMs} ms");
 
-            context.Artifact("ölçüm", new
+            context.Artifact("measurement", new
             {
                 retry1Ms = single.ElapsedMs,
                 retryNMs = many.ElapsedMs,
                 retryCount,
                 exceptionType = many.ExceptionType,
-                retryCountSifirHatasi = zero.Exception?.Message,
-                not = "Polly'nin OnRetry olayı paket dışına açılmadığı için deneme sayısı doğrudan sayılamıyor.",
+                retryCountZeroError = zero.Exception?.Message,
+                note = "The attempt count can't be counted directly since Polly's OnRetry event isn't exposed outside the package.",
             });
         });
 
@@ -207,9 +207,9 @@ public static class DatabaseScenarios
         {
             Id = "mongo.roundtrip",
             PackageId = "Pinqponq.Database.Mongo",
-            Title = "Belge yaz, oku, sil",
-            Summary = "Kayıtlı IMongoDatabase üzerinden bir koleksiyona belge yazar, geri okur "
-                      + "ve siler. Veritabanı adının options'tan geldiğini de doğrular.",
+            Title = "Write, read, delete a document",
+            Summary = "Writes a document to a collection via the registered IMongoDatabase, reads "
+                      + "it back, and deletes it. Also verifies the database name comes from options.",
             RequiredServices = [DevServiceIds.Mongo],
             Fields = [new ScenarioField("databaseName", "DatabaseName", ScenarioFieldKind.Text, "playground")],
         },
@@ -224,34 +224,34 @@ public static class DatabaseScenarios
             }));
 
             var database = host.GetRequiredService<IMongoDatabase>();
-            context.Require("Veritabanı adı options'tan geldi",
+            context.Require("Database name came from options",
                 database.DatabaseNamespace.DatabaseName == databaseName,
                 database.DatabaseNamespace.DatabaseName);
 
-            var collection = database.GetCollection<BsonDocument>("senaryolar");
+            var collection = database.GetCollection<BsonDocument>("scenarios");
             var id = ObjectId.GenerateNewId();
             var document = new BsonDocument
             {
                 ["_id"] = id,
-                ["ad"] = "pinqponq",
-                ["olusturuldu"] = DateTime.UtcNow,
+                ["name"] = "pinqponq",
+                ["createdAt"] = DateTime.UtcNow,
             };
 
             await collection.InsertOneAsync(document, cancellationToken: context.CancellationToken);
-            context.Step("Belge yazıldı");
+            context.Step("Document written");
 
             var found = await collection
                 .Find(Builders<BsonDocument>.Filter.Eq("_id", id))
                 .FirstOrDefaultAsync(context.CancellationToken);
 
-            context.Require("Belge geri okundu", found is not null);
-            context.Require("Alan korunmuş", found!["ad"].AsString == "pinqponq");
-            context.Artifact("belge", found.ToJson(), "text");
+            context.Require("Document read back", found is not null);
+            context.Require("Field preserved", found!["name"].AsString == "pinqponq");
+            context.Artifact("document", found.ToJson(), "text");
 
             var deleted = await collection.DeleteOneAsync(
                 Builders<BsonDocument>.Filter.Eq("_id", id),
                 context.CancellationToken);
-            context.Require("Belge silindi", deleted.DeletedCount == 1);
+            context.Require("Document deleted", deleted.DeletedCount == 1);
         });
 
     private static Scenario MongoHealth() => new(
@@ -260,7 +260,7 @@ public static class DatabaseScenarios
             Id = "mongo.health",
             PackageId = "Pinqponq.Database.Mongo",
             Title = "MongoDB health-check",
-            Summary = "Çalışan sunucuya karşı Healthy, ulaşılamayan bir adrese karşı Unhealthy.",
+            Summary = "Healthy against a running server, Unhealthy against an unreachable address.",
             RequiredServices = [DevServiceIds.Mongo],
             TimeoutSeconds = 90,
         },
@@ -278,8 +278,8 @@ public static class DatabaseScenarios
 
             var report = await healthy.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Çalışan sunucu Healthy", report.Status == HealthStatus.Healthy, report.Status.ToString());
-            context.Artifact("sağlıklı rapor", HealthProjection.Project(report));
+            context.Require("Running server is Healthy", report.Status == HealthStatus.Healthy, report.Status.ToString());
+            context.Artifact("healthy report", HealthProjection.Project(report));
 
             await using var broken = context.Host(services =>
             {
@@ -293,9 +293,9 @@ public static class DatabaseScenarios
 
             var brokenReport = await broken.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Ulaşılamayan sunucu Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
+            context.Require("Unreachable server is Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
                 brokenReport.Status.ToString());
-            context.Artifact("sağlıksız rapor", HealthProjection.Project(brokenReport));
+            context.Artifact("unhealthy report", HealthProjection.Project(brokenReport));
         });
 
     private static Scenario MssqlQuery() => new(
@@ -303,9 +303,9 @@ public static class DatabaseScenarios
         {
             Id = "mssql.query",
             PackageId = "Pinqponq.Database.Mssql",
-            Title = "Bağlan ve sorgu çalıştır",
-            Summary = "ISqlConnectionFactory ile bağlanır ve @@VERSION okur. SQL Server imajı "
-                      + "ağırdır (~1,5 GB) ve ARM64'te çalışmaz.",
+            Title = "Connect and run a query",
+            Summary = "Connects via ISqlConnectionFactory and reads @@VERSION. The SQL Server image "
+                      + "is heavy (~1.5 GB) and doesn't run on ARM64.",
             RequiredServices = [DevServiceIds.MsSql],
             TimeoutSeconds = 90,
         },
@@ -316,14 +316,14 @@ public static class DatabaseScenarios
 
             await using var connection = await host.GetRequiredService<ISqlConnectionFactory>()
                 .OpenConnectionAsync(context.CancellationToken);
-            context.Step("Bağlantı açıldı");
+            context.Step("Connection opened");
 
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT @@VERSION";
             var version = await command.ExecuteScalarAsync(context.CancellationToken);
 
-            context.Require("Sürüm okundu", version is not null);
-            context.Artifact("sunucu sürümü", version?.ToString(), "text");
+            context.Require("Version read", version is not null);
+            context.Artifact("server version", version?.ToString(), "text");
         });
 
     private static Scenario MssqlHealth() => new(
@@ -332,7 +332,7 @@ public static class DatabaseScenarios
             Id = "mssql.health",
             PackageId = "Pinqponq.Database.Mssql",
             Title = "SQL Server health-check",
-            Summary = "Çalışan sunucuya karşı Healthy, kapalı bir porta karşı Unhealthy.",
+            Summary = "Healthy against a running server, Unhealthy against a closed port.",
             RequiredServices = [DevServiceIds.MsSql],
             TimeoutSeconds = 90,
         },
@@ -347,8 +347,8 @@ public static class DatabaseScenarios
 
             var report = await healthy.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Çalışan sunucu Healthy", report.Status == HealthStatus.Healthy, report.Status.ToString());
-            context.Artifact("sağlıklı rapor", HealthProjection.Project(report));
+            context.Require("Running server is Healthy", report.Status == HealthStatus.Healthy, report.Status.ToString());
+            context.Artifact("healthy report", HealthProjection.Project(report));
 
             await using var broken = context.Host(services =>
             {
@@ -363,9 +363,9 @@ public static class DatabaseScenarios
 
             var brokenReport = await broken.GetRequiredService<HealthCheckService>()
                 .CheckHealthAsync(context.CancellationToken);
-            context.Require("Kapalı port Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
+            context.Require("Closed port is Unhealthy", brokenReport.Status == HealthStatus.Unhealthy,
                 brokenReport.Status.ToString());
-            context.Artifact("sağlıksız rapor", HealthProjection.Project(brokenReport));
+            context.Artifact("unhealthy report", HealthProjection.Project(brokenReport));
         });
 
     private sealed record FailureMeasurement(long ElapsedMs, Exception? Exception, string? ExceptionType);

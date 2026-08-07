@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Auth.Sso.Abstractions</PackageId>
     <Title>Pinqponq SSO Abstractions</Title>
-    <Description>Dış kimlik sağlayıcıların (Google, vb.) ortak sözleşmesi: IExternalAuthProvider ve taşıdığı modeller. Sağlayıcı implementasyon paketlerinin temeli.</Description>
+    <Description>Shared contract for external identity providers (Google, etc.): IExternalAuthProvider and related models. Foundation for provider implementation packages.</Description>
     <PackageTags>$(PackageTags);sso;oauth;oidc;authentication;external-auth;abstractions;auth</PackageTags>
   </PropertyGroup>
 

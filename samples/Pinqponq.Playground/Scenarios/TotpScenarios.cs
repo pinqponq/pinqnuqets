@@ -1,5 +1,6 @@
 using Pinqponq.Auth.Totp;
 using Pinqponq.Auth.Totp.DependencyInjection;
+using Pinqponq.Playground.Scenarios.Support;
 
 namespace Pinqponq.Playground.Scenarios;
 
@@ -22,6 +23,8 @@ public static class TotpScenarios
         yield return GenerateAndValidate();
         yield return DriftWindow();
         yield return WrongCode();
+        yield return ReplayProtection();
+        yield return MissingReplayStore();
         yield return Base32RoundTrip();
     }
 
@@ -30,12 +33,12 @@ public static class TotpScenarios
         {
             Id = "totp.generate-validate",
             PackageId = Package,
-            Title = "Secret üret, kod hesapla, doğrula",
-            Summary = "Yeni bir secret üretir, Authenticator uygulamalarının okuduğu otpauth:// "
-                      + "URI'sini kurar, o andaki kodu hesaplar ve doğrular.",
+            Title = "Generate a secret, compute a code, validate",
+            Summary = "Generates a new secret, builds the otpauth:// URI that Authenticator apps "
+                      + "read, computes the current code, and validates it.",
             Fields =
             [
-                new ScenarioField("account", "Hesap adı", ScenarioFieldKind.Text, "user@pinqponq.dev"),
+                new ScenarioField("account", "Account name", ScenarioFieldKind.Text, "user@pinqponq.dev"),
                 new ScenarioField("issuer", "Issuer", ScenarioFieldKind.Text, "Pinqponq"),
                 DigitsField,
                 PeriodField,
@@ -55,22 +58,22 @@ public static class TotpScenarios
             var service = host.GetRequiredService<ITotpService>();
 
             var secret = service.GenerateSecret();
-            context.Step("Secret üretildi", $"{secret.Length} karakter Base32");
+            context.Step("Secret generated", $"{secret.Length} Base32 characters");
             context.Artifact("secret", secret, "text");
 
             var uri = service.GetProvisioningUri(secret, context.Input.Text("account"));
             context.Artifact("otpauth URI", uri, "uri");
-            context.Check("URI otpauth://totp/ ile başlıyor", uri.StartsWith("otpauth://totp/", StringComparison.Ordinal));
+            context.Check("URI starts with otpauth://totp/", uri.StartsWith("otpauth://totp/", StringComparison.Ordinal));
 
             var code = service.ComputeCode(secret);
-            context.Step("Anlık kod hesaplandı", code);
-            context.Artifact("kod", code, "text");
+            context.Step("Current code computed", code);
+            context.Artifact("code", code, "text");
 
-            context.Require("Kod doğrulandı", service.Validate(secret, code));
+            context.Require("Code validated", service.Validate(secret, code));
             context.Check(
-                "Kod istenen uzunlukta",
+                "Code has the requested length",
                 code.Length == context.Input.Int("digits"),
-                $"{code.Length} basamak");
+                $"{code.Length} digits");
         });
 
     private static Scenario DriftWindow() => new(
@@ -78,9 +81,9 @@ public static class TotpScenarios
         {
             Id = "totp.drift-window",
             PackageId = Package,
-            Title = "Saat kayması penceresi (ValidationWindow)",
-            Summary = "Bir önceki periyodun kodu ValidationWindow=1 iken kabul edilir, 0 iken "
-                      + "reddedilir. Kullanıcının saati birkaç saniye geriyse yaşanan durum.",
+            Title = "Clock drift window (ValidationWindow)",
+            Summary = "The previous period's code is accepted when ValidationWindow=1, and rejected "
+                      + "when it's 0. This is what happens when the user's clock is a few seconds behind.",
             Fields = [PeriodField],
         },
         async context =>
@@ -98,9 +101,9 @@ public static class TotpScenarios
             var service = tolerant.GetRequiredService<ITotpService>();
             var secret = service.GenerateSecret();
             var oldCode = service.ComputeCode(secret, previousPeriod);
-            context.Step("Bir önceki periyodun kodu hesaplandı", oldCode);
+            context.Step("Previous period's code computed", oldCode);
 
-            context.Require("ValidationWindow=1 ile kabul edildi", service.Validate(secret, oldCode, now));
+            context.Require("Accepted with ValidationWindow=1", service.Validate(secret, oldCode, now));
 
             await using var strict = context.Host(services => services.AddPinqponqTotp(totp =>
             {
@@ -109,7 +112,7 @@ public static class TotpScenarios
             }));
 
             context.Require(
-                "ValidationWindow=0 ile reddedildi",
+                "Rejected with ValidationWindow=0",
                 !strict.GetRequiredService<ITotpService>().Validate(secret, oldCode, now));
         });
 
@@ -118,10 +121,10 @@ public static class TotpScenarios
         {
             Id = "totp.wrong-code",
             PackageId = Package,
-            Title = "Yanlış kod reddedilir",
-            Summary = "Rastgele bir kod ve boş bir kod denenir; ikisi de reddedilmeli.",
+            Title = "A wrong code is rejected",
+            Summary = "A random code and an empty code are tried; both must be rejected.",
             NegativePath = true,
-            Fields = [new ScenarioField("code", "Denenecek kod", ScenarioFieldKind.Text, "000000")],
+            Fields = [new ScenarioField("code", "Code to try", ScenarioFieldKind.Text, "000000")],
         },
         async context =>
         {
@@ -135,12 +138,83 @@ public static class TotpScenarios
             {
                 // A one-in-a-million collision would otherwise look like a package defect.
                 attempt = real == "000000" ? "111111" : "000000";
-                context.Step("Denenen kod gerçek kodla çakıştı, değiştirildi", attempt);
+                context.Step("The tried code collided with the real code, changed it", attempt);
             }
 
-            context.Require("Yanlış kod reddedildi", !service.Validate(secret, attempt));
-            context.Require("Boş kod reddedildi", !service.Validate(secret, string.Empty));
-            context.Artifact("karşılaştırma", new { gercekKod = real, denenen = attempt });
+            context.Require("Wrong code rejected", !service.Validate(secret, attempt));
+            context.Require("Empty code rejected", !service.Validate(secret, string.Empty));
+            context.Artifact("comparison", new { realCode = real, tried = attempt });
+        });
+
+    private static Scenario ReplayProtection() => new(
+        new ScenarioDescriptor
+        {
+            Id = "totp.replay",
+            PackageId = Package,
+            Title = "ValidateAsync replay protection",
+            Summary = "With an ITotpReplayStore, the same code is rejected on a second ValidateAsync "
+                      + "call. Sync Validate is unaffected; replay protection only applies on the async path.",
+            NegativePath = true,
+        },
+        async context =>
+        {
+            await using var host = context.Host(services =>
+            {
+                services.AddPinqponqTotp();
+                services.AddSingleton<ITotpReplayStore, InMemoryTotpReplayStore>();
+            });
+
+            var service = host.GetRequiredService<ITotpService>();
+            var secret = service.GenerateSecret();
+            var code = service.ComputeCode(secret);
+
+            const string Subject = "user@pinqponq.dev";
+            context.Require(
+                "First ValidateAsync accepted",
+                await service.ValidateAsync(secret, code, Subject, cancellationToken: context.CancellationToken));
+            context.Require(
+                "Same code rejected the second time",
+                !await service.ValidateAsync(secret, code, Subject, cancellationToken: context.CancellationToken));
+            context.Check(
+                "Sync Validate still passes (doesn't use the replay store)",
+                service.Validate(secret, code));
+        });
+
+    private static Scenario MissingReplayStore() => new(
+        new ScenarioDescriptor
+        {
+            Id = "totp.missing-replay-store",
+            PackageId = Package,
+            Title = "ValidateAsync fails without a replay store",
+            Summary = "ValidateAsync requires an ITotpReplayStore; if none is registered, the error "
+                      + "shows an example AddScoped call. Sync Validate keeps working without a store.",
+            NegativePath = true,
+        },
+        async context =>
+        {
+            await using var host = context.Host(services => services.AddPinqponqTotp());
+            var service = host.GetRequiredService<ITotpService>();
+            var secret = service.GenerateSecret();
+            var code = service.ComputeCode(secret);
+
+            context.Require("Sync Validate works without a store", service.Validate(secret, code));
+
+            Exception? thrown = null;
+            try
+            {
+                await service.ValidateAsync(secret, code, "user@pinqponq.dev", cancellationToken: context.CancellationToken);
+            }
+            catch (InvalidOperationException exception)
+            {
+                thrown = exception;
+            }
+
+            context.Require("ValidateAsync InvalidOperationException", thrown is not null);
+            context.Check(
+                "The error names ITotpReplayStore",
+                thrown!.Message.Contains("ITotpReplayStore", StringComparison.Ordinal),
+                thrown.Message);
+            context.Artifact("exception", new { type = thrown.GetType().FullName, message = thrown.Message });
         });
 
     private static Scenario Base32RoundTrip() => new(
@@ -149,21 +223,21 @@ public static class TotpScenarios
             Id = "totp.base32",
             PackageId = Package,
             Title = "Base32 encode/decode",
-            Summary = "Paketin dışa açtığı RFC 4648 Base32 yardımcısı: metin → Base32 → geri. "
-                      + "Geçersiz karakterin FormatException verdiğini de gösterir.",
-            Fields = [new ScenarioField("text", "Metin", ScenarioFieldKind.Text, "Pinqponq")],
+            Summary = "The RFC 4648 Base32 helper the package exposes: text → Base32 → back. Also "
+                      + "shows that an invalid character throws a FormatException.",
+            Fields = [new ScenarioField("text", "Text", ScenarioFieldKind.Text, "Pinqponq")],
         },
         context =>
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(context.Input.Text("text"));
             var encoded = Base32.Encode(bytes);
-            context.Step("Encode edildi", encoded);
+            context.Step("Encoded", encoded);
 
             var decoded = Base32.Decode(encoded);
             var roundTrip = System.Text.Encoding.UTF8.GetString(decoded);
 
-            context.Require("Round-trip aynı metni verdi", roundTrip == context.Input.Text("text"), roundTrip);
-            context.Artifact("sonuç", new { girdi = context.Input.Text("text"), base32 = encoded, cozulmus = roundTrip });
+            context.Require("Round-trip produced the same text", roundTrip == context.Input.Text("text"), roundTrip);
+            context.Artifact("result", new { input = context.Input.Text("text"), base32 = encoded, decoded = roundTrip });
 
             Exception? thrown = null;
             try
@@ -175,7 +249,7 @@ public static class TotpScenarios
                 thrown = exception;
             }
 
-            context.Require("Geçersiz karakter FormatException verdi", thrown is not null);
+            context.Require("Invalid character threw FormatException", thrown is not null);
             context.Artifact("exception", new { type = thrown!.GetType().Name, message = thrown.Message });
 
             return Task.CompletedTask;

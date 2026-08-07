@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Cache</PackageId>
     <Title>Pinqponq Cache</Title>
-    <Description>Redis cache sağlayıcısını sarmalar: get/set/remove/exists, dağıtık kilit ve health-check. StackExchange.Redis tek sürüm.</Description>
+    <Description>Redis cache wrapper: get/set/remove/exists, distributed lock, and health-check. Single StackExchange.Redis version.</Description>
     <PackageTags>$(PackageTags);redis;cache;distributed-cache;distributed-lock;stackexchange-redis;fencing-token;health-check</PackageTags>
   </PropertyGroup>
 

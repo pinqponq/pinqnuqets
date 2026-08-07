@@ -38,7 +38,7 @@ public static class DockerProbe
                 var socketPath = endpoint.LocalPath;
                 if (!File.Exists(socketPath))
                 {
-                    throw new IOException($"Docker soketi bulunamadı: {socketPath}");
+                    throw new IOException($"Docker socket not found: {socketPath}");
                 }
 
                 handler.ConnectCallback = async (_, token) =>
@@ -80,7 +80,7 @@ public static class DockerProbe
                     {
                         await pipe.DisposeAsync().ConfigureAwait(false);
                         throw new IOException(
-                            $"Docker named pipe bulunamadı: \\\\.\\pipe\\{pipeName}. Docker Desktop çalışıyor mu?",
+                            $"Docker named pipe not found: \\\\.\\pipe\\{pipeName}. Is Docker Desktop running?",
                             exception);
                     }
                 };
@@ -98,7 +98,7 @@ public static class DockerProbe
                 break;
 
             default:
-                throw new NotSupportedException($"Desteklenmeyen DOCKER_HOST şeması: {endpoint.Scheme}");
+                throw new NotSupportedException($"Unsupported DOCKER_HOST scheme: {endpoint.Scheme}");
         }
 
         using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) };
@@ -122,7 +122,7 @@ public static class DockerProbe
             var candidate = segment?.Trim('/') ?? string.Empty;
             if (string.IsNullOrEmpty(candidate))
             {
-                throw new NotSupportedException($"Geçersiz npipe DOCKER_HOST: {endpoint}");
+                throw new NotSupportedException($"Invalid npipe DOCKER_HOST: {endpoint}");
             }
 
             return candidate;
@@ -131,7 +131,7 @@ public static class DockerProbe
         var pipeName = path[(index + marker.Length)..].Trim('/');
         if (string.IsNullOrEmpty(pipeName))
         {
-            throw new NotSupportedException($"Geçersiz npipe DOCKER_HOST: {endpoint}");
+            throw new NotSupportedException($"Invalid npipe DOCKER_HOST: {endpoint}");
         }
 
         return pipeName;

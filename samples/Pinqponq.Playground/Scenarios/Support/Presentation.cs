@@ -34,7 +34,7 @@ public static class Presentation
         var parts = token.Split('.');
         if (parts.Length < 2)
         {
-            return new { error = "Token üç bölümlü değil." };
+            return new { error = "Token is not three-part." };
         }
 
         return new

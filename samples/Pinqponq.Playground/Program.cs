@@ -61,8 +61,8 @@ lifetime.ApplicationStarted.Register(() => _ = Task.Run(async () =>
 {
     await stack.ProbeDockerAsync(CancellationToken.None);
     app.Logger.LogInformation(
-        "Playground hazır. Docker {DockerState}. Senaryo sayısı: {ScenarioCount}.",
-        stack.DockerAvailable ? "kullanılabilir" : "kullanılamıyor",
+        "Playground ready. Docker {DockerState}. Scenario count: {ScenarioCount}.",
+        stack.DockerAvailable ? "available" : "unavailable",
         app.Services.GetRequiredService<ScenarioCatalog>().All.Count);
 }));
 

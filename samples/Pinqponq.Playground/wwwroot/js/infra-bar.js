@@ -67,7 +67,7 @@ export function createInfraBar({ onChange }) {
     const actions = el('div', { class: 'popover__actions' });
 
     if (service.state === 'External') {
-      actions.append(el('span', { class: 'badge' }, 'Yapılandırmadan geliyor, yönetilmiyor'));
+      actions.append(el('span', { class: 'badge' }, 'Comes from configuration, not managed'));
     } else {
       actions.append(
         el(
@@ -76,9 +76,9 @@ export function createInfraBar({ onChange }) {
             class: 'btn btn--primary',
             type: 'button',
             disabled: busy || running,
-            onClick: () => act(service.id, api.startService, 'başlatılıyor'),
+            onClick: () => act(service.id, api.startService, 'starting'),
           },
-          'Başlat',
+          'Start',
         ),
         el(
           'button',
@@ -86,9 +86,9 @@ export function createInfraBar({ onChange }) {
             class: 'btn',
             type: 'button',
             disabled: !running,
-            onClick: () => act(service.id, api.stopService, 'durduruluyor'),
+            onClick: () => act(service.id, api.stopService, 'stopping'),
           },
-          'Durdur',
+          'Stop',
         ),
         el(
           'button',
@@ -96,9 +96,9 @@ export function createInfraBar({ onChange }) {
             class: 'btn',
             type: 'button',
             disabled: !running,
-            onClick: () => act(service.id, api.restartService, 'yeniden başlatılıyor'),
+            onClick: () => act(service.id, api.restartService, 'restarting'),
           },
-          'Yeniden başlat',
+          'Restart',
         ),
       );
     }
@@ -116,7 +116,7 @@ export function createInfraBar({ onChange }) {
       el('div', { class: 'popover__meta' }, service.description),
       el('div', { class: 'popover__meta' }, service.image),
       service.heavy
-        ? el('div', { class: 'badge badge--warn' }, 'Ağır imaj (~1,5 GB), ARM64 desteklenmiyor')
+        ? el('div', { class: 'badge badge--warn' }, 'Heavy image (~1.5 GB), ARM64 not supported')
         : null,
       service.connectionString
         ? el('div', { class: 'popover__meta' }, service.connectionString)
@@ -126,7 +126,7 @@ export function createInfraBar({ onChange }) {
         : null,
       service.lastError ? el('div', { class: 'error-box' }, service.lastError) : null,
       !dockerAvailable && service.state !== 'External'
-        ? el('div', { class: 'error-box error-box--warn' }, `Docker kullanılamıyor: ${dockerError ?? 'bilinmiyor'}`)
+        ? el('div', { class: 'error-box error-box--warn' }, `Docker unavailable: ${dockerError ?? 'unknown'}`)
         : null,
       actions,
     );

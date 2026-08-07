@@ -13,6 +13,7 @@ public static class MailScenarios
     public static IEnumerable<Scenario> Create()
     {
         yield return SendHtml();
+        yield return AttachmentRootJail();
         yield return MultipleRecipients();
         yield return ConfigurationBinding();
     }
@@ -22,18 +23,16 @@ public static class MailScenarios
         {
             Id = "mail.send",
             PackageId = Package,
-            Title = "HTML mail gönder",
-            Summary = "SMTP üzerinden mail gönderir ve MailHog kutusundan geri okuyup gösterir. "
-                      + "Var olmayan bir ek dosyanın sessizce atlandığını da doğrular.",
+            Title = "Send an HTML mail",
+            Summary = "Sends a mail over SMTP and reads it back from the MailHog inbox. No "
+                      + "attachment — AttachmentRoot is only required when sending attachments.",
             RequiredServices = [DevServiceIds.MailHog],
             Fields =
             [
-                new ScenarioField("to", "Alıcı", ScenarioFieldKind.Text, "user@pinqponq.dev"),
-                new ScenarioField("subject", "Konu", ScenarioFieldKind.Text, "Pinqponq Playground testi"),
-                new ScenarioField("body", "Gövde (HTML)", ScenarioFieldKind.MultilineText,
-                    "<h1>Merhaba</h1><p>Bu mail <strong>Pinqponq.Mail</strong> ile gönderildi.</p>"),
-                new ScenarioField("attachment", "Ek dosya yolu (yok sayılmalı)", ScenarioFieldKind.Text,
-                    "/tmp/olmayan-dosya.pdf", "Var olmayan ekler sessizce atlanır."),
+                new ScenarioField("to", "Recipient", ScenarioFieldKind.Text, "user@pinqponq.dev"),
+                new ScenarioField("subject", "Subject", ScenarioFieldKind.Text, "Pinqponq Playground test"),
+                new ScenarioField("body", "Body (HTML)", ScenarioFieldKind.MultilineText,
+                    "<h1>Hello</h1><p>This mail was sent with <strong>Pinqponq.Mail</strong>.</p>"),
             ],
             TimeoutSeconds = 45,
         },
@@ -60,21 +59,102 @@ public static class MailScenarios
                     Subject = context.Input.Text("subject"),
                     Body = context.Input.Text("body"),
                     IsBodyHtml = true,
-                    Attachments = [context.Input.Text("attachment")],
                 },
                 context.CancellationToken);
 
-            context.Step("SendAsync tamamlandı (eksik ek hata vermedi)");
+            context.Step("SendAsync completed");
 
             var mail = await WaitForMailAsync(mailhog, context);
-            context.Require("Mail MailHog kutusuna düştü", mail is not null);
-            context.Check("Konu korunmuş", mail!.Subject == context.Input.Text("subject"), mail.Subject);
+            context.Require("Mail landed in the MailHog inbox", mail is not null);
+            context.Check("Subject preserved", mail!.Subject == context.Input.Text("subject"), mail.Subject);
             context.Check(
-                "Alıcı doğru",
+                "Recipient is correct",
                 mail.To.Any(recipient => recipient.Contains(context.Input.Text("to"), StringComparison.OrdinalIgnoreCase)),
                 string.Join(", ", mail.To));
 
-            context.Artifact("gelen mail", new { mail.Subject, mail.From, mail.To, mail.Body, mail.ReceivedAt });
+            context.Artifact("received mail", new { mail.Subject, mail.From, mail.To, mail.Body, mail.ReceivedAt });
+        });
+
+    private static Scenario AttachmentRootJail() => new(
+        new ScenarioDescriptor
+        {
+            Id = "mail.attachment-root",
+            PackageId = Package,
+            Title = "AttachmentRoot path jail",
+            Summary = "AttachmentRoot is required when sending attachments. A file under the root "
+                      + "is attached; a missing file throws ArgumentException (no silent skip).",
+            RequiredServices = [DevServiceIds.MailHog],
+            NegativePath = true,
+            TimeoutSeconds = 45,
+        },
+        async context =>
+        {
+            var mailhog = context.AppServices.GetRequiredService<MailHogClient>();
+            await mailhog.ClearAsync(context.CancellationToken);
+            var endpoint = context.Stack.Require(DevServiceIds.MailHog);
+
+            var root = Path.Combine(Path.GetTempPath(), "pinqponq-playground-mail", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            var attachmentPath = Path.Combine(root, "attachment.txt");
+            await File.WriteAllTextAsync(attachmentPath, "playground attachment content", context.CancellationToken);
+
+            try
+            {
+                await using var host = context.Host(services => services.AddPinqponqMail(smtp =>
+                {
+                    smtp.SmtpHost = endpoint.Host!;
+                    smtp.SmtpPort = endpoint.Port!.Value;
+                    smtp.EnableSsl = false;
+                    smtp.FromEmail = "playground@pinqponq.dev";
+                    smtp.AttachmentRoot = root;
+                }));
+
+                await host.GetRequiredService<IEmailSender>().SendAsync(
+                    new EmailMessage
+                    {
+                        To = "user@pinqponq.dev",
+                        Subject = "Mail with attachment",
+                        Body = "<p>has an attachment</p>",
+                        Attachments = [attachmentPath],
+                    },
+                    context.CancellationToken);
+                context.Step("Attachment under the root sent");
+
+                var mail = await WaitForMailAsync(mailhog, context);
+                context.Require("Mail arrived", mail is not null);
+
+                Exception? missing = null;
+                try
+                {
+                    await host.GetRequiredService<IEmailSender>().SendAsync(
+                        new EmailMessage
+                        {
+                            To = "user@pinqponq.dev",
+                            Subject = "Missing attachment",
+                            Body = "x",
+                            Attachments = [Path.Combine(root, "missing.pdf")],
+                        },
+                        context.CancellationToken);
+                }
+                catch (ArgumentException exception)
+                {
+                    missing = exception;
+                }
+
+                context.Require("Missing attachment throws ArgumentException", missing is not null);
+                context.Artifact("exception", new { type = missing!.GetType().FullName, message = missing.Message });
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+                catch (IOException)
+                {
+                    // temp cleanup best-effort
+                }
+            }
         });
 
     private static Scenario MultipleRecipients() => new(
@@ -82,15 +162,15 @@ public static class MailScenarios
         {
             Id = "mail.recipients",
             PackageId = Package,
-            Title = "Çoklu alıcı: virgül ve noktalı virgül",
-            Summary = "To/Cc/Bcc alanları hem virgül hem noktalı virgülle ayrılmış listeleri "
-                      + "kabul eder. Bcc'nin başlıklarda görünmediği de doğrulanır.",
+            Title = "Multiple recipients: comma and semicolon",
+            Summary = "The To/Cc/Bcc fields accept lists separated by both commas and semicolons. "
+                      + "Also verifies that Bcc doesn't appear in the headers.",
             RequiredServices = [DevServiceIds.MailHog],
             Fields =
             [
                 new ScenarioField("to", "To", ScenarioFieldKind.Text, "a@pinqponq.dev, b@pinqponq.dev"),
                 new ScenarioField("cc", "Cc", ScenarioFieldKind.Text, "c@pinqponq.dev; d@pinqponq.dev"),
-                new ScenarioField("bcc", "Bcc", ScenarioFieldKind.Text, "gizli@pinqponq.dev"),
+                new ScenarioField("bcc", "Bcc", ScenarioFieldKind.Text, "secret@pinqponq.dev"),
             ],
             TimeoutSeconds = 45,
         },
@@ -115,24 +195,24 @@ public static class MailScenarios
                     To = context.Input.Text("to"),
                     Cc = context.Input.Text("cc"),
                     Bcc = context.Input.Text("bcc"),
-                    Subject = "Çoklu alıcı testi",
-                    Body = "<p>Ayraç testi</p>",
+                    Subject = "Multiple recipients test",
+                    Body = "<p>Separator test</p>",
                 },
                 context.CancellationToken);
 
-            context.Step("Mail gönderildi");
+            context.Step("Mail sent");
 
             var messages = await WaitForCountAsync(mailhog, context, expected: 5);
-            context.Artifact("teslim edilen kopyalar", messages.Select(message => new
+            context.Artifact("delivered copies", messages.Select(message => new
             {
                 message.Subject,
                 to = message.To,
             }).ToArray(), "table");
 
             context.Require(
-                "Beş alıcının hepsine teslim edildi",
+                "Delivered to all five recipients",
                 messages.Count == 5,
-                $"{messages.Count} kopya");
+                $"{messages.Count} copies");
 
             var headerRecipients = messages
                 .SelectMany(message => message.To)
@@ -140,9 +220,9 @@ public static class MailScenarios
                 .ToArray();
 
             context.Check(
-                "Bcc alıcısı başlıklarda görünmüyor",
+                "Bcc recipient does not appear in the headers",
                 !headerRecipients.Any(recipient =>
-                    recipient.Contains("gizli@", StringComparison.OrdinalIgnoreCase)),
+                    recipient.Contains("secret@", StringComparison.OrdinalIgnoreCase)),
                 string.Join(", ", headerRecipients));
         });
 
@@ -151,9 +231,9 @@ public static class MailScenarios
         {
             Id = "mail.configuration",
             PackageId = Package,
-            Title = "IConfiguration bölümünden bağlama",
-            Summary = "AddPinqponqMail(IConfiguration, \"Smtp\") aşırı yüklemesi bölümü bağlar; "
-                      + "bölüm yoksa anlaşılır bir InvalidOperationException verir. Docker gerekmez.",
+            Title = "Binding from an IConfiguration section",
+            Summary = "The AddPinqponqMail(IConfiguration, \"Smtp\") overload binds the section; if "
+                      + "the section is missing, it throws a clear InvalidOperationException. No Docker needed.",
         },
         context =>
         {
@@ -172,24 +252,24 @@ public static class MailScenarios
                 .BuildServiceProvider();
 
             var options = bound.GetRequiredService<Microsoft.Extensions.Options.IOptions<SmtpOptions>>().Value;
-            context.Require("SmtpHost bağlandı", options.SmtpHost == "smtp.pinqponq.dev", options.SmtpHost);
-            context.Require("SmtpPort bağlandı", options.SmtpPort == 587, options.SmtpPort.ToString());
-            context.Artifact("bağlanan options", options);
+            context.Require("SmtpHost bound", options.SmtpHost == "smtp.pinqponq.dev", options.SmtpHost);
+            context.Require("SmtpPort bound", options.SmtpPort == 587, options.SmtpPort.ToString());
+            context.Artifact("bound options", options);
 
             Exception? thrown = null;
             try
             {
-                new ServiceCollection().AddPinqponqMail(configuration, "OlmayanBolum");
+                new ServiceCollection().AddPinqponqMail(configuration, "MissingSection");
             }
             catch (InvalidOperationException exception)
             {
                 thrown = exception;
             }
 
-            context.Require("Eksik bölüm hata verdi", thrown is not null);
+            context.Require("Missing section throws", thrown is not null);
             context.Check(
-                "Hata bölüm adını söylüyor",
-                thrown!.Message.Contains("OlmayanBolum", StringComparison.Ordinal),
+                "The error names the section",
+                thrown!.Message.Contains("MissingSection", StringComparison.Ordinal),
                 thrown.Message);
 
             return Task.CompletedTask;

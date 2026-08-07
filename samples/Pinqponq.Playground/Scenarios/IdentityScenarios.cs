@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Pinqponq.Identity.DependencyInjection;
@@ -22,7 +23,7 @@ public static class IdentityScenarios
 
     private static readonly ScenarioField KeyField =
         new("symmetricKey", "SymmetricKey", ScenarioFieldKind.Password, DemoKey,
-            "HMAC için en az 32 bayt olmalı.");
+            "Must be at least 32 bytes for HMAC.");
 
     public static IEnumerable<Scenario> Create()
     {
@@ -31,9 +32,11 @@ public static class IdentityScenarios
         yield return ExpiredToken();
         yield return WrongAudience();
         yield return ShortKeyRejected();
+        yield return JtiIssuedAndRevoked();
         yield return PasswordHashing();
         yield return RefreshTokenRotation();
         yield return RefreshTokenReuseDetected();
+        yield return RefreshTokenFamilyRevoke();
         yield return MissingStoreDetected();
     }
 
@@ -42,9 +45,9 @@ public static class IdentityScenarios
         {
             Id = "identity.jwt.hmac",
             PackageId = Package,
-            Title = "JWT üret ve doğrula (HMAC-SHA256)",
-            Summary = "Claim listesiyle token üretir, aynı yapılandırmayla doğrular ve çözülmüş "
-                      + "header/payload ile dönen ClaimsPrincipal'ı gösterir.",
+            Title = "Issue and validate a JWT (HMAC-SHA256)",
+            Summary = "Issues a token with a claim list, validates it with the same configuration, "
+                      + "and shows the decoded header/payload and the returned ClaimsPrincipal.",
             Fields =
             [
                 IssuerField,
@@ -67,7 +70,7 @@ public static class IdentityScenarios
                 jwt.Lifetime = context.Input.Duration("lifetimeMs");
             }));
 
-            context.Step("AddPinqponqIdentity ile izole konteyner kuruldu");
+            context.Step("Isolated container set up via AddPinqponqIdentity");
 
             var generator = host.GetRequiredService<IJwtTokenGenerator>();
             var token = generator.GenerateToken(
@@ -77,22 +80,27 @@ public static class IdentityScenarios
                 new Claim(ClaimTypes.Role, context.Input.Text("role")),
             ]);
 
-            context.Step("Token üretildi", $"{token.Length} karakter");
+            context.Step("Token issued", $"{token.Length} characters");
             context.Artifact("token", token, "token");
-            context.Artifact("çözülmüş token", Presentation.Jwt(token));
+            context.Artifact("decoded token", Presentation.Jwt(token));
 
             var validator = host.GetRequiredService<IJwtTokenValidator>();
             var principal = await validator.ValidateAsync(token, context.CancellationToken);
 
-            context.Require("Token doğrulandı", principal is not null);
+            context.Require("Token validated", principal is not null);
             context.Artifact("ClaimsPrincipal", Presentation.Principal(principal!));
 
             context.Check(
-                "sub claim korunmuş",
+                "sub claim preserved",
                 principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value == context.Input.Text("subject"));
             context.Check(
-                "role claim korunmuş",
+                "role claim preserved",
                 principal.FindFirst(ClaimTypes.Role)?.Value == context.Input.Text("role"));
+            context.Check(
+                "jti generated automatically",
+                !string.IsNullOrEmpty(
+                    principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value
+                    ?? principal.FindFirst("jti")?.Value));
         });
 
     private static Scenario RsaRoundTrip() => new(
@@ -100,9 +108,9 @@ public static class IdentityScenarios
         {
             Id = "identity.jwt.rsa",
             PackageId = Package,
-            Title = "JWT üret ve doğrula (RSA-SHA256)",
-            Summary = "2048 bit RSA anahtar çifti üretir, özel anahtarla imzalar, açık anahtarla "
-                      + "doğrular. Token'ın alg başlığının RS256 olduğunu gösterir.",
+            Title = "Issue and validate a JWT (RSA-SHA256)",
+            Summary = "Generates a 2048-bit RSA key pair, signs with the private key, validates with the "
+                      + "public key. Shows that the token's alg header is RS256.",
             Fields = [IssuerField, AudienceField],
         },
         async context =>
@@ -110,7 +118,7 @@ public static class IdentityScenarios
             using var rsa = RSA.Create(2048);
             var privatePem = rsa.ExportPkcs8PrivateKeyPem();
             var publicPem = rsa.ExportSubjectPublicKeyInfoPem();
-            context.Step("RSA-2048 anahtar çifti üretildi");
+            context.Step("RSA-2048 key pair generated");
 
             await using var host = context.Host(services => services.AddPinqponqIdentity(jwt =>
             {
@@ -125,13 +133,13 @@ public static class IdentityScenarios
                 .GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-rsa")]);
 
             context.Artifact("token", token, "token");
-            context.Artifact("çözülmüş token", Presentation.Jwt(token));
-            context.Artifact("açık anahtar (PEM)", publicPem, "text");
+            context.Artifact("decoded token", Presentation.Jwt(token));
+            context.Artifact("public key (PEM)", publicPem, "text");
 
             var principal = await host.GetRequiredService<IJwtTokenValidator>()
                 .ValidateAsync(token, context.CancellationToken);
 
-            context.Require("Açık anahtarla doğrulandı", principal is not null);
+            context.Require("Validated with the public key", principal is not null);
         });
 
     private static Scenario ExpiredToken() => new(
@@ -139,9 +147,10 @@ public static class IdentityScenarios
         {
             Id = "identity.jwt.expired",
             PackageId = Package,
-            Title = "Süresi dolmuş token reddedilir",
-            Summary = "Token, ömrü ve saat toleransı kadar geçmişte üretilir. Doğrulayıcı "
-                      + "exception fırlatmaz — null döner; bu paketin bilinçli sözleşmesidir.",
+            Title = "An expired token is rejected",
+            Summary = "The token is issued far enough in the past to exceed its lifetime plus clock "
+                      + "skew. The validator does not throw — it returns null; this is the package's "
+                      + "deliberate contract.",
             NegativePath = true,
             Fields =
             [
@@ -170,13 +179,13 @@ public static class IdentityScenarios
             var token = host.GetRequiredService<IJwtTokenGenerator>()
                 .GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-expired")], issuedAt);
 
-            context.Step("Geçmiş tarihli token üretildi", $"issuedAt = {issuedAt:O}");
-            context.Artifact("çözülmüş token", Presentation.Jwt(token));
+            context.Step("Back-dated token issued", $"issuedAt = {issuedAt:O}");
+            context.Artifact("decoded token", Presentation.Jwt(token));
 
             var principal = await host.GetRequiredService<IJwtTokenValidator>()
                 .ValidateAsync(token, context.CancellationToken);
 
-            context.Require("Doğrulama null döndü (exception değil)", principal is null);
+            context.Require("Validation returned null (not an exception)", principal is null);
         });
 
     private static Scenario WrongAudience() => new(
@@ -184,16 +193,16 @@ public static class IdentityScenarios
         {
             Id = "identity.jwt.wrong-audience",
             PackageId = Package,
-            Title = "Yanlış audience reddedilir",
-            Summary = "Token bir konteynerde üretilir, farklı bir audience bekleyen ikinci bir "
-                      + "konteynerde doğrulanır. İki ayrı DI konteyneri kullanmak, options "
-                      + "önbelleğinin koşular arasında sızmadığını da kanıtlar.",
+            Title = "A wrong audience is rejected",
+            Summary = "The token is issued in one container and validated in a second container that "
+                      + "expects a different audience. Using two separate DI containers also proves "
+                      + "the options cache doesn't leak between runs.",
             NegativePath = true,
             Fields =
             [
                 KeyField,
-                new ScenarioField("issuedAudience", "Üretilen audience", ScenarioFieldKind.Text, "app-a"),
-                new ScenarioField("expectedAudience", "Beklenen audience", ScenarioFieldKind.Text, "app-b"),
+                new ScenarioField("issuedAudience", "Issued audience", ScenarioFieldKind.Text, "app-a"),
+                new ScenarioField("expectedAudience", "Expected audience", ScenarioFieldKind.Text, "app-b"),
             ],
         },
         async context =>
@@ -209,7 +218,7 @@ public static class IdentityScenarios
 
             var token = issuer.GetRequiredService<IJwtTokenGenerator>()
                 .GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-aud")]);
-            context.Step($"Token '{context.Input.Text("issuedAudience")}' için üretildi");
+            context.Step($"Token issued for '{context.Input.Text("issuedAudience")}'");
 
             await using var verifier = context.Host(services => services.AddPinqponqIdentity(jwt =>
             {
@@ -222,7 +231,7 @@ public static class IdentityScenarios
                 .ValidateAsync(token, context.CancellationToken);
 
             context.Require(
-                $"'{context.Input.Text("expectedAudience")}' bekleyen doğrulayıcı reddetti",
+                $"Validator expecting '{context.Input.Text("expectedAudience")}' rejected it",
                 principal is null);
         });
 
@@ -231,14 +240,13 @@ public static class IdentityScenarios
         {
             Id = "identity.jwt.short-key",
             PackageId = Package,
-            Title = "32 bayttan kısa anahtar reddedilir",
-            Summary = "HMAC-SHA256 en az 256 bit anahtar ister. Paket bunu sessizce kabul etmek "
-                      + "yerine anlaşılır bir hatayla reddeder. Kontrol, kayıt anında değil "
-                      + "imzalama anahtarı ilk kez kurulduğunda — yani ilk token üretiminde — çalışır.",
+            Title = "A key shorter than 32 bytes is rejected",
+            Summary = "HMAC-SHA256 requires at least a 256-bit key. JwtOptionsValidator rejects it "
+                      + "with a clear error as soon as the options are read.",
             NegativePath = true,
             Fields =
             [
-                new ScenarioField("shortKey", "Kısa anahtar", ScenarioFieldKind.Password, "cok-kisa-anahtar"),
+                new ScenarioField("shortKey", "Short key", ScenarioFieldKind.Password, "too-short-key"),
             ],
         },
         async context =>
@@ -252,19 +260,65 @@ public static class IdentityScenarios
                     jwt.SymmetricKey = context.Input.Text("shortKey");
                 }));
 
-                var generator = host.GetRequiredService<IJwtTokenGenerator>();
-                context.Step("Kısa anahtarla konteyner kuruldu, token üretimi deneniyor");
-                _ = generator.GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-short-key")]);
+                context.Step("Container set up with the short key, reading options");
+                _ = host.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtOptions>>().Value;
             });
 
-            context.Require("Bir exception fırlatıldı", thrown is not null);
+            context.Require("An exception was thrown", thrown is not null);
             context.Artifact(
                 "exception",
                 new { type = thrown!.GetType().FullName, message = thrown.Message });
             context.Check(
-                "Hata mesajı anahtar uzunluğunu açıklıyor",
+                "The error message explains the key length",
                 thrown.ToString().Contains("32", StringComparison.Ordinal),
                 thrown.Message);
+        });
+
+    private static Scenario JtiIssuedAndRevoked() => new(
+        new ScenarioDescriptor
+        {
+            Id = "identity.jwt.revoke",
+            PackageId = Package,
+            Title = "jti generation and access token revocation",
+            Summary = "The issued token has a jti claim. Once revoked via IAccessTokenRevocationStore + "
+                      + "IAccessTokenRevocationService, ValidateAsync returns null.",
+            Fields = [IssuerField, AudienceField, KeyField],
+        },
+        async context =>
+        {
+            var store = new InMemoryAccessTokenRevocationStore();
+
+            await using var host = context.Host(services =>
+            {
+                services.AddPinqponqIdentity(jwt =>
+                {
+                    jwt.Issuer = context.Input.Text("issuer");
+                    jwt.Audience = context.Input.Text("audience");
+                    jwt.SymmetricKey = context.Input.Text("symmetricKey");
+                });
+                services.AddSingleton<IAccessTokenRevocationStore>(store);
+            });
+
+            var token = host.GetRequiredService<IJwtTokenGenerator>()
+                .GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-revoke")]);
+            context.Artifact("decoded token", Presentation.Jwt(token));
+
+            var before = await host.GetRequiredService<IJwtTokenValidator>()
+                .ValidateAsync(token, context.CancellationToken);
+            context.Require("Valid before revocation", before is not null);
+
+            var jti = before!.FindFirst(JwtRegisteredClaimNames.Jti)?.Value
+                      ?? before.FindFirst("jti")?.Value;
+            context.Require("jti claim is present", !string.IsNullOrEmpty(jti), jti);
+
+            await host.GetRequiredService<IAccessTokenRevocationService>()
+                .RevokeAccessTokenAsync(token, context.CancellationToken);
+            context.Step("Access token jti revoked");
+
+            var after = await host.GetRequiredService<IJwtTokenValidator>()
+                .ValidateAsync(token, context.CancellationToken);
+            context.Require("Null after revocation", after is null);
+            context.Require("jti is present in the store", store.RevokedJtis.Contains(jti!), string.Join(", ", store.RevokedJtis));
         });
 
     private static Scenario PasswordHashing() => new(
@@ -272,13 +326,13 @@ public static class IdentityScenarios
         {
             Id = "identity.password",
             PackageId = Package,
-            Title = "Parola hash'le ve doğrula",
-            Summary = "PBKDF2 hash üretir, doğru ve yanlış parolayı doğrular. Aynı parolanın iki "
-                      + "hash'inin farklı çıkması tuzlamanın çalıştığını gösterir.",
+            Title = "Hash and verify a password",
+            Summary = "Generates a PBKDF2 hash, verifies the correct and the wrong password. Two "
+                      + "hashes of the same password coming out different shows that salting works.",
             Fields =
             [
-                new ScenarioField("password", "Parola", ScenarioFieldKind.Password, "Str0ng-Pass!"),
-                new ScenarioField("wrongPassword", "Yanlış parola", ScenarioFieldKind.Password, "Str0ng-Pass?"),
+                new ScenarioField("password", "Password", ScenarioFieldKind.Password, "Str0ng-Pass!"),
+                new ScenarioField("wrongPassword", "Wrong password", ScenarioFieldKind.Password, "Str0ng-Pass?"),
             ],
         },
         async context =>
@@ -295,17 +349,17 @@ public static class IdentityScenarios
 
             var first = hasher.Hash(password);
             var second = hasher.Hash(password);
-            context.Step("Aynı parola iki kez hash'lendi");
-            context.Require("İki hash farklı (tuzlanmış)", !string.Equals(first, second, StringComparison.Ordinal));
+            context.Step("The same password hashed twice");
+            context.Require("The two hashes differ (salted)", !string.Equals(first, second, StringComparison.Ordinal));
             context.Artifact("hash #1", first, "text");
             context.Artifact("hash #2", second, "text");
 
             var correct = hasher.Verify(first, password);
             var wrong = hasher.Verify(first, context.Input.Text("wrongPassword"));
 
-            context.Require("Doğru parola kabul edildi", correct != PasswordVerificationOutcome.Failed, correct.ToString());
-            context.Require("Yanlış parola reddedildi", wrong == PasswordVerificationOutcome.Failed, wrong.ToString());
-            context.Artifact("sonuçlar", new { dogru = correct.ToString(), yanlis = wrong.ToString() });
+            context.Require("Correct password accepted", correct != PasswordVerificationOutcome.Failed, correct.ToString());
+            context.Require("Wrong password rejected", wrong == PasswordVerificationOutcome.Failed, wrong.ToString());
+            context.Artifact("results", new { correct = correct.ToString(), wrong = wrong.ToString() });
         });
 
     private static Scenario RefreshTokenRotation() => new(
@@ -313,9 +367,9 @@ public static class IdentityScenarios
         {
             Id = "identity.refresh.rotate",
             PackageId = Package,
-            Title = "Refresh token üret ve döndür (rotate)",
-            Summary = "Token üretir, döndürür ve deponun içeriğini gösterir: yalnızca SHA-256 "
-                      + "hash saklanır, eski kayıt revoke edilip yenisine zincirlenir.",
+            Title = "Issue and rotate a refresh token",
+            Summary = "Issues a token, rotates it, and shows the store's contents: only a SHA-256 "
+                      + "hash is kept, the old record is revoked and chained to the new one.",
             Fields =
             [
                 new ScenarioField("subject", "Subject", ScenarioFieldKind.Text, "user-42"),
@@ -342,23 +396,23 @@ public static class IdentityScenarios
 
             var service = host.GetRequiredService<IRefreshTokenService>();
             var issued = await service.IssueAsync(context.Input.Text("subject"), context.CancellationToken);
-            context.Step("Token üretildi");
+            context.Step("Token issued");
 
             context.Require(
-                "Ham token depoda saklanmıyor",
+                "The raw token is not stored",
                 store.All.All(token => !string.Equals(token.TokenHash, issued.Token, StringComparison.Ordinal)));
-            context.Check("Saklanan değer 64 karakter hex", issued.Descriptor.TokenHash.Length == 64);
+            context.Check("Stored value is 64-character hex", issued.Descriptor.TokenHash.Length == 64);
 
             var rotated = await service.RotateAsync(issued.Token, context.CancellationToken);
-            context.Step("Token döndürüldü (rotate)");
+            context.Step("Token rotated");
 
             var old = await store.FindByHashAsync(issued.Descriptor.TokenHash, context.CancellationToken);
-            context.Require("Eski token revoke edildi", old?.RevokedAt is not null);
+            context.Require("Old token revoked", old?.RevokedAt is not null);
             context.Require(
-                "Eski kayıt yenisine zincirlendi",
+                "Old record chained to the new one",
                 old?.ReplacedByTokenHash == rotated.Descriptor.TokenHash);
 
-            context.Artifact("depo içeriği", store.All.Select(token => new
+            context.Artifact("store contents", store.All.Select(token => new
             {
                 tokenHash = token.TokenHash,
                 subject = token.Subject,
@@ -373,9 +427,10 @@ public static class IdentityScenarios
         {
             Id = "identity.refresh.reuse",
             PackageId = Package,
-            Title = "Kullanılmış refresh token yeniden kullanılamaz",
-            Summary = "Aynı ham token iki kez döndürülmeye çalışılır. İkinci deneme "
-                      + "InvalidRefreshTokenException ile reddedilir — çalınmış token tespiti.",
+            Title = "A used refresh token (within grace)",
+            Summary = "The same raw token is rotated twice. Within ReuseDetectionGrace, the second "
+                      + "attempt throws InvalidRefreshTokenException but does not trigger a family "
+                      + "revoke — so as not to punish a concurrent double-submit.",
             NegativePath = true,
         },
         async context =>
@@ -384,19 +439,21 @@ public static class IdentityScenarios
 
             await using var host = context.Host(services =>
             {
-                services.AddPinqponqIdentity(jwt =>
-                {
-                    jwt.Issuer = "pinqponq";
-                    jwt.Audience = "clients";
-                    jwt.SymmetricKey = DemoKey;
-                });
+                services.AddPinqponqIdentity(
+                    jwt =>
+                    {
+                        jwt.Issuer = "pinqponq";
+                        jwt.Audience = "clients";
+                        jwt.SymmetricKey = DemoKey;
+                    },
+                    refresh => refresh.ReuseDetectionGrace = TimeSpan.FromSeconds(30));
                 services.AddSingleton<IRefreshTokenStore>(store);
             });
 
             var service = host.GetRequiredService<IRefreshTokenService>();
             var issued = await service.IssueAsync("user-42", context.CancellationToken);
-            await service.RotateAsync(issued.Token, context.CancellationToken);
-            context.Step("Token bir kez döndürüldü");
+            var rotated = await service.RotateAsync(issued.Token, context.CancellationToken);
+            context.Step("Token rotated once");
 
             Exception? thrown = null;
             try
@@ -408,8 +465,66 @@ public static class IdentityScenarios
                 thrown = exception;
             }
 
-            context.Require("İkinci kullanım reddedildi", thrown is not null);
+            context.Require("Second use rejected", thrown is not null);
+            var replacement = await store.FindByHashAsync(rotated.Descriptor.TokenHash, context.CancellationToken);
+            context.Require(
+                "Replacement still active within grace",
+                replacement is not null && replacement.RevokedAt is null);
             context.Artifact("exception", new { type = thrown!.GetType().FullName, message = thrown.Message });
+        });
+
+    private static Scenario RefreshTokenFamilyRevoke() => new(
+        new ScenarioDescriptor
+        {
+            Id = "identity.refresh.family-revoke",
+            PackageId = Package,
+            Title = "Family revoke after ReuseDetectionGrace",
+            Summary = "When the grace period is zero and an old token is reused, RevokeAllForSubjectAsync "
+                      + "revokes the entire subject family — the stolen refresh token path.",
+            NegativePath = true,
+        },
+        async context =>
+        {
+            var store = new InMemoryRefreshTokenStore();
+
+            await using var host = context.Host(services =>
+            {
+                services.AddPinqponqIdentity(
+                    jwt =>
+                    {
+                        jwt.Issuer = "pinqponq";
+                        jwt.Audience = "clients";
+                        jwt.SymmetricKey = DemoKey;
+                    },
+                    refresh => refresh.ReuseDetectionGrace = TimeSpan.Zero);
+                services.AddSingleton<IRefreshTokenStore>(store);
+            });
+
+            var service = host.GetRequiredService<IRefreshTokenService>();
+            var issued = await service.IssueAsync("user-family", context.CancellationToken);
+            var rotated = await service.RotateAsync(issued.Token, context.CancellationToken);
+            context.Step("Rotation complete; old token will be reused outside the grace period");
+
+            Exception? thrown = null;
+            try
+            {
+                await service.RotateAsync(issued.Token, context.CancellationToken);
+            }
+            catch (InvalidRefreshTokenException exception)
+            {
+                thrown = exception;
+            }
+
+            context.Require("Reuse rejected", thrown is not null);
+            var replacement = await store.FindByHashAsync(rotated.Descriptor.TokenHash, context.CancellationToken);
+            context.Require("Replacement revoked by family revoke", replacement?.RevokedAt is not null);
+            context.Artifact("store", store.All.Select(token => new
+            {
+                token.TokenHash,
+                token.Subject,
+                token.RevokedAt,
+                token.ReplacedByTokenHash,
+            }).ToArray());
         });
 
     private static Scenario MissingStoreDetected() => new(
@@ -417,10 +532,10 @@ public static class IdentityScenarios
         {
             Id = "identity.di.missing-store",
             PackageId = Package,
-            Title = "IRefreshTokenStore kaydedilmezse hata verir",
-            Summary = "Paket depoyu bilinçli olarak kaydetmez; uygulamanın kendi kalıcılığını "
-                      + "vermesi beklenir. Depo olmadan IRefreshTokenService çözülemez ve hata "
-                      + "eksik kaydı doğrudan adıyla söyler.",
+            Title = "Fails without a registered IRefreshTokenStore",
+            Summary = "The package deliberately doesn't register a store; the application is expected "
+                      + "to supply its own persistence. Without a store, IRefreshTokenService cannot "
+                      + "be resolved and the error names the missing registration directly.",
             NegativePath = true,
         },
         async context =>
@@ -432,7 +547,7 @@ public static class IdentityScenarios
                 jwt.SymmetricKey = DemoKey;
             }));
 
-            context.Step("IRefreshTokenStore kaydedilmeden konteyner kuruldu");
+            context.Step("Container set up without registering IRefreshTokenStore");
 
             var thrown = await RecordAsync(() =>
             {
@@ -440,9 +555,9 @@ public static class IdentityScenarios
                 return Task.CompletedTask;
             });
 
-            context.Require("IRefreshTokenService çözülemedi", thrown is not null);
+            context.Require("IRefreshTokenService could not be resolved", thrown is not null);
             context.Check(
-                "Hata IRefreshTokenStore'u işaret ediyor",
+                "The error points to IRefreshTokenStore",
                 thrown!.ToString().Contains("IRefreshTokenStore", StringComparison.Ordinal));
             context.Artifact("exception", new { type = thrown.GetType().FullName, message = thrown.Message });
 
@@ -459,7 +574,7 @@ public static class IdentityScenarios
             });
 
             context.Check(
-                "Depo eklenince çözülüyor",
+                "Resolves once the store is added",
                 complete.GetRequiredService<IRefreshTokenService>() is not null);
         });
 

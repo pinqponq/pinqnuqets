@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Messaging.RabbitMq</PackageId>
     <Title>Pinqponq RabbitMQ Messaging</Title>
-    <Description>RabbitMQ publish/consume akışı, connection/channel yönetimi, retry ve dead-letter (DLX) taşıma katmanı. Mesaj contract'ları içermez.</Description>
+    <Description>RabbitMQ publish/consume transport layer with connection/channel management, retry, and dead-letter (DLX). Does not include message contracts.</Description>
     <PackageTags>$(PackageTags);rabbitmq;messaging;message-queue;amqp;publish-subscribe;dead-letter;consumer</PackageTags>
   </PropertyGroup>
 

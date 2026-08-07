@@ -46,7 +46,7 @@ function renderContainer(entries, open, close, expandDepth, depth, isArray) {
       class: 'json__toggle',
       type: 'button',
       'aria-expanded': String(expanded),
-      title: 'Aç/kapat',
+      title: 'Toggle',
     },
     expanded ? '▾' : '▸',
   );
@@ -54,7 +54,7 @@ function renderContainer(entries, open, close, expandDepth, depth, isArray) {
   const summary = el(
     'span',
     { class: 'json__punct' },
-    ` ${open} ${entries.length} ${isArray ? 'öğe' : 'alan'} ${close}`,
+    ` ${open} ${entries.length} ${isArray ? 'items' : 'fields'} ${close}`,
   );
   summary.hidden = expanded;
 

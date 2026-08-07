@@ -27,23 +27,23 @@ public static class ErrorHandlingScenarios
     private static readonly IReadOnlyList<ErrorCase> Cases =
     [
         new("unauthorized", "UnauthorizedAccessException", 401, "unauthorized",
-            () => throw new UnauthorizedAccessException("Yetkiniz yok.")),
+            () => throw new UnauthorizedAccessException("You are not authorized.")),
         new("not-found", "KeyNotFoundException", 404, "not_found",
-            () => throw new KeyNotFoundException("Kayıt bulunamadı.")),
+            () => throw new KeyNotFoundException("Record not found.")),
         new("argument", "ArgumentException", 400, "bad_request",
-            () => throw new ArgumentException("Geçersiz argüman.")),
+            () => throw new ArgumentException("Invalid argument.")),
         new("format", "FormatException", 400, "bad_request",
-            () => throw new FormatException("Biçim hatalı.")),
+            () => throw new FormatException("Malformed value.")),
         new("invalid-operation", "InvalidOperationException", 400, "bad_request",
-            () => throw new InvalidOperationException("Bu işlem şu anda yapılamaz.")),
+            () => throw new InvalidOperationException("This operation cannot be performed right now.")),
         new("not-implemented", "NotImplementedException", 501, "not_implemented",
-            () => throw new NotImplementedException("Henüz yazılmadı.")),
+            () => throw new NotImplementedException("Not implemented yet.")),
         new("timeout", "TimeoutException", 504, "timeout",
-            () => throw new TimeoutException("Süre aşıldı.")),
-        new("custom-notfound", "WidgetNotFoundException (isim kuralı)", 404, "not_found",
-            () => throw new WidgetNotFoundException("Widget bulunamadı.")),
+            () => throw new TimeoutException("The operation timed out.")),
+        new("custom-notfound", "WidgetNotFoundException (naming convention)", 404, "not_found",
+            () => throw new WidgetNotFoundException("Widget not found.")),
         new("unhandled", "Exception", 500, "internal_error",
-            () => throw new InvalidProgramException("Beklenmeyen hata.")),
+            () => throw new InvalidProgramException("Unexpected error.")),
     ];
 
     /// <summary>Case identifiers the permanently mounted sandbox branch understands.</summary>
@@ -53,7 +53,7 @@ public static class ErrorHandlingScenarios
     public static void Throw(string caseId)
     {
         var match = Cases.FirstOrDefault(item => string.Equals(item.Id, caseId, StringComparison.Ordinal))
-                    ?? throw new KeyNotFoundException($"Bilinmeyen vaka: {caseId}");
+                    ?? throw new KeyNotFoundException($"Unknown case: {caseId}");
 
         match.Throw();
     }
@@ -80,10 +80,9 @@ public static class ErrorHandlingScenarios
         {
             Id = "errorhandling.mapping",
             PackageId = Package,
-            Title = "Exception → HTTP durum haritası",
-            Summary = "Dokuz exception türü gerçek bir ASP.NET Core boru hattından geçirilir. "
-                      + "Her satırda beklenen ve gerçekleşen durum kodu ile responseCode "
-                      + "karşılaştırılır.",
+            Title = "Exception → HTTP status map",
+            Summary = "Nine exception types are run through a real ASP.NET Core pipeline. Each row "
+                      + "compares the expected and actual status code and responseCode.",
             TimeoutSeconds = 60,
         },
         async context =>
@@ -103,20 +102,20 @@ public static class ErrorHandlingScenarios
                 context.Check(
                     $"{item.ExceptionLabel} → {item.ExpectedStatus} {item.ExpectedResponseCode}",
                     ok,
-                    $"gelen {(int)response.StatusCode} {body?.ResponseCode}");
+                    $"got {(int)response.StatusCode} {body?.ResponseCode}");
 
                 rows.Add(new
                 {
                     exception = item.ExceptionLabel,
-                    beklenenDurum = item.ExpectedStatus,
-                    gelenDurum = (int)response.StatusCode,
-                    beklenenKod = item.ExpectedResponseCode,
-                    gelenKod = body?.ResponseCode,
-                    mesaj = body?.Message,
+                    expectedStatus = item.ExpectedStatus,
+                    actualStatus = (int)response.StatusCode,
+                    expectedCode = item.ExpectedResponseCode,
+                    actualCode = body?.ResponseCode,
+                    message = body?.Message,
                 });
             }
 
-            context.Artifact("harita", rows, "table");
+            context.Artifact("map", rows, "table");
         });
 
     private static Scenario LogShape() => new(
@@ -124,13 +123,13 @@ public static class ErrorHandlingScenarios
         {
             Id = "errorhandling.log-shape",
             PackageId = Package,
-            Title = "Üretilen log kaydının yapısı",
-            Summary = "Paketin iddiası, hataları Pinqloq'un beklediği yapılandırılmış biçimde "
-                      + "loglaması. Bu senaryo tek bir hata üretir ve kaydın message template'ini, "
-                      + "alan adlarını ve seviyesini birebir doğrular.",
+            Title = "Shape of the produced log record",
+            Summary = "The package's claim is that it logs errors in the structured format Pinqloq "
+                      + "expects. This scenario produces a single error and verifies the record's "
+                      + "message template, field names, and level exactly.",
             Fields =
             [
-                new ScenarioField("case", "Vaka", ScenarioFieldKind.Enum, "unhandled", null,
+                new ScenarioField("case", "Case", ScenarioFieldKind.Enum, "unhandled", null,
                     [.. Cases.Select(item => item.Id)]),
             ],
             TimeoutSeconds = 60,
@@ -146,41 +145,41 @@ public static class ErrorHandlingScenarios
                 new Uri($"/throw/{caseId}", UriKind.Relative),
                 context.CancellationToken);
 
-            context.Step($"İstek atıldı, {(int)response.StatusCode} döndü");
+            context.Step($"Request sent, returned {(int)response.StatusCode}");
 
             var entry = await context.WaitForLogAsync(
                 record => record.Category.Contains("ExceptionHandlingMiddleware", StringComparison.Ordinal),
                 TimeSpan.FromSeconds(10));
 
-            context.Require("Middleware bir log kaydı üretti", entry is not null);
+            context.Require("Middleware produced a log record", entry is not null);
 
             const string ExpectedTemplate =
                 "Request failed. {ResponseCode} {StatusCode} {Method} {Path} traceId={TraceId} correlationId={CorrelationId}";
 
             context.Require(
-                "Message template beklenen biçimde",
+                "Message template matches the expected shape",
                 entry!.MessageTemplate == ExpectedTemplate,
                 entry.MessageTemplate);
 
             string[] expectedKeys = ["ResponseCode", "StatusCode", "Method", "Path", "TraceId", "CorrelationId"];
             var missing = expectedKeys.Where(key => !entry.State.ContainsKey(key)).ToArray();
             context.Require(
-                "Yapılandırılmış alanların hepsi var",
+                "All structured fields are present",
                 missing.Length == 0,
-                missing.Length == 0 ? null : $"eksik: {string.Join(", ", missing)}");
+                missing.Length == 0 ? null : $"missing: {string.Join(", ", missing)}");
 
             var expectedLevel = expected.ExpectedStatus >= 500 ? "Error" : "Warning";
             context.Require(
-                $"Seviye {expectedLevel} ({expected.ExpectedStatus} için)",
+                $"Level is {expectedLevel} (for {expected.ExpectedStatus})",
                 entry.Level == expectedLevel,
                 entry.Level);
 
-            context.Require("Exception kaydı taşınıyor", entry.Exception is not null);
+            context.Require("Exception record is carried", entry.Exception is not null);
             context.Check(
-                "ResponseCode alanı doğru",
+                "ResponseCode field is correct",
                 entry.State["ResponseCode"]?.ToString() == expected.ExpectedResponseCode);
 
-            context.Artifact("ham log kaydı", entry);
+            context.Artifact("raw log record", entry);
         });
 
     private static Scenario Correlation() => new(
@@ -188,11 +187,11 @@ public static class ErrorHandlingScenarios
         {
             Id = "errorhandling.correlation",
             PackageId = Package,
-            Title = "Correlation id ve hata mesajı sızdırma",
-            Summary = "Gelen X-Correlation-ID başlığı hem yanıt gövdesindeki traceId'ye hem de "
-                      + "log kaydındaki CorrelationId alanına yansır — logdaki TraceId ise "
-                      + "isteğin kendi kimliğidir, ikisi farklıdır. IncludeExceptionMessage'ın "
-                      + "açık/kapalı farkı da gösterilir.",
+            Title = "Correlation id and error message leakage",
+            Summary = "The incoming X-Correlation-ID header is reflected both in the response "
+                      + "body's traceId and in the log record's CorrelationId field — the log's "
+                      + "TraceId is the request's own identity though, the two differ. Also shows "
+                      + "the effect of toggling IncludeExceptionMessage.",
             Fields =
             [
                 new ScenarioField("correlationId", "X-Correlation-ID", ScenarioFieldKind.Text, "pinq-12345"),
@@ -216,13 +215,13 @@ public static class ErrorHandlingScenarios
             using var hiddenResponse = await hidden.Client.SendAsync(hiddenRequest, context.CancellationToken);
             var hiddenBody = await ReadErrorAsync(hiddenResponse, context);
 
-            context.Require("Yanıt traceId'si gönderilen correlation id", hiddenBody?.TraceId == correlationId,
+            context.Require("Response traceId is the submitted correlation id", hiddenBody?.TraceId == correlationId,
                 hiddenBody?.TraceId);
             context.Require(
-                "IncludeExceptionMessage kapalıyken iç mesaj sızmıyor",
-                hiddenBody?.Message?.Contains("Beklenmeyen hata", StringComparison.Ordinal) != true,
+                "Internal message does not leak when IncludeExceptionMessage is off",
+                hiddenBody?.Message?.Contains("Unexpected error", StringComparison.Ordinal) != true,
                 hiddenBody?.Message);
-            context.Artifact("gövde (mesaj gizli)", hiddenBody);
+            context.Artifact("body (message hidden)", hiddenBody);
 
             var entry = await context.WaitForLogAsync(
                 record => record.Category.Contains("ExceptionHandlingMiddleware", StringComparison.Ordinal)
@@ -230,10 +229,10 @@ public static class ErrorHandlingScenarios
                           && string.Equals(value?.ToString(), correlationId, StringComparison.Ordinal),
                 TimeSpan.FromSeconds(10));
 
-            context.Require("Log kaydında correlation id var", entry is not null);
+            context.Require("Log record has the correlation id", entry is not null);
             var loggedTraceId = entry!.State["TraceId"]?.ToString();
             context.Check(
-                "Logdaki TraceId isteğin kendi kimliği, correlation id'den farklı",
+                "The log's TraceId is the request's own identity, different from the correlation id",
                 !string.Equals(loggedTraceId, correlationId, StringComparison.Ordinal),
                 $"TraceId={loggedTraceId}");
 
@@ -249,12 +248,12 @@ public static class ErrorHandlingScenarios
             var revealedBody = await ReadErrorAsync(revealedResponse, context);
 
             context.Require(
-                "IncludeExceptionMessage açıkken gerçek mesaj dönüyor",
-                revealedBody?.Message?.Contains("Beklenmeyen hata", StringComparison.Ordinal) == true,
+                "The real message is returned when IncludeExceptionMessage is on",
+                revealedBody?.Message?.Contains("Unexpected error", StringComparison.Ordinal) == true,
                 revealedBody?.Message);
 
-            context.Artifact("gövde (mesaj açık)", revealedBody);
-            context.Artifact("log alanları", entry.State);
+            context.Artifact("body (message shown)", revealedBody);
+            context.Artifact("log fields", entry.State);
         });
 
     private static async Task<SandboxPipeline> BuildPipelineAsync(

@@ -63,7 +63,7 @@ public sealed class ScenarioRunner(
                 {
                     var service = stack.Get(required);
                     throw new ScenarioSkippedException(
-                        $"'{service.DisplayName}' hazır değil ({Translate(service.State)}). Üst şeritten başlatıp tekrar deneyin.");
+                        $"'{service.DisplayName}' is not ready ({Translate(service.State)}). Start it from the top strip and try again.");
                 }
             }
 
@@ -82,7 +82,7 @@ public sealed class ScenarioRunner(
         catch (OperationCanceledException) when (linked.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
             status = "failed";
-            error = $"Senaryo {timeout.TotalSeconds:0} saniye içinde tamamlanmadı.";
+            error = $"The scenario did not complete within {timeout.TotalSeconds:0} seconds.";
             errorType = "Timeout";
         }
         catch (Exception exception)
@@ -101,7 +101,7 @@ public sealed class ScenarioRunner(
         if (status == "passed" && context.Steps.Any(step => !step.Ok))
         {
             status = "failed";
-            error ??= "Bir veya daha fazla kontrol başarısız.";
+            error ??= "One or more checks failed.";
         }
 
         return new ScenarioRunResult
@@ -121,12 +121,12 @@ public sealed class ScenarioRunner(
 
     private static string Translate(DevServiceState state) => state switch
     {
-        DevServiceState.Stopped => "durdu",
-        DevServiceState.Starting => "başlatılıyor",
-        DevServiceState.Ready => "hazır",
-        DevServiceState.Failed => "hata",
-        DevServiceState.DockerUnavailable => "Docker yok",
-        DevServiceState.External => "harici",
+        DevServiceState.Stopped => "stopped",
+        DevServiceState.Starting => "starting",
+        DevServiceState.Ready => "ready",
+        DevServiceState.Failed => "failed",
+        DevServiceState.DockerUnavailable => "Docker unavailable",
+        DevServiceState.External => "external",
         _ => state.ToString(),
     };
 }

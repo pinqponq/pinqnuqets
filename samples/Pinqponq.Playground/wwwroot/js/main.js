@@ -97,7 +97,7 @@ function renderSidebar(filterText = '') {
   }
 
   if (groups.size === 0) {
-    sidebarList.append(emptyState('Eşleşen senaryo yok', filterText));
+    sidebarList.append(emptyState('No matching scenarios', filterText));
     return;
   }
 
@@ -120,7 +120,7 @@ function renderSidebar(filterText = '') {
               type: 'button',
               dataset: { id: scenario.id, available: String(scenario.available) },
               'aria-current': String(scenario.id === activeId),
-              title: scenario.available ? scenario.title : `Gereken servis hazır değil: ${scenario.blockedBy.join(', ')}`,
+              title: scenario.available ? scenario.title : `Required service not ready: ${scenario.blockedBy.join(', ')}`,
               onClick: () => navigate(scenario.id),
             },
             el('span', { class: 'scenario-link__title' }, scenario.title),
@@ -224,7 +224,7 @@ function renderPalette(query) {
   clear(paletteList);
 
   if (paletteMatches.length === 0) {
-    paletteList.append(emptyState('Eşleşme yok'));
+    paletteList.append(emptyState('No matches'));
     return;
   }
 
@@ -387,6 +387,6 @@ async function boot() {
 
 boot().catch((error) => {
   clear(document.getElementById('main-inner')).append(
-    emptyState('Konsol başlatılamadı', error.message),
+    emptyState('Could not start the console', error.message),
   );
 });

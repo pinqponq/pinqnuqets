@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Identity.Otp</PackageId>
     <Title>Pinqponq Identity OTP</Title>
-    <Description>E-posta veya SMS ile tek kullanımlık kod gönderme/doğrulama akışı; kanal seçimi (mail/sms) pakette route edilir. Saklama arayüzü tüketiciye bırakılır.</Description>
+    <Description>One-time code send/verify flow over email or SMS; channel routing (mail/sms) lives in the package. Storage interface is left to the consumer.</Description>
     <PackageTags>$(PackageTags);otp;one-time-password;2fa;mfa;email;sms;verification;identity;auth</PackageTags>
   </PropertyGroup>
 

@@ -58,7 +58,7 @@ public sealed class DevStackManager : IAsyncDisposable
     public DevServiceStatus Get(string id) =>
         _slots.TryGetValue(id, out var slot)
             ? slot.ToStatus(_dockerAvailable)
-            : throw new KeyNotFoundException($"Bilinmeyen servis: {id}");
+            : throw new KeyNotFoundException($"Unknown service: {id}");
 
     /// <summary>Pings the Docker daemon and caches the result.</summary>
     public async Task<bool> ProbeDockerAsync(CancellationToken cancellationToken = default)
@@ -78,7 +78,7 @@ public sealed class DevStackManager : IAsyncDisposable
             _dockerAvailable = false;
             _dockerError = exception.Message;
             _logger.LogWarning(
-                "Docker daemon'a ulaşılamadı; konteyner gerektiren senaryolar kullanılamaz. {Reason}",
+                "Could not reach the Docker daemon; scenarios that need a container are unavailable. {Reason}",
                 exception.Message);
         }
 
@@ -108,7 +108,7 @@ public sealed class DevStackManager : IAsyncDisposable
                 if (_dockerAvailable is not true)
                 {
                     slot.State = DevServiceState.Failed;
-                    slot.LastError = $"Docker daemon'a ulaşılamıyor: {_dockerError}";
+                    slot.LastError = $"Cannot reach the Docker daemon: {_dockerError}";
                     Publish(slot);
                     return slot.ToStatus(_dockerAvailable);
                 }
@@ -119,7 +119,7 @@ public sealed class DevStackManager : IAsyncDisposable
             Publish(slot);
 
             _logger.LogInformation(
-                "{Service} başlatılıyor ({Image}). İlk çalıştırmada imaj indirilebilir.",
+                "Starting {Service} ({Image}). The image may be pulled on first run.",
                 slot.Definition.DisplayName,
                 slot.Definition.Image);
 
@@ -135,7 +135,7 @@ public sealed class DevStackManager : IAsyncDisposable
             slot.StartupMs = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation(
-                "{Service} hazır ({ElapsedMs} ms).",
+                "{Service} ready ({ElapsedMs} ms).",
                 slot.Definition.DisplayName,
                 stopwatch.ElapsedMilliseconds);
         }
@@ -145,7 +145,7 @@ public sealed class DevStackManager : IAsyncDisposable
             slot.LastError = exception.Message;
             slot.Container = null;
             slot.Endpoint = null;
-            _logger.LogError(exception, "{Service} başlatılamadı.", slot.Definition.DisplayName);
+            _logger.LogError(exception, "Failed to start {Service}.", slot.Definition.DisplayName);
         }
         finally
         {
@@ -171,7 +171,7 @@ public sealed class DevStackManager : IAsyncDisposable
             if (slot.Container is { } container)
             {
                 await container.DisposeAsync().ConfigureAwait(false);
-                _logger.LogInformation("{Service} durduruldu.", slot.Definition.DisplayName);
+                _logger.LogInformation("{Service} stopped.", slot.Definition.DisplayName);
             }
 
             slot.Container = null;
@@ -184,7 +184,7 @@ public sealed class DevStackManager : IAsyncDisposable
         {
             slot.State = DevServiceState.Failed;
             slot.LastError = exception.Message;
-            _logger.LogError(exception, "{Service} durdurulamadı.", slot.Definition.DisplayName);
+            _logger.LogError(exception, "Failed to stop {Service}.", slot.Definition.DisplayName);
         }
         finally
         {
@@ -214,7 +214,7 @@ public sealed class DevStackManager : IAsyncDisposable
         if (slot.State != DevServiceState.Ready || slot.Endpoint is null)
         {
             throw new DevStackNotReadyException(
-                $"'{slot.Definition.DisplayName}' hazır değil. Üst şeritten başlatıp tekrar deneyin.");
+                $"'{slot.Definition.DisplayName}' is not ready. Start it from the top strip and try again.");
         }
 
         return slot.Endpoint;
@@ -225,7 +225,7 @@ public sealed class DevStackManager : IAsyncDisposable
     {
         var endpoint = Require(id);
         return endpoint.ConnectionString
-               ?? throw new DevStackNotReadyException($"'{id}' için bağlantı dizesi çözülemedi.");
+               ?? throw new DevStackNotReadyException($"Could not resolve a connection string for '{id}'.");
     }
 
     /// <summary>Whether a scenario's prerequisites are satisfied right now.</summary>
@@ -274,7 +274,7 @@ public sealed class DevStackManager : IAsyncDisposable
                 {
                     _logger.LogWarning(
                         exception,
-                        "{Service} kapatılırken hata oluştu.",
+                        "An error occurred while shutting down {Service}.",
                         slot.Definition.DisplayName);
                 }
             }
@@ -286,7 +286,7 @@ public sealed class DevStackManager : IAsyncDisposable
     private ServiceSlot Slot(string id) =>
         _slots.TryGetValue(id, out var slot)
             ? slot
-            : throw new KeyNotFoundException($"Bilinmeyen servis: {id}");
+            : throw new KeyNotFoundException($"Unknown service: {id}");
 
     private void Publish(ServiceSlot slot)
     {
@@ -344,7 +344,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.Postgres,
             "PostgreSQL",
-            "Pinqponq.Database.Postgres bağlantı, retry ve health-check senaryoları.",
+            "Pinqponq.Database.Postgres connection, retry, and health-check scenarios.",
             DevStackImages.Postgres,
             Heavy: false,
             () => new PostgreSqlBuilder(DevStackImages.Postgres).Build(),
@@ -353,7 +353,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.Redis,
             "Redis",
-            "Pinqponq.Cache get/set, dağıtık kilit ve health-check senaryoları.",
+            "Pinqponq.Cache get/set, distributed lock, and health-check scenarios.",
             DevStackImages.Redis,
             Heavy: false,
             () => new RedisBuilder(DevStackImages.Redis).Build(),
@@ -362,7 +362,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.RabbitMq,
             "RabbitMQ",
-            "Pinqponq.Messaging.RabbitMq publish/consume ve dead-letter senaryoları.",
+            "Pinqponq.Messaging.RabbitMq publish/consume and dead-letter scenarios.",
             DevStackImages.RabbitMq,
             Heavy: false,
             () => new RabbitMqBuilder(DevStackImages.RabbitMq)
@@ -382,7 +382,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.Mongo,
             "MongoDB",
-            "Pinqponq.Database.Mongo bağlantı, ping ve health-check senaryoları.",
+            "Pinqponq.Database.Mongo connection, ping, and health-check scenarios.",
             DevStackImages.Mongo,
             Heavy: false,
             () => new MongoDbBuilder(DevStackImages.Mongo).Build(),
@@ -391,7 +391,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.MailHog,
             "MailHog (SMTP)",
-            "Pinqponq.Mail gönderimi ve OTP e-posta kanalı; gelen kutusu arayüzde görünür.",
+            "Pinqponq.Mail sending and the OTP email channel; the inbox is visible in the UI.",
             DevStackImages.MailHog,
             Heavy: false,
             () => new ContainerBuilder(DevStackImages.MailHog)
@@ -413,7 +413,7 @@ public sealed class DevStackManager : IAsyncDisposable
         yield return new ServiceDefinition(
             DevServiceIds.MsSql,
             "SQL Server",
-            "Pinqponq.Database.Mssql senaryoları. Ağır imaj (~1,5 GB) ve ARM64 desteği yok.",
+            "Pinqponq.Database.Mssql scenarios. Heavy image (~1.5 GB), no ARM64 support.",
             DevStackImages.MsSql,
             Heavy: true,
             () => new MsSqlBuilder(DevStackImages.MsSql).Build(),

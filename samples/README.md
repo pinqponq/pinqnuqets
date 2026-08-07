@@ -1,104 +1,107 @@
-# Pinqponq.Playground — paket ve log test konsolu
+# Pinqponq.Playground — package and log test console
 
-Reponun 13 `Pinqponq.*` paketini tarayıcıdan, **gerçek** bağımlılıklara karşı çalıştıran
-bir ASP.NET Core uygulaması. Her çalıştırma iki şeyi birden gösterir: paketin ne yaptığı
-ve o sırada **hangi yapılandırılmış log kayıtlarını ürettiği**.
+An ASP.NET Core application that exercises the repo's 13 `Pinqponq.*` packages from a
+browser, against **real** dependencies. Every run shows two things at once: what the
+package does, and **which structured log records it produces** while doing it.
 
 ```bash
 dotnet run --project samples/Pinqponq.Playground
 # → http://127.0.0.1:5199
 ```
 
-Paketler **kaynak** olarak referanslanır (`ProjectReference`), yani `src/` altındaki bir
-değişiklik konsolda anında görünür.
+Packages are referenced as **source** (`ProjectReference`), so a change under `src/`
+shows up in the console instantly.
 
-## Docker gerekli mi?
+## Is Docker required?
 
-Hayır — açılışta hiçbir konteyner başlatılmaz, uygulama anında ayağa kalkar.
-**47 senaryonun 32'si Docker olmadan çalışır**: Identity, TOTP, SSO negatif yolları,
-ErrorHandling ve SMS'in tamamı (SMS trafiği konsolun kendi içindeki sahte NetGSM ucuna
-gider, böylece `IHttpClientFactory` + sorgu kurulumu + Polly retry yolu gerçekten koşar).
+No — no container is started on launch, the app comes up instantly.
+Most scenarios work without Docker: Identity, OTP (SMS), TOTP, SSO negative paths,
+ErrorHandling, and all of SMS (SMS traffic goes to the console's own fake NetGSM
+endpoint — HTTPS ApiUrl + loopback rewrite; GET and RestV2).
 
-Docker varsa üst şeritteki servise tıklayıp **Başlat** deyin; Testcontainers ile konteyner
-ayağa kalkar ve o servise bağlı senaryolar açılır. Servisi **Durdur** ile kapatmak,
-health-check'in `Unhealthy`'ye düşmesini ve retry davranışını göstermek için kullanılır.
+If Docker is available, click the service in the top strip and say **Start**;
+Testcontainers spins up a container and the scenarios tied to that service unlock.
+Shutting a service down with **Stop** is used to demonstrate the health-check
+dropping to `Unhealthy` and the retry behavior.
 
-| Servis | İmaj | Açtığı senaryolar |
+| Service | Image | Scenarios it unlocks |
 |---|---|---|
 | PostgreSQL | `postgres:16-alpine` | Database.Postgres |
 | Redis | `redis:7.4-alpine` | Cache |
 | RabbitMQ | `rabbitmq:3.13-alpine` | Messaging.RabbitMq |
 | MongoDB | `mongo:7.0` | Database.Mongo |
-| MailHog | `mailhog/mailhog:v1.0.1` | Mail, Otp'nin e-posta kanalı |
-| SQL Server | `mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04` | Database.Mssql (ağır, ~1,5 GB, ARM64 yok) |
+| MailHog | `mailhog/mailhog:v1.0.1` | Mail, Otp's email channel |
+| SQL Server | `mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04` | Database.Mssql (heavy, ~1.5 GB, no ARM64) |
 
-İmaj etiketleri `tests/Pinqponq.TestSupport/Fixtures/` ile birebir aynıdır, böylece konsol
-ve entegrasyon testleri aynı sunucu sürümlerine karşı çalışır.
+Image tags are identical to `tests/Pinqponq.TestSupport/Fixtures/`, so the console
+and the integration tests run against the same server versions.
 
-### Alternatifler
+### Alternatives
 
-- **Sabit portlu ortam**: `docker compose -f samples/Pinqponq.Playground/docker-compose.yml up -d`
-- **Mevcut sunucular**: `appsettings.json` → `Playground:ExternalServices` altına bağlantı
-  dizesini yazın; o servis "Harici" olarak işaretlenir ve konteyner başlatılmaz. Karışık
-  kullanım (harici Redis + konteyner Postgres) desteklenir.
+- **Fixed-port environment**: `docker compose -f samples/Pinqponq.Playground/docker-compose.yml up -d`
+- **Existing servers**: write a connection string under `appsettings.json` →
+  `Playground:ExternalServices`; that service is marked "External" and no container
+  is started. Mixed usage (external Redis + containerized Postgres) is supported.
 
-## Nasıl çalışıyor
+## How it works
 
-**Her senaryo kendi DI konteynerinde koşar.** Senaryo gövdesi paketin kendi
-`AddPinqponqXxx(...)` uzantısını çağırır — yani kayıt kodu da test edilmiş olur. Konteyner
-koşu bitince `DisposeAsync` edilir, bu yüzden `IOptions<T>` önbelleği koşular arasında
-sızmaz ve arayüzden değiştirdiğiniz her options alanı gerçekten etkili olur.
-`NpgsqlDataSource` / `IConnectionMultiplexer` gibi singleton kaynaklar da böylece sızmaz.
+**Each scenario runs in its own DI container.** The scenario body calls the package's
+own `AddPinqponqXxx(...)` extension — so the registration code itself is exercised too.
+The container is `DisposeAsync`d when the run finishes, so the `IOptions<T>` cache
+doesn't leak between runs and every options field you change from the UI actually
+takes effect. Singleton resources such as `NpgsqlDataSource` / `IConnectionMultiplexer`
+don't leak either, for the same reason.
 
-**Loglar koşuya bağlanır.** Koşunun log sağlayıcısı `runId` ile kurulur, yani kayıt
-yapısal olarak damgalanır — arka planda çalışan RabbitMQ consumer'ı gibi ambient bağlamın
-akmadığı yerlerde de doğru çalışır. Sonuç kartındaki **"N log →"** düğmesi alt konsolu o
-koşuya filtreler. Bir satırı açtığınızda `messageTemplate` ve yapılandırılmış alanlar ham
-hâlleriyle görünür — `Pinqponq.ErrorHandling`'in ürettiği `TraceId` / `CorrelationId` /
-`ResponseCode` alan adları ancak böyle doğrulanabilir.
+**Logs are tied to the run.** The run's log provider is set up with a `runId`, so the
+record is structurally stamped — this works correctly even where the ambient context
+doesn't flow, such as a RabbitMQ consumer running in the background. The **"N logs →"**
+button on the result card filters the bottom console to that run. Expanding a line
+shows the `messageTemplate` and the structured fields in their raw form — the only way
+to verify the `TraceId` / `CorrelationId` / `ResponseCode` field names produced by
+`Pinqponq.ErrorHandling`.
 
-## Öne çıkan senaryolar
+## Highlighted scenarios
 
-| Senaryo | Ne kanıtlıyor |
+| Scenario | What it proves |
 |---|---|
-| `errorhandling.log-shape` | Middleware'in log kaydı: message template'i, alan adları, seviyesi (500 → Error, 4xx → Warning). |
-| `errorhandling.correlation` | Gelen `X-Correlation-ID` → yanıttaki `traceId` **ve** logdaki `CorrelationId`; logdaki `TraceId` ise isteğin kendi kimliği, ikisi farklı. |
-| `sms.retry` | Sahte uç ilk N isteği 500 döner; denemeler ve aralarındaki üstel gecikme tablo hâlinde görünür. |
-| `otp.sms` / `otp.email` | Kod yalnızca kanaldan çıktığı için sahte SMS kaydından veya MailHog kutusundan geri okunup doğrulanır. |
-| `identity.refresh.rotate` | Depoda yalnızca SHA-256 hash tutulduğu, eski kaydın revoke edilip yenisine zincirlendiği. |
-| `cache.lock` | İki ayrı konteynerden aynı kaynağa kilit: ikincisi `Acquired=false`, bırakılınca üçüncü deneme başarılı. |
-| `rabbit.dead-letter` | Handler hata verince mesajın `{kuyruk}.dead`'e düşmesi **ve** paketin ürettiği hata logunun `Queue` alanı. |
+| `errorhandling.log-shape` | The middleware's log record: message template, field names, level (500 → Error, 4xx → Warning). |
+| `errorhandling.correlation` | Incoming `X-Correlation-ID` → the response's `traceId` **and** the log's `CorrelationId`; the log's `TraceId` is the request's own identity, the two differ. |
+| `sms.retry` | The fake endpoint returns 500 for the first N requests; the attempts and the exponential delay between them are shown as a table. |
+| `otp.sms` / `otp.email` | Since the code only leaves through the channel, it's read back and verified from the fake SMS record or the MailHog inbox. |
+| `identity.refresh.rotate` | Only a SHA-256 hash is kept in the store; the old record is revoked and chained to the new one. |
+| `cache.lock` | Locking the same resource from two separate containers: the second gets `Acquired=false`, and once released the third attempt succeeds. |
+| `rabbit.dead-letter` | When the handler throws, the message lands in `{queue}.dead` **and** the `Queue` field of the error log the package produces. |
 
-## Klavye
+## Keyboard
 
-| Kısayol | İş |
+| Shortcut | Action |
 |---|---|
-| <kbd>Ctrl/⌘ K</kbd> | Senaryo ara |
-| <kbd>Ctrl/⌘ ↵</kbd> | Açık senaryoyu çalıştır |
-| <kbd>/</kbd> | Kenar çubuğu filtresine odaklan |
+| <kbd>Ctrl/⌘ K</kbd> | Search scenarios |
+| <kbd>Ctrl/⌘ ↵</kbd> | Run the open scenario |
+| <kbd>/</kbd> | Focus the sidebar filter |
 
 ## HTTP API
 
-Arayüz tamamen bu uçları kullanır; curl ile de sürülebilir.
+The UI runs entirely on these endpoints; you can also drive it with curl.
 
-| Uç | İş |
+| Endpoint | Action |
 |---|---|
-| `GET /api/catalog` | Paketler, senaryolar, form alanları, hangi senaryonun neden kapalı olduğu |
-| `POST /api/scenarios/{id}/run` | `{"input":{...}}` → adımlar, çıktılar ve koşunun logları |
-| `GET /api/infra`, `POST /api/infra/{id}/start\|stop\|restart` | Servis durumu ve kontrolü |
-| `GET /api/logs`, `GET /api/logs/stream` | Log geçmişi ve canlı akış (SSE) |
-| `GET /api/mail`, `GET /api/sms` | MailHog gelen kutusu, sahte NetGSM'in aldığı istekler |
-| `GET /sandbox/errors/{vaka}` | `UsePinqponqErrorHandling()` uygulanmış gerçek boru hattı |
+| `GET /api/catalog` | Packages, scenarios, form fields, why a given scenario is disabled |
+| `POST /api/scenarios/{id}/run` | `{"input":{...}}` → steps, outputs, and the run's logs |
+| `GET /api/infra`, `POST /api/infra/{id}/start\|stop\|restart` | Service status and control |
+| `GET /api/logs`, `GET /api/logs/stream` | Log history and live stream (SSE) |
+| `GET /api/mail`, `GET /api/sms` | MailHog inbox, requests received by the fake NetGSM |
+| `GET /sandbox/errors/{case}` | Real pipeline with `UsePinqponqErrorHandling()` applied |
 
 ```bash
 curl -i -H 'X-Correlation-ID: pinq-123' http://127.0.0.1:5199/sandbox/errors/unauthorized
 curl -s 'http://127.0.0.1:5199/api/logs?q=pinq-123' | jq '.entries[0].state'
 ```
 
-## Notlar
+## Notes
 
-- Uygulama yalnızca `127.0.0.1` dinler: gerçek kimlik bilgileri girilebilen ve dışarı
-  bağlantı açan bir araçtır.
-- `dotnet watch` her derlemede konteynerleri yeniden yaratır; `dotnet run` tercih edin.
-- Uygulama kapanırken başlattığı konteynerleri kaldırır. Beklenmedik bir sonlanmadan sonra
-  artakalanlar için Testcontainers'ın resource reaper'ı devrededir.
+- The app only listens on `127.0.0.1`: it's a tool where real credentials can be
+  entered and it opens outbound connections.
+- `dotnet watch` recreates containers on every rebuild; prefer `dotnet run`.
+- The app removes the containers it started when it shuts down. Testcontainers'
+  resource reaper handles leftovers after an unexpected termination.

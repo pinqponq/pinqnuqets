@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Identity</PackageId>
     <Title>Pinqponq Identity</Title>
-    <Description>JWT üretimi/doğrulaması, refresh token issue/rotate/revoke ve parola hash/verify gibi jenerik auth primitiflerini tek pakette toplar.</Description>
+    <Description>Generic auth primitives in one package: JWT issue/validate, refresh token issue/rotate/revoke, and password hash/verify.</Description>
     <PackageTags>$(PackageTags);jwt;identity;auth;authentication;refresh-token;password-hashing;pbkdf2;security</PackageTags>
   </PropertyGroup>
 

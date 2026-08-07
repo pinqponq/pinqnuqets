@@ -33,11 +33,11 @@ public sealed class OtpOptions
     public string HashPepper { get; set; } = string.Empty;
 
     /// <summary>SMS body template. <c>{0}</c> is the code.</summary>
-    public string SmsTemplate { get; set; } = "Doğrulama kodunuz: {0}";
+    public string SmsTemplate { get; set; } = "Your verification code: {0}";
 
     /// <summary>Email subject template. <c>{0}</c> is the code.</summary>
-    public string EmailSubjectTemplate { get; set; } = "Doğrulama kodunuz: {0}";
+    public string EmailSubjectTemplate { get; set; } = "Your verification code: {0}";
 
     /// <summary>Email body template. <c>{0}</c> is the code.</summary>
-    public string EmailBodyTemplate { get; set; } = "Doğrulama kodunuz: {0}";
+    public string EmailBodyTemplate { get; set; } = "Your verification code: {0}";
 }

@@ -18,13 +18,14 @@ public sealed class FakeNetGsmState
     private readonly object _gate = new();
 
     private int _failuresRemaining;
+    private int _rejectsRemaining;
     private long _sequence;
     private DateTimeOffset? _lastReceivedAt;
 
     /// <summary>Requests the fake endpoint has received, newest last.</summary>
     public IReadOnlyList<FakeSmsRequest> Requests => [.. _requests];
 
-    /// <summary>How many upcoming requests will be answered with 500.</summary>
+    /// <summary>How many upcoming requests will be answered with HTTP 500.</summary>
     public int FailuresRemaining
     {
         get
@@ -32,6 +33,18 @@ public sealed class FakeNetGsmState
             lock (_gate)
             {
                 return _failuresRemaining;
+            }
+        }
+    }
+
+    /// <summary>How many upcoming requests will return HTTP 200 with a business-reject body.</summary>
+    public int RejectsRemaining
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _rejectsRemaining;
             }
         }
     }
@@ -45,6 +58,18 @@ public sealed class FakeNetGsmState
         }
     }
 
+    /// <summary>
+    /// Makes the next <paramref name="count"/> requests return HTTP 200 with body
+    /// <c>20</c> (NetGSM permanent business failure — must not be Polly-retried).
+    /// </summary>
+    public void RejectNext(int count)
+    {
+        lock (_gate)
+        {
+            _rejectsRemaining = Math.Max(0, count);
+        }
+    }
+
     /// <summary>Records a request and decides how to answer it.</summary>
     public FakeSmsRequest Record(
         string? userCode,
@@ -52,9 +77,12 @@ public sealed class FakeNetGsmState
         string? message,
         string? msgHeader,
         string rawQuery,
-        string? runId)
+        string? runId,
+        string method = "GET",
+        string? body = null)
     {
         bool fail;
+        bool reject;
         long sequence;
         long? deltaMs;
         var now = DateTimeOffset.UtcNow;
@@ -65,6 +93,12 @@ public sealed class FakeNetGsmState
             if (fail)
             {
                 _failuresRemaining--;
+            }
+
+            reject = !fail && _rejectsRemaining > 0;
+            if (reject)
+            {
+                _rejectsRemaining--;
             }
 
             sequence = ++_sequence;
@@ -84,7 +118,10 @@ public sealed class FakeNetGsmState
             userCode,
             rawQuery,
             fail ? 500 : 200,
-            runId);
+            runId,
+            method,
+            body,
+            reject ? "20" : "00");
 
         _requests.Enqueue(record);
         while (_requests.Count > 200 && _requests.TryDequeue(out _))
@@ -106,6 +143,7 @@ public sealed class FakeNetGsmState
         lock (_gate)
         {
             _failuresRemaining = 0;
+            _rejectsRemaining = 0;
             _sequence = 0;
             _lastReceivedAt = null;
         }
@@ -114,6 +152,7 @@ public sealed class FakeNetGsmState
 
 /// <summary>One request the fake NetGSM endpoint received.</summary>
 /// <param name="DeltaMs">Milliseconds since the previous request — the retry backoff.</param>
+/// <param name="ResponseBody">Plain body returned to the package (<c>00</c> / <c>20</c> / …).</param>
 public sealed record FakeSmsRequest(
     long Sequence,
     DateTimeOffset ReceivedAt,
@@ -124,4 +163,7 @@ public sealed record FakeSmsRequest(
     string? UserCode,
     string RawQuery,
     int ResponseStatus,
-    string? RunId);
+    string? RunId,
+    string Method = "GET",
+    string? Body = null,
+    string ResponseBody = "00");

@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Database.Mongo</PackageId>
     <Title>Pinqponq Database MongoDB</Title>
-    <Description>MongoDB (MongoDB.Driver) bağlantı kurulumu ve health-check katmanı. Repository/entity içermez.</Description>
+    <Description>MongoDB (MongoDB.Driver) connection setup and health-check layer. Does not include repositories or entities.</Description>
     <PackageTags>$(PackageTags);mongodb;mongo;database;nosql;connection;health-check</PackageTags>
   </PropertyGroup>
 

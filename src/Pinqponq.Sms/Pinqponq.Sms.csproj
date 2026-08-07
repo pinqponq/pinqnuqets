@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Sms</PackageId>
     <Title>Pinqponq SMS</Title>
-    <Description>SMS gönderim davranışını (NetGSM) sarmalayan gönderim paketi. Standart ISmsSender arayüzü.</Description>
+    <Description>SMS sending wrapper for NetGSM with a standard ISmsSender interface.</Description>
     <PackageTags>$(PackageTags);sms;netgsm;messaging;notification;sms-sender</PackageTags>
   </PropertyGroup>
 

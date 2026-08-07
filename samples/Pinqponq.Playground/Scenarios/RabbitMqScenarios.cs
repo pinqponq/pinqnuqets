@@ -15,6 +15,7 @@ public static class RabbitMqScenarios
     {
         yield return RoundTrip();
         yield return DeadLetter();
+        yield return DropWithoutDeadLetter();
         yield return QueueRequired();
         yield return PublishRetry();
     }
@@ -24,14 +25,14 @@ public static class RabbitMqScenarios
         {
             Id = "rabbit.roundtrip",
             PackageId = Package,
-            Title = "Publish → consume turu",
-            Summary = "Gerçek bir hosted consumer başlatır, mesaj yayınlar ve handler'a "
-                      + "ulaşmasını bekler. Consumer'ın hazır olması BasicConsume tamamlanana "
-                      + "kadar beklenerek anlaşılır — sabit bir gecikmeyle değil.",
+            Title = "Publish → consume round trip",
+            Summary = "Starts a real hosted consumer, publishes a message, and waits for it to "
+                      + "reach the handler. The consumer's readiness is determined by waiting for "
+                      + "BasicConsume to complete — not by a fixed delay.",
             RequiredServices = [DevServiceIds.RabbitMq],
             Fields =
             [
-                new ScenarioField("message", "Mesaj", ScenarioFieldKind.Text, "merhaba rabbit"),
+                new ScenarioField("message", "Message", ScenarioFieldKind.Text, "hello rabbit"),
                 new ScenarioField("prefetchCount", "PrefetchCount", ScenarioFieldKind.Number, "10"),
             ],
             TimeoutSeconds = 60,
@@ -48,27 +49,27 @@ public static class RabbitMqScenarios
                 services.AddRabbitMqConsumer<RendezvousHandler>(consumer =>
                 {
                     consumer.Queue = queue;
-                    consumer.EnableDeadLetter = false;
+                    consumer.EnableDeadLetter = true;
                 });
             });
 
             await host.StartHostedServicesAsync(context.CancellationToken);
-            context.Step("Hosted consumer başlatıldı", $"kuyruk {queue}");
+            context.Step("Hosted consumer started", $"queue {queue}");
 
             var ready = await WaitForConsumerAsync(host, queue, context);
-            context.Require("Consumer kuyruğa bağlandı", ready);
+            context.Require("Consumer connected to the queue", ready);
 
             var message = context.Input.Text("message");
             await host.GetRequiredService<IMessagePublisher>()
                 .PublishAsync(string.Empty, queue, message, context.CancellationToken);
-            context.Step("Mesaj yayınlandı");
+            context.Step("Message published");
 
             using var receiveTimeout = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
             receiveTimeout.CancelAfter(TimeSpan.FromSeconds(20));
             var received = await rendezvous.Reader.ReadAsync(receiveTimeout.Token);
 
-            context.Require("Handler mesajı aldı", received == message, received);
-            context.Artifact("tur", new { kuyruk = queue, gonderilen = message, alinan = received });
+            context.Require("Handler received the message", received == message, received);
+            context.Artifact("round trip", new { queue, sent = message, received });
         });
 
     private static Scenario DeadLetter() => new(
@@ -76,10 +77,10 @@ public static class RabbitMqScenarios
         {
             Id = "rabbit.dead-letter",
             PackageId = Package,
-            Title = "Handler hata verince dead-letter'a düşer",
-            Summary = "Handler exception fırlatır; paket mesajı requeue etmeden nack'ler ve DLX "
-                      + "onu {kuyruk}.dead kuyruğuna taşır. Paketin ürettiği hata logu da "
-                      + "yapılandırılmış hâliyle doğrulanır.",
+            Title = "A message lands in the dead-letter queue when the handler fails",
+            Summary = "The handler throws; the package nacks the message without requeuing and the "
+                      + "DLX moves it to the {queue}.dead queue. The structured error log the package "
+                      + "produces is also verified.",
             RequiredServices = [DevServiceIds.RabbitMq],
             NegativePath = true,
             TimeoutSeconds = 60,
@@ -101,38 +102,38 @@ public static class RabbitMqScenarios
             });
 
             await host.StartHostedServicesAsync(context.CancellationToken);
-            context.Require("Consumer kuyruğa bağlandı", await WaitForConsumerAsync(host, queue, context));
+            context.Require("Consumer connected to the queue", await WaitForConsumerAsync(host, queue, context));
 
-            const string Payload = "bu mesaj işlenemeyecek";
+            const string Payload = "this message will not be processed";
             await host.GetRequiredService<IMessagePublisher>()
                 .PublishAsync(string.Empty, queue, Payload, context.CancellationToken);
-            context.Step("Mesaj yayınlandı", $"kuyruk {queue}");
+            context.Step("Message published", $"queue {queue}");
 
             using (var receiveTimeout = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken))
             {
                 receiveTimeout.CancelAfter(TimeSpan.FromSeconds(20));
                 var seen = await rendezvous.Reader.ReadAsync(receiveTimeout.Token);
-                context.Step("Handler mesajı gördü ve hata fırlattı", seen);
+                context.Step("Handler saw the message and threw", seen);
             }
 
             var deadLetterQueue = $"{queue}.dead";
             var deadLettered = await WaitForDeadLetterAsync(host, deadLetterQueue, context);
 
-            context.Require("Mesaj dead-letter kuyruğuna düştü", deadLettered is not null, deadLetterQueue);
-            context.Require("Gövde korunmuş", deadLettered == Payload, deadLettered);
+            context.Require("Message landed in the dead-letter queue", deadLettered is not null, deadLetterQueue);
+            context.Require("Body preserved", deadLettered == Payload, deadLettered);
 
             var logEntry = await context.WaitForLogAsync(
                 record => record.MessageTemplate?.Contains("dead-letter", StringComparison.OrdinalIgnoreCase) == true,
                 TimeSpan.FromSeconds(10));
 
-            context.Require("Paket hata logunu üretti", logEntry is not null);
+            context.Require("The package produced the error log", logEntry is not null);
             context.Check(
-                "Log kaydında yapılandırılmış Queue alanı var",
+                "The log record has a structured Queue field",
                 logEntry!.State.TryGetValue("Queue", out var loggedQueue)
                 && string.Equals(loggedQueue?.ToString(), queue, StringComparison.Ordinal),
-                logEntry.State.TryGetValue("Queue", out var value) ? value?.ToString() : "(yok)");
+                logEntry.State.TryGetValue("Queue", out var value) ? value?.ToString() : "(none)");
 
-            context.Artifact("log kaydı", new
+            context.Artifact("log record", new
             {
                 level = logEntry.Level,
                 category = logEntry.Category,
@@ -142,14 +143,71 @@ public static class RabbitMqScenarios
             });
         });
 
+    private static Scenario DropWithoutDeadLetter() => new(
+        new ScenarioDescriptor
+        {
+            Id = "rabbit.drop-no-dlx",
+            PackageId = Package,
+            Title = "A poison message is dropped when the DLX is disabled",
+            Summary = "When EnableDeadLetter=false and the handler keeps failing, the package "
+                      + "redelivers the message up to MaxRedeliveryCount times, then drops it via "
+                      + "nack(requeue:false) and produces a 'dropping after' log.",
+            RequiredServices = [DevServiceIds.RabbitMq],
+            NegativePath = true,
+            Fields =
+            [
+                new ScenarioField("maxRedelivery", "MaxRedeliveryCount", ScenarioFieldKind.Number, "2"),
+            ],
+            TimeoutSeconds = 90,
+        },
+        async context =>
+        {
+            var queue = $"pg-drop-{Guid.NewGuid():N}"[..18];
+            var rendezvous = new MessageRendezvous { ThrowOnHandle = true };
+            var maxRedelivery = context.Input.Int("maxRedelivery");
+
+            await using var host = context.Host(services =>
+            {
+                services.AddSingleton(rendezvous);
+                ConfigureBroker(services, context);
+                services.AddRabbitMqConsumer<RendezvousHandler>(consumer =>
+                {
+                    consumer.Queue = queue;
+                    consumer.EnableDeadLetter = false;
+                    consumer.MaxRedeliveryCount = maxRedelivery;
+                });
+            });
+
+            await host.StartHostedServicesAsync(context.CancellationToken);
+            context.Require("Consumer connected", await WaitForConsumerAsync(host, queue, context));
+
+            await host.GetRequiredService<IMessagePublisher>()
+                .PublishAsync(string.Empty, queue, "poison", context.CancellationToken);
+            context.Step("Poison message published");
+
+            var dropLog = await context.WaitForLogAsync(
+                record => record.MessageTemplate?.Contains("dropping after", StringComparison.OrdinalIgnoreCase) == true
+                          || record.Message?.Contains("dropping after", StringComparison.OrdinalIgnoreCase) == true,
+                TimeSpan.FromSeconds(45));
+
+            context.Require("Drop log produced", dropLog is not null);
+            context.Artifact("log", new
+            {
+                dropLog!.Level,
+                dropLog.MessageTemplate,
+                dropLog.Message,
+                dropLog.State,
+            });
+        });
+
     private static Scenario QueueRequired() => new(
         new ScenarioDescriptor
         {
             Id = "rabbit.queue-required",
             PackageId = Package,
-            Title = "Kuyruk adı boşsa kayıt anında hata verir",
-            Summary = "AddRabbitMqConsumer, kuyruk adını çalışma anında değil kayıt anında "
-                      + "doğrular. Broker gerekmez — hata DI kurulumunda oluşur.",
+            Title = "An empty queue name fails at registration time",
+            Summary = "AddRabbitMqConsumer validates the queue name at registration time, not at "
+                      + "runtime. No broker is needed — the error occurs during DI setup.",
             NegativePath = true,
         },
         context =>
@@ -166,9 +224,9 @@ public static class RabbitMqScenarios
                 thrown = exception;
             }
 
-            context.Require("Kayıt anında InvalidOperationException", thrown is not null);
+            context.Require("InvalidOperationException at registration time", thrown is not null);
             context.Check(
-                "Hata Queue alanını söylüyor",
+                "The error names the Queue field",
                 thrown!.Message.Contains("Queue", StringComparison.Ordinal),
                 thrown.Message);
             context.Artifact("exception", new { type = thrown.GetType().FullName, message = thrown.Message });
@@ -181,9 +239,9 @@ public static class RabbitMqScenarios
         {
             Id = "rabbit.publish-retry",
             PackageId = Package,
-            Title = "Broker kapalıyken publish tekrar dener",
-            Summary = "Ulaşılamayan bir brokera yayın yapılır. PublishRetryCount arttıkça geçen "
-                      + "süre belirgin biçimde uzar; sonunda hata çağırana yükselir.",
+            Title = "Publish retries when the broker is unavailable",
+            Summary = "Publishes to an unreachable broker. As PublishRetryCount increases, the "
+                      + "elapsed time grows noticeably; the error eventually propagates to the caller.",
             NegativePath = true,
             Fields =
             [
@@ -196,19 +254,19 @@ public static class RabbitMqScenarios
         {
             var withoutRetry = await MeasurePublishFailureAsync(context, 0);
             context.Step($"PublishRetryCount=0 → {withoutRetry.ElapsedMs} ms", withoutRetry.ExceptionType);
-            context.Require("Denemesiz yayın hata verdi", withoutRetry.ExceptionType is not null);
+            context.Require("Publish without retries failed", withoutRetry.ExceptionType is not null);
 
             var retryCount = context.Input.Int("publishRetryCount");
             var withRetry = await MeasurePublishFailureAsync(context, retryCount);
             context.Step($"PublishRetryCount={retryCount} → {withRetry.ElapsedMs} ms", withRetry.ExceptionType);
-            context.Require("Denemeli yayın da hata verdi", withRetry.ExceptionType is not null);
+            context.Require("Publish with retries also failed", withRetry.ExceptionType is not null);
 
             context.Require(
-                "Tekrar denemeler ölçülebilir ek süre getirdi",
+                "The retries added a measurable amount of extra time",
                 withRetry.ElapsedMs > withoutRetry.ElapsedMs,
                 $"{withoutRetry.ElapsedMs} ms → {withRetry.ElapsedMs} ms");
 
-            context.Artifact("ölçüm", new
+            context.Artifact("measurement", new
             {
                 retry0Ms = withoutRetry.ElapsedMs,
                 retryNMs = withRetry.ElapsedMs,
@@ -337,7 +395,7 @@ public sealed class RendezvousHandler(MessageRendezvous rendezvous) : IMessageHa
 
         if (rendezvous.ThrowOnHandle)
         {
-            throw new InvalidOperationException("Playground: handler bilerek hata verdi.");
+            throw new InvalidOperationException("Playground: handler deliberately threw.");
         }
 
         return Task.CompletedTask;

@@ -8,7 +8,7 @@
 
     <PackageId>Pinqponq.Database.Postgres</PackageId>
     <Title>Pinqponq Database Postgres</Title>
-    <Description>Postgres (Npgsql) bağlantı kurulumu, retry/resiliency ve health-check katmanı. Repository/entity içermez.</Description>
+    <Description>Postgres (Npgsql) connection setup, retry/resiliency, and health-check layer. Does not include repositories or entities.</Description>
     <PackageTags>$(PackageTags);postgres;postgresql;npgsql;database;connection;health-check;resiliency</PackageTags>
   </PropertyGroup>
 

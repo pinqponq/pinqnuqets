@@ -1,13 +1,14 @@
-# Sabit portlu alternatif ortam.
+# Fixed-port alternative environment.
 #
-# Konsol servisleri normalde kendisi (Testcontainers ile, rastgele portlarda) kaldırır.
-# Bu dosya, konteynerleri konsolun ömründen bağımsız tutmak istediğinizde kullanılır:
+# The console normally starts and tears down services itself (via Testcontainers, on
+# random ports). Use this file when you want containers whose lifetime is independent
+# of the console's:
 #
 #   docker compose -f samples/Pinqponq.Playground/docker-compose.yml up -d
 #   dotnet run --project samples/Pinqponq.Playground
 #
-# Ardından appsettings.json içindeki Playground:ExternalServices bölümüne aşağıdaki
-# değerleri girin; ilgili servisler "Harici" olarak işaretlenir ve konteyner başlatılmaz:
+# Then enter the following values under Playground:ExternalServices in appsettings.json;
+# the matching services are marked "External" and no container is started:
 #
 #   "postgres": "Host=localhost;Port=5432;Database=playground;Username=playground;Password=playground"
 #   "redis":    "localhost:6379"
@@ -16,7 +17,7 @@
 #   "mailhog":  "localhost:1025:8025"
 #   "mssql":    "Server=localhost,1433;Database=master;User Id=sa;Password=Playground!2024;TrustServerCertificate=true"
 #
-# İmaj etiketleri tests/Pinqponq.TestSupport/Fixtures/ ile aynı tutulmuştur.
+# Image tags are kept identical to tests/Pinqponq.TestSupport/Fixtures/.
 
 services:
   postgres:
@@ -47,8 +48,8 @@ services:
       - "27017:27017"
 
   rabbitmq:
-    # Fixture'larla eşleşsin diye alpine etiketi kullanılıyor; bu imajda yönetim arayüzü
-    # (:15672) yoktur. Arayüz gerekiyorsa rabbitmq:3.13-management-alpine kullanın.
+    # Uses the alpine tag to match the fixtures; this image has no management UI
+    # (:15672). Use rabbitmq:3.13-management-alpine if you need the UI.
     image: rabbitmq:3.13-alpine
     environment:
       RABBITMQ_DEFAULT_USER: guest
@@ -66,7 +67,7 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  # Ağır imaj (~1,5 GB) ve ARM64 desteği yok; yalnızca istendiğinde başlatılır:
+  # Heavy image (~1.5 GB), no ARM64 support; only started on request:
   #   docker compose --profile mssql up -d
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04

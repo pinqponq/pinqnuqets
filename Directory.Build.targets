@@ -1,9 +1,10 @@
 <Project>
 
-  <!-- Pack the shared repository README into every packable project. Evaluated
-       after the project body so $(IsPackable) is known. -->
+  <!-- Pack the shared repository README and package icon into every packable
+       project. Evaluated after the project body so $(IsPackable) is known. -->
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)assets\img\pinqnuqets-dark.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>

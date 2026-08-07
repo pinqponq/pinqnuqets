@@ -49,10 +49,10 @@ export function createLogConsole() {
     if (visible.length === 0) {
       body.append(
         emptyState(
-          records.length === 0 ? 'Henüz log yok' : 'Filtreye uyan kayıt yok',
+          records.length === 0 ? 'No logs yet' : 'No records match the filter',
           records.length === 0
-            ? 'Bir senaryo çalıştırın; ürettiği loglar burada canlı akar.'
-            : 'Seviye çiplerini veya aramayı gevşetmeyi deneyin.',
+            ? 'Run a scenario; the logs it produces stream here live.'
+            : 'Try loosening the level chips or the search.',
         ),
       );
     } else {
@@ -138,7 +138,7 @@ export function createLogConsole() {
     }
 
     if (record.state && Object.keys(record.state).length > 0) {
-      detail.append(section('yapılandırılmış alanlar', jsonView(record.state, { expandDepth: 3 })));
+      detail.append(section('structured fields', jsonView(record.state, { expandDepth: 3 })));
     }
 
     if (record.scopes?.length) {
@@ -158,7 +158,7 @@ export function createLogConsole() {
       copyButton(() => JSON.stringify(record, null, 2)),
     );
 
-    detail.append(section('ham kayıt', meta));
+    detail.append(section('raw record', meta));
     detail.addEventListener('click', (event) => event.stopPropagation());
     return detail;
   }
@@ -207,7 +207,7 @@ export function createLogConsole() {
     paused = !paused;
     pauseButton.setAttribute('aria-pressed', String(paused));
     pauseButton.textContent = paused ? '▶' : '⏸';
-    pauseButton.title = paused ? 'Akışı sürdür' : 'Akışı duraklat';
+    pauseButton.title = paused ? 'Resume the stream' : 'Pause the stream';
     if (!paused) renderAll();
   });
 
@@ -225,7 +225,7 @@ export function createLogConsole() {
     runId = value;
     if (value) {
       runFilterChip.hidden = false;
-      runFilterChip.textContent = `koşu ${value} ✕`;
+      runFilterChip.textContent = `run ${value} ✕`;
       runFilterChip.setAttribute('aria-pressed', 'true');
       dock.dataset.collapsed = 'false';
       document.getElementById('dock-caret').textContent = '▾';
@@ -250,7 +250,7 @@ export function createLogConsole() {
     renderAll();
 
     subscribe('/api/logs/stream', 'log', append, () =>
-      toast('Log akışı koptu. Sayfayı yenileyin.', 'err'),
+      toast('The log stream disconnected. Refresh the page.', 'err'),
     );
   }
 

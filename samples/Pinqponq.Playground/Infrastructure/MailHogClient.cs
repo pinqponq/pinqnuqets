@@ -35,7 +35,7 @@ public sealed partial class MailHogClient(IHttpClientFactory httpClientFactory, 
     public string ApiBaseUrl =>
         stack.Require(DevServiceIds.MailHog).Extra.TryGetValue("apiBaseUrl", out var url)
             ? url
-            : throw new DevStackNotReadyException("MailHog API adresi çözülemedi.");
+            : throw new DevStackNotReadyException("Could not resolve the MailHog API address.");
 
     /// <summary>Lists the most recent messages, newest first.</summary>
     public async Task<IReadOnlyList<CapturedMail>> ListAsync(int take, CancellationToken cancellationToken)
@@ -198,7 +198,7 @@ public sealed partial class MailHogClient(IHttpClientFactory httpClientFactory, 
         return Encoding.UTF8.GetString([.. bytes]);
     }
 
-    /// <summary>Decodes RFC 2047 encoded words so Turkish subjects render correctly.</summary>
+    /// <summary>Decodes RFC 2047 encoded words so non-ASCII subjects render correctly.</summary>
     private static string DecodeHeader(string? value)
     {
         if (string.IsNullOrEmpty(value))
