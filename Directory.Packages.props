@@ -40,7 +40,7 @@
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
 
     <!-- SSO Google (PIN-392) -->
-    <PackageVersion Include="Google.Apis.Auth" Version="1.70.0" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.76.0" />
 
     <!-- LiveKit. Microsoft.Bcl.Memory backports System.Buffers.Text.Base64Url, which
          Pinqponq.LiveKit.Server signs tokens with; .NET 9 ships it in the BCL, so only the
