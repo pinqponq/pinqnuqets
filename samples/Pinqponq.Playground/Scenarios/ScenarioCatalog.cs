@@ -9,7 +9,7 @@ public sealed record PackageDescriptor(string Id, string Title, string Group, st
 /// <remarks>
 /// Registration is hand-written rather than reflection-scanned: the order is meaningful in
 /// the UI, a renamed scenario breaks the build instead of silently disappearing, and the
-/// list doubles as a readable coverage document for the 13 packages.
+/// list doubles as a readable coverage document for the 14 packages.
 /// </remarks>
 public sealed class ScenarioCatalog
 {
@@ -25,6 +25,7 @@ public sealed class ScenarioCatalog
         scenarios.AddRange(CacheScenarios.Create());
         scenarios.AddRange(SmsScenarios.Create());
         scenarios.AddRange(MailScenarios.Create());
+        scenarios.AddRange(LiveKitScenarios.Create());
         scenarios.AddRange(DatabaseScenarios.Create());
         scenarios.AddRange(RabbitMqScenarios.Create());
         scenarios.AddRange(ErrorHandlingScenarios.Create());
@@ -73,6 +74,8 @@ public sealed class ScenarioCatalog
             "NetGSM GET/RestV2, HTTPS, AllowNoOp, Polly retry, job rejection."),
         new("Pinqponq.Mail", "Mail", "Communication",
             "SMTP, multiple recipients, AttachmentRoot path jail."),
+        new("Pinqponq.LiveKit.Server", "LiveKit.Server", "Communication",
+            "Access tokens, webhook signature/checksum verification, RoomService over Twirp."),
         new("Pinqponq.Messaging.RabbitMq", "Messaging.RabbitMq", "Messaging",
             "Publish/consume, DLX, DLX-disabled drop, publish retry."),
         new("Pinqponq.ErrorHandling", "ErrorHandling", "Cross-cutting",
