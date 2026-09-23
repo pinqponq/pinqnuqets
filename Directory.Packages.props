@@ -11,8 +11,11 @@
 
   <ItemGroup>
     <!-- Identity (PIN-389) -->
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
+    <!-- 8.14.0: floor raised by Livekit.Server.Sdk.Dotnet 1.2.3 (via System.IdentityModel.Tokens.Jwt),
+         referenced by Pinqponq.LiveKit.Server.Tests. Transitive pinning means every consumer,
+         including Pinqponq.Identity, resolves to this version. -->
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
 
     <!-- Resiliency (Wave 1: Cache, Sms, Database, Messaging) -->
     <PackageVersion Include="Polly.Core" Version="8.4.2" />
@@ -38,6 +41,13 @@
 
     <!-- SSO Google (PIN-392) -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.70.0" />
+
+    <!-- LiveKit. Microsoft.Bcl.Memory backports System.Buffers.Text.Base64Url, which
+         Pinqponq.LiveKit.Server signs tokens with; .NET 9 ships it in the BCL, so only the
+         net8.0 leg references it. Livekit.Server.Sdk.Dotnet is used only by
+         Pinqponq.LiveKit.Server.Tests, to assert wire-compatibility with the official client. -->
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="9.0.18" />
+    <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.3" />
 
     <!-- Test stack. FluentAssertions stays on 6.x: 7.0 moved to a commercial licence. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
