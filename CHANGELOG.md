@@ -16,18 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `net9.0` and `net10.0`; the `net8.0` leg takes `Microsoft.Bcl.Memory` for `Base64Url`,
   which .NET 9 ships in the BCL. It is published at the shared **1.0.1**, the version the
   rest of the packages are already on, so the family stays on one number.
+- `Pinqponq.Identity`: `AddPinqponqJwtBearer`, which builds ASP.NET Core's
+  `TokenValidationParameters` from the `JwtOptions` `AddPinqponqIdentity` already binds, so a
+  service that validates a token cannot drift away from the one that signed it. A second overload
+  binds `JwtOptions` itself, so a service that only validates tokens does not have to register the
+  refresh token service and the password hasher it will never call. `Pinqponq.Identity` now
+  references `Microsoft.AspNetCore.Authentication.JwtBearer`, which brings the ASP.NET Core
+  shared framework with it; every consumer so far is an ASP.NET Core API.
 - Playground scenarios for `Pinqponq.LiveKit.Server`: token issuing and grant checks,
   webhook verification and tamper rejection, options validation, and RoomService against
   a LiveKit server you supply. The console now covers all 14 packages.
 
 ### Changed
 
-- `Microsoft.IdentityModel.JsonWebTokens` / `Microsoft.IdentityModel.Tokens` 8.3.0 → 8.14.0.
+- `Microsoft.IdentityModel.JsonWebTokens` / `Microsoft.IdentityModel.Tokens` 8.3.0 → 8.19.2.
   `Livekit.Server.Sdk.Dotnet`, which `Pinqponq.LiveKit.Server.Tests` checks wire
   compatibility against, requires 8.14.0 through `System.IdentityModel.Tokens.Jwt`, and
-  transitive pinning keeps every project on one version — so `Pinqponq.Identity` now
-  depends on 8.14.0 as well. Its published 1.0.1 still carries the 8.3.0 floor, so the
-  change reaches consumers with the next release.
+  `Microsoft.AspNetCore.Authentication.JwtBearer` 9/10, which `Pinqponq.Identity` now
+  references, raises that floor to 8.19.2. Transitive pinning keeps every project on one
+  version — so `Pinqponq.Identity` now depends on 8.19.2 as well. Its published 1.0.1 still
+  carries the 8.3.0 floor, so the change reaches consumers with the next release.
 
 ## [1.0.1] - 2026-08-07
 

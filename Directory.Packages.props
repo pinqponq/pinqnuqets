@@ -11,11 +11,10 @@
 
   <ItemGroup>
     <!-- Identity (PIN-389) -->
-    <!-- 8.14.0: floor raised by Livekit.Server.Sdk.Dotnet 1.2.3 (via System.IdentityModel.Tokens.Jwt),
-         referenced by Pinqponq.LiveKit.Server.Tests. Transitive pinning means every consumer,
-         including Pinqponq.Identity, resolves to this version. -->
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
+    <!-- 8.19.2: floor raised by Microsoft.AspNetCore.Authentication.JwtBearer 9/10, referenced by
+         Pinqponq.Identity. Transitive pinning means every consumer resolves to this version. -->
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.19.2" />
 
     <!-- Resiliency (Wave 1: Cache, Sms, Database, Messaging) -->
     <PackageVersion Include="Polly.Core" Version="8.4.2" />
@@ -87,6 +86,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.11" />
   </ItemGroup>
 
@@ -104,6 +104,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.18" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.18" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.18" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.18" />
   </ItemGroup>
 
@@ -121,6 +122,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.10" />
   </ItemGroup>
 
