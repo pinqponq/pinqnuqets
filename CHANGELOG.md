@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-29
+
 ### Added
 
 - `Pinqponq.LiveKit.Server`: a LiveKit server API client — `AccessTokenIssuer` (access
@@ -35,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Microsoft.AspNetCore.Authentication.JwtBearer` 9/10, which `Pinqponq.Identity` now
   references, raises that floor to 8.19.2. Transitive pinning keeps every project on one
   version — so `Pinqponq.Identity` now depends on 8.19.2 as well. Its published 1.0.1 still
-  carries the 8.3.0 floor, so the change reaches consumers with the next release.
+  carries the 8.3.0 floor; 1.0.2 is the first release with 8.19.2.
 
 ## [1.0.1] - 2026-08-07
 
@@ -167,6 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial monorepo release of `Pinqponq.*` infrastructure NuGet packages
   (Identity, OTP, TOTP, SSO, Cache, Sms, Mail, Database, RabbitMQ, ErrorHandling)
 
+[1.0.2]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.2
 [1.0.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.1
 [1.0.0]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.0
 [0.2.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v0.2.1
