@@ -45,7 +45,7 @@
          Pinqponq.LiveKit.Server signs tokens with; .NET 9 ships it in the BCL, so only the
          net8.0 leg references it. Livekit.Server.Sdk.Dotnet is used only by
          Pinqponq.LiveKit.Server.Tests, to assert wire-compatibility with the official client. -->
-    <PackageVersion Include="Microsoft.Bcl.Memory" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.12" />
     <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.3" />
 
     <!-- Test stack. FluentAssertions stays on 6.x: 7.0 moved to a commercial licence. -->
