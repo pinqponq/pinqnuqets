@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-29
+
 ### Added
 
 - `Pinqponq.LiveKit.Server`: a LiveKit server API client — `AccessTokenIssuer` (access
@@ -16,18 +18,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `net9.0` and `net10.0`; the `net8.0` leg takes `Microsoft.Bcl.Memory` for `Base64Url`,
   which .NET 9 ships in the BCL. It is published at the shared **1.0.1**, the version the
   rest of the packages are already on, so the family stays on one number.
+- `Pinqponq.Identity`: `AddPinqponqJwtBearer`, which builds ASP.NET Core's
+  `TokenValidationParameters` from the `JwtOptions` `AddPinqponqIdentity` already binds, so a
+  service that validates a token cannot drift away from the one that signed it. A second overload
+  binds `JwtOptions` itself, so a service that only validates tokens does not have to register the
+  refresh token service and the password hasher it will never call. `Pinqponq.Identity` now
+  references `Microsoft.AspNetCore.Authentication.JwtBearer`, which brings the ASP.NET Core
+  shared framework with it; every consumer so far is an ASP.NET Core API.
 - Playground scenarios for `Pinqponq.LiveKit.Server`: token issuing and grant checks,
   webhook verification and tamper rejection, options validation, and RoomService against
   a LiveKit server you supply. The console now covers all 14 packages.
 
 ### Changed
 
-- `Microsoft.IdentityModel.JsonWebTokens` / `Microsoft.IdentityModel.Tokens` 8.3.0 → 8.14.0.
+- `Microsoft.IdentityModel.JsonWebTokens` / `Microsoft.IdentityModel.Tokens` 8.3.0 → 8.19.2.
   `Livekit.Server.Sdk.Dotnet`, which `Pinqponq.LiveKit.Server.Tests` checks wire
   compatibility against, requires 8.14.0 through `System.IdentityModel.Tokens.Jwt`, and
-  transitive pinning keeps every project on one version — so `Pinqponq.Identity` now
-  depends on 8.14.0 as well. Its published 1.0.1 still carries the 8.3.0 floor, so the
-  change reaches consumers with the next release.
+  `Microsoft.AspNetCore.Authentication.JwtBearer` 9/10, which `Pinqponq.Identity` now
+  references, raises that floor to 8.19.2. Transitive pinning keeps every project on one
+  version — so `Pinqponq.Identity` now depends on 8.19.2 as well. Its published 1.0.1 still
+  carries the 8.3.0 floor; 1.0.2 is the first release with 8.19.2.
 
 ## [1.0.1] - 2026-08-07
 
@@ -159,6 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial monorepo release of `Pinqponq.*` infrastructure NuGet packages
   (Identity, OTP, TOTP, SSO, Cache, Sms, Mail, Database, RabbitMQ, ErrorHandling)
 
+[1.0.2]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.2
 [1.0.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.1
 [1.0.0]: https://github.com/pinqponq/pinqnuqets/releases/tag/v1.0.0
 [0.2.1]: https://github.com/pinqponq/pinqnuqets/releases/tag/v0.2.1
