@@ -6,7 +6,6 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <!-- First release of this package: it has its own version, the repo-wide one in Directory.Build.props belongs to the others. -->
     <Version>1.0.0</Version>
     <PackageId>Pinqponq.Configuration.Vault</PackageId>
     <Title>Pinqponq Configuration Vault</Title>
