@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Auth.Sso.Abstractions</PackageId>
     <Title>Pinqponq SSO Abstractions</Title>
     <Description>Shared contract for external identity providers (Google, etc.): IExternalAuthProvider and related models. Foundation for provider implementation packages.</Description>

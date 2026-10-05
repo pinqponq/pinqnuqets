@@ -34,6 +34,7 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 - Dependency versions belong in `Directory.Packages.props` (Central Package Management).
 - Do not commit secrets, credentials, or personal NuGet source configs.
 - Update `CHANGELOG.md` under `[Unreleased]` when behavior or public API changes.
+- Every package is versioned on its own: when you change a package, raise the `<Version>` in that package's `.csproj` (Semantic Versioning). There is no shared version.
 
 ## Code of conduct
 
