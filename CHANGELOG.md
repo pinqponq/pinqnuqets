@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Pinqponq.Configuration.Vault`: a HashiCorp Vault configuration provider. `AddPinqponqVault`
+- `Pinqponq.Configuration.Vault` 1.0.0 (first release; it carries its own version, the other
+  packages keep the repo-wide one): a HashiCorp Vault configuration provider. `AddPinqponqVault`
   reads one KV version 2 record shaped like `appsettings.json` at startup and lays it over the
   configuration sources registered before it, so secrets leave the settings files while every
   `IOptions<T>` binding keeps working. The token is resolved the way the Vault CLI does it —

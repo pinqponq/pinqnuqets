@@ -6,6 +6,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <!-- First release of this package: it has its own version, the repo-wide one in Directory.Build.props belongs to the others. -->
+    <Version>1.0.0</Version>
     <PackageId>Pinqponq.Configuration.Vault</PackageId>
     <Title>Pinqponq Configuration Vault</Title>
     <Description>HashiCorp Vault configuration provider: loads one KV v2 record shaped like appsettings.json into IConfiguration at startup. Resolves the token the way the Vault CLI does (configuration, VAULT_TOKEN, ~/.vault-token).</Description>
