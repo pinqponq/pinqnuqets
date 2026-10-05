@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Pinqponq.Configuration.Vault`: a HashiCorp Vault configuration provider. `AddPinqponqVault`
+  reads one KV version 2 record shaped like `appsettings.json` at startup and lays it over the
+  configuration sources registered before it, so secrets leave the settings files while every
+  `IOptions<T>` binding keeps working. The token is resolved the way the Vault CLI does it —
+  the `Token` setting, then `VAULT_TOKEN`, then the `~/.vault-token` file written by
+  `vault login` — so a developer who logged in once needs no per-project setup. Startup fails
+  fast with `VaultConfigurationException` on a missing setting, a missing record, a rejected
+  token or an unreachable Vault (the last one after `MaxAttemptCount` attempts); messages never
+  contain a secret value or the token. Requests are plain `HttpClient` calls, so no Vault client
+  library is added. Targets `net8.0`, `net9.0` and `net10.0`.
+
 ## [1.0.2] - 2026-09-29
 
 ### Added
