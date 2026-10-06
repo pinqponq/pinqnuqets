@@ -7,7 +7,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- 1.1.0 exists on nuget.org (unlisted) and cannot be published again: the next release must not use it. -->
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <PackageId>Pinqponq.LiveKit.Server</PackageId>
     <Title>Pinqponq LiveKit Server</Title>
     <Description>LiveKit server API client: access token issuing, RoomService calls over Twirp JSON, and webhook signature verification. Does not require a Protobuf/gRPC toolchain.</Description>
