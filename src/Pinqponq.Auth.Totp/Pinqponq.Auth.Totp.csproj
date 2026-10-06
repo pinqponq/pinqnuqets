@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Auth.Totp</PackageId>
     <Title>Pinqponq TOTP</Title>
     <Description>RFC 6238 TOTP-based 2FA: secret generation, otpauth:// provisioning URI, and code validation. Compatible with Google/Microsoft Authenticator.</Description>

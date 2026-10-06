@@ -1,7 +1,7 @@
 # Pinqponq.Identity
 
-Generic auth primitives in one package: JWT issue/validate, refresh token
-issue/rotate/revoke, and password hash/verify. The package owns the crypto and
+Generic auth primitives in one package: JWT issue/validate, ASP.NET Core JWT
+bearer authentication, refresh token issue/rotate/revoke, and password hash/verify. The package owns the crypto and
 lifecycle rules; storage for refresh tokens and revoked access tokens is left to
 the consuming application so this package stays free of a database dependency.
 
@@ -116,6 +116,31 @@ public sealed class ProfileEndpoint(IJwtTokenValidator jwtValidator)
 }
 ```
 
+## ASP.NET Core bearer authentication
+
+`AddPinqponqJwtBearer` registers ASP.NET Core's JWT bearer handler with validation
+parameters derived from `JwtOptions` — issuer, audience, signing key, lifetime
+validation and clock skew are never restated at the validation side, so a service
+that validates a token cannot drift away from the one that signed it.
+
+```csharp
+// A service that issues tokens: AddPinqponqIdentity binds JwtOptions.
+builder.Services.AddPinqponqIdentity(configureJwt: jwt => { /* ... */ });
+builder.Services.AddPinqponqJwtBearer(bearer =>
+{
+    bearer.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+});
+
+// A service that only validates tokens: this overload binds JwtOptions itself,
+// without the refresh token service or the password hasher.
+builder.Services.AddPinqponqJwtBearer(configureJwt: jwt => { /* ... */ });
+```
+
+The `configureBearer` delegate is for settings that belong to the host rather than
+to the token contract; it runs after the derived parameters. The `Bearer` scheme is
+registered by default; pass `authenticationScheme` to use another name. The returned
+`AuthenticationBuilder` chains further schemes.
+
 ## Configuration
 
 `JwtOptions` (configured via `configureJwt`, validated on startup):
@@ -145,6 +170,7 @@ public sealed class ProfileEndpoint(IJwtTokenValidator jwtValidator)
 | Type | Lifetime | Description |
 |---|---|---|
 | `IJwtTokenGenerator` | Singleton | `GenerateToken(claims, issuedAt?)` — issues a signed JWT from claims. |
+| `AddPinqponqJwtBearer` | DI extension | Registers the ASP.NET Core JWT bearer handler with parameters derived from `JwtOptions`. |
 | `IJwtTokenValidator` | Scoped | `ValidateAsync(token, ct)` — validates signature, issuer, audience, lifetime; returns a `ClaimsPrincipal?`. |
 | `IPasswordHasher` | Singleton (`Pbkdf2PasswordHasher`) | `Hash(password)`, `Verify(hash, password)` → `PasswordVerificationOutcome`. |
 | `IRefreshTokenService` | Scoped | `IssueAsync`, `RotateAsync`, `RevokeAsync`. Requires the application to register `IRefreshTokenStore`. |
