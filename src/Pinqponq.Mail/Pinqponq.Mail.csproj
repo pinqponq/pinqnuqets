@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Mail</PackageId>
     <Title>Pinqponq Mail</Title>
     <Description>SMTP-based email sending wrapper with configuration (System.Net.Mail).</Description>

@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Sms</PackageId>
     <Title>Pinqponq SMS</Title>
     <Description>SMS sending wrapper for NetGSM with a standard ISmsSender interface.</Description>

@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.ErrorHandling</PackageId>
     <Title>Pinqponq Error Handling</Title>
     <Description>Global exception middleware plus a standard error response contract; log output uses Pinqloq's structured format (correlation/trace id, field names).</Description>
