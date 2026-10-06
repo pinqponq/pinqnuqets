@@ -29,7 +29,7 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 
 - Target .NET 8 and every release after it. The list lives in one place — `PinqponqTargetFrameworks` in `Directory.Build.props`; projects reference it rather than spelling frameworks out, so adding the next runtime is a single edit.
 - `LangVersion` is pinned per target framework, so the oldest one is the real language ceiling. New syntax that the `net8.0` leg rejects fails the build there, whichever SDK you have installed.
-- Prefer the existing style: nullable enabled, warnings as errors, FluentAssertions + xUnit, hand-rolled fakes over Moq.
+- Prefer the existing style: nullable enabled, warnings as errors, xUnit with its own `Assert`, hand-rolled fakes over Moq.
 - Mark Testcontainers tests with `[Trait("Category", "Integration")]`.
 - Dependency versions belong in `Directory.Packages.props` (Central Package Management).
 - Do not commit secrets, credentials, or personal NuGet source configs.

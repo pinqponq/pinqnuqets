@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Xunit;
 
 namespace Pinqponq.Auth.Totp.Tests;
@@ -10,26 +9,27 @@ public sealed class Base32Tests
     {
         var bytes = "HelloPinq"u8.ToArray();
         var encoded = Base32.Encode(bytes);
-        Base32.Decode(encoded).Should().Equal(bytes);
+        Assert.Equal(bytes, Base32.Decode(encoded));
     }
 
     [Fact]
     public void Decode_invalid_character_throws()
     {
         var act = () => Base32.Decode("ABC!");
-        act.Should().Throw<FormatException>().WithMessage("*Invalid Base32*");
+        var exception = Assert.ThrowsAny<FormatException>(act);
+        Assert.Contains("Invalid Base32", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Decode_empty_returns_empty()
     {
-        Base32.Decode("").Should().BeEmpty();
-        Base32.Decode("   ").Should().BeEmpty();
+        Assert.Empty(Base32.Decode(""));
+        Assert.Empty(Base32.Decode("   "));
     }
 
     [Fact]
     public void Encode_empty_returns_empty()
     {
-        Base32.Encode([]).Should().BeEmpty();
+        Assert.Empty(Base32.Encode([]));
     }
 }

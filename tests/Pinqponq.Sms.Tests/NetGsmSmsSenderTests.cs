@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Pinqponq.Sms.DependencyInjection;
@@ -38,14 +37,14 @@ public sealed class NetGsmSmsSenderTests
 
         await sender.SendAsync(new SmsMessage { To = "+90 555 111 2233", Text = "Merhaba & test" });
 
-        handler.LastRequest.Should().NotBeNull();
+        Assert.NotNull(handler.LastRequest);
         var uri = handler.LastRequest!.RequestUri!.ToString();
-        uri.Should().Contain("usercode=user1");
-        uri.Should().Contain("password=secret");
-        uri.Should().Contain("gsmno=905551112233");
-        uri.Should().Contain("msgheader=PINQ");
-        uri.Should().Contain("message=Merhaba");
-        uri.Should().Contain("%26");
+        Assert.Contains("usercode=user1", uri);
+        Assert.Contains("password=secret", uri);
+        Assert.Contains("gsmno=905551112233", uri);
+        Assert.Contains("msgheader=PINQ", uri);
+        Assert.Contains("message=Merhaba", uri);
+        Assert.Contains("%26", uri);
     }
 
     [Fact]
@@ -60,7 +59,7 @@ public sealed class NetGsmSmsSenderTests
 
         await sender.SendAsync(new SmsMessage { To = "555", Text = "x" });
 
-        handler.Requests.Should().BeEmpty();
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler, o => o.UserCode = null);
 
         var act = () => sender.SendAsync(new SmsMessage { To = "555", Text = "x" });
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(act);
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler, o => o.Password = " ");
 
         var act = () => sender.SendAsync(new SmsMessage { To = "555", Text = "x" });
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(act);
     }
 
     [Fact]
@@ -90,7 +89,7 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler);
 
         var act = () => sender.SendAsync(new SmsMessage { To = "   ", Text = "x" });
-        await act.Should().ThrowAsync<ArgumentException>();
+        await Assert.ThrowsAnyAsync<ArgumentException>(act);
     }
 
     [Fact]
@@ -100,7 +99,8 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler);
 
         var act = () => sender.SendAsync(new SmsMessage { To = "555", Text = "  " });
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*text*");
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+        Assert.Contains("text", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -110,8 +110,9 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler);
 
         var act = () => sender.SendAsync(new SmsMessage { To = "abc", Text = "x" });
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*digit*");
-        handler.Requests.Should().BeEmpty();
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+        Assert.Contains("digit", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -125,8 +126,9 @@ public sealed class NetGsmSmsSenderTests
         });
 
         var act = () => sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" });
-        await act.Should().ThrowAsync<NetGsmRejectedException>().WithMessage("*NetGSM*");
-        handler.Requests.Should().ContainSingle();
+        var exception = await Assert.ThrowsAnyAsync<NetGsmRejectedException>(act);
+        Assert.Contains("NetGSM", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(handler.Requests);
     }
 
     [Fact]
@@ -136,7 +138,7 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler);
 
         await sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" });
-        handler.Requests.Should().ContainSingle();
+        Assert.Single(handler.Requests);
     }
 
     [Fact]
@@ -146,7 +148,7 @@ public sealed class NetGsmSmsSenderTests
         var sender = Create(handler);
 
         var act = () => sender.SendAsync(null!);
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThrowsAnyAsync<ArgumentNullException>(act);
     }
 
     [Fact]
@@ -160,7 +162,7 @@ public sealed class NetGsmSmsSenderTests
             o.Password = "p";
         });
 
-        services.Should().Contain(d => d.ServiceType == typeof(ISmsSender));
+        Assert.Contains(services, d => d.ServiceType == typeof(ISmsSender));
     }
 
     [Fact]
@@ -177,8 +179,8 @@ public sealed class NetGsmSmsSenderTests
         cts.Cancel();
 
         var act = () => sender.SendAsync(new SmsMessage { To = "5551112233", Text = "x" }, cts.Token);
-        await act.Should().ThrowAsync<OperationCanceledException>();
-        handler.RequestCount.Should().BeLessThanOrEqualTo(1);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
+        Assert.True(handler.RequestCount <= 1);
     }
 
     [Fact]
@@ -186,37 +188,37 @@ public sealed class NetGsmSmsSenderTests
     {
         var validator = new SmsOptionsValidator();
 
-        validator.Validate(null, new SmsOptions
+        Assert.False(validator.Validate(null, new SmsOptions
         {
             ApiUrl = "http://insecure.example/",
             UserCode = "u",
             Password = "p",
-        }).Succeeded.Should().BeFalse();
+        }).Succeeded);
 
-        validator.Validate(null, new SmsOptions
+        Assert.False(validator.Validate(null, new SmsOptions
         {
             ApiUrl = "",
             AllowNoOp = false,
-        }).Succeeded.Should().BeFalse();
+        }).Succeeded);
 
-        validator.Validate(null, new SmsOptions
+        Assert.True(validator.Validate(null, new SmsOptions
         {
             ApiUrl = "",
             AllowNoOp = true,
-        }).Succeeded.Should().BeTrue();
+        }).Succeeded);
 
-        validator.Validate(null, new SmsOptions
+        Assert.True(validator.Validate(null, new SmsOptions
         {
             ApiUrl = "https://api.example/",
             UserCode = "u",
             Password = "p",
-        }).Succeeded.Should().BeTrue();
+        }).Succeeded);
     }
 
     [Fact]
     public void AllowNoOp_defaults_to_false()
     {
-        new SmsOptions().AllowNoOp.Should().BeFalse();
+        Assert.False(new SmsOptions().AllowNoOp);
     }
 
     [Fact]
@@ -233,16 +235,17 @@ public sealed class NetGsmSmsSenderTests
 
         await sender.SendAsync(new SmsMessage { To = "+90 555 111 2233", Text = "Merhaba" });
 
-        handler.LastRequest.Should().NotBeNull();
-        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
-        handler.LastRequest.RequestUri!.ToString().Should().Be(SmsOptions.DefaultRestV2ApiUrl);
-        handler.LastRequest.Headers.Authorization.Should().NotBeNull();
-        handler.LastRequest.Headers.Authorization!.Scheme.Should().Be("Basic");
-        handler.LastRequest.Headers.Authorization.Parameter.Should().Be(
-            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("user1:secret")));
-        handler.LastRequestBody.Should().Contain("\"msgheader\":\"PINQ\"");
-        handler.LastRequestBody.Should().Contain("\"msg\":\"Merhaba\"");
-        handler.LastRequestBody.Should().Contain("\"no\":\"905551112233\"");
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal(SmsOptions.DefaultRestV2ApiUrl, handler.LastRequest.RequestUri!.ToString());
+        Assert.NotNull(handler.LastRequest.Headers.Authorization);
+        Assert.Equal("Basic", handler.LastRequest.Headers.Authorization!.Scheme);
+        Assert.Equal(
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("user1:secret")),
+            handler.LastRequest.Headers.Authorization.Parameter);
+        Assert.Contains("\"msgheader\":\"PINQ\"", handler.LastRequestBody);
+        Assert.Contains("\"msg\":\"Merhaba\"", handler.LastRequestBody);
+        Assert.Contains("\"no\":\"905551112233\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -250,13 +253,13 @@ public sealed class NetGsmSmsSenderTests
     {
         var validator = new SmsOptionsValidator();
 
-        validator.Validate(null, new SmsOptions
+        Assert.True(validator.Validate(null, new SmsOptions
         {
             Transport = SmsTransport.RestV2,
             ApiUrl = null,
             UserCode = "u",
             Password = "p",
-        }).Succeeded.Should().BeTrue();
+        }).Succeeded);
     }
 
     private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory

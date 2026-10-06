@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Pinqponq.Database.Mssql.DependencyInjection;
@@ -14,7 +13,7 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         services.AddPinqponqMssql(o => o.ConnectionString = "Server=localhost;Database=master;Trusted_Connection=True;");
 
-        services.Should().Contain(d => d.ServiceType == typeof(ISqlConnectionFactory));
+        Assert.Contains(services, d => d.ServiceType == typeof(ISqlConnectionFactory));
     }
 
     [Fact]
@@ -25,6 +24,6 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddPinqponqMssql(o => o.ConnectionString = "Server=localhost;Database=master;Trusted_Connection=True;");
         services.AddHealthChecks().AddPinqponqMssql();
 
-        services.Should().Contain(d => d.ServiceType == typeof(HealthCheckService));
+        Assert.Contains(services, d => d.ServiceType == typeof(HealthCheckService));
     }
 }

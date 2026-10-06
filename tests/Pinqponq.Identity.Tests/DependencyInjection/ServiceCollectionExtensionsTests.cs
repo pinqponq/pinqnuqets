@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Pinqponq.Identity.DependencyInjection;
 using Pinqponq.Identity.Jwt;
@@ -30,10 +29,10 @@ public sealed class ServiceCollectionExtensionsTests
         using var scope = provider.CreateScope();
         var sp = scope.ServiceProvider;
 
-        sp.GetService<IJwtTokenGenerator>().Should().NotBeNull();
-        sp.GetService<IJwtTokenValidator>().Should().NotBeNull();
-        sp.GetService<IPasswordHasher>().Should().NotBeNull();
-        sp.GetService<IRefreshTokenService>().Should().NotBeNull();
+        Assert.NotNull(sp.GetService<IJwtTokenGenerator>());
+        Assert.NotNull(sp.GetService<IJwtTokenValidator>());
+        Assert.NotNull(sp.GetService<IPasswordHasher>());
+        Assert.NotNull(sp.GetService<IRefreshTokenService>());
     }
 
     [Fact]
@@ -47,7 +46,7 @@ public sealed class ServiceCollectionExtensionsTests
             jwt.SymmetricKey = "0123456789abcdef0123456789abcdef";
         });
 
-        services.Should().NotContain(d => d.ServiceType == typeof(IRefreshTokenStore));
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IRefreshTokenStore));
     }
 
     [Fact]
@@ -74,7 +73,7 @@ public sealed class ServiceCollectionExtensionsTests
         var val = scope.ServiceProvider.GetRequiredService<IJwtTokenValidator>();
 
         var token = gen.GenerateToken([new Claim(ClaimTypes.NameIdentifier, "u1")]);
-        (await val.ValidateAsync(token)).Should().NotBeNull();
+        Assert.NotNull((await val.ValidateAsync(token)));
     }
 
     /// <summary>
@@ -99,7 +98,7 @@ public sealed class ServiceCollectionExtensionsTests
             ValidateScopes = true,
         });
 
-        build.Should().NotThrow();
+        Assert.Null(Record.Exception(build));
     }
 
     [Fact]
@@ -118,8 +117,8 @@ public sealed class ServiceCollectionExtensionsTests
 
         var resolve = scope.ServiceProvider.GetRequiredService<IRefreshTokenService>;
 
-        resolve.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{nameof(IRefreshTokenStore)}*");
+        var exception = Assert.ThrowsAny<InvalidOperationException>(resolve);
+        Assert.Contains(nameof(IRefreshTokenStore), exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class InMemoryRevocationStore : IAccessTokenRevocationStore

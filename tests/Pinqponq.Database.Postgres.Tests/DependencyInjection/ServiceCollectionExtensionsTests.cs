@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Pinqponq.Database.Postgres.DependencyInjection;
@@ -14,7 +13,7 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         services.AddPinqponqPostgres(o => o.ConnectionString = "Host=localhost;Database=x;Username=u;Password=p");
 
-        services.Should().Contain(d => d.ServiceType == typeof(IPostgresConnectionFactory));
+        Assert.Contains(services, d => d.ServiceType == typeof(IPostgresConnectionFactory));
     }
 
     [Fact]
@@ -25,6 +24,6 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddPinqponqPostgres(o => o.ConnectionString = "Host=localhost;Database=x;Username=u;Password=p");
         services.AddHealthChecks().AddPinqponqPostgres();
 
-        services.Should().Contain(d => d.ServiceType == typeof(HealthCheckService));
+        Assert.Contains(services, d => d.ServiceType == typeof(HealthCheckService));
     }
 }

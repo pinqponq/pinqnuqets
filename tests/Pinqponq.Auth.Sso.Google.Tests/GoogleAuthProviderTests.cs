@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Pinqponq.Auth.Sso.Abstractions;
@@ -23,20 +22,20 @@ public sealed class GoogleAuthProviderTests
     [Fact]
     public void ProviderName_is_Google()
     {
-        Create().ProviderName.Should().Be("Google");
-        GoogleAuthProvider.Name.Should().Be("Google");
+        Assert.Equal("Google", Create().ProviderName);
+        Assert.Equal("Google", GoogleAuthProvider.Name);
     }
 
     [Fact]
     public void RequireEmailVerified_defaults_to_true()
     {
-        new GoogleAuthOptions().RequireEmailVerified.Should().BeTrue();
+        Assert.True(new GoogleAuthOptions().RequireEmailVerified);
     }
 
     [Fact]
     public void RequireNonce_defaults_to_false()
     {
-        new GoogleAuthOptions().RequireNonce.Should().BeFalse();
+        Assert.False(new GoogleAuthOptions().RequireNonce);
     }
 
     [Fact]
@@ -48,8 +47,8 @@ public sealed class GoogleAuthProviderTests
 
         var result = await provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken("x.y.z"));
 
-        result.Succeeded.Should().BeFalse();
-        result.Error.Should().Be("Invalid Google id_token.");
+        Assert.False(result.Succeeded);
+        Assert.Equal("Invalid Google id_token.", result.Error);
     }
 
     [Fact]
@@ -58,15 +57,15 @@ public sealed class GoogleAuthProviderTests
         var result = await Create("client.apps.googleusercontent.com")
             .AuthenticateAsync(ExternalAuthRequest.FromIdToken("  "));
 
-        result.Succeeded.Should().BeFalse();
-        result.Error.Should().Contain("id_token");
+        Assert.False(result.Succeeded);
+        Assert.Contains("id_token", result.Error);
     }
 
     [Fact]
     public async Task Null_request_throws()
     {
         var act = () => Create().AuthenticateAsync(null!);
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThrowsAnyAsync<ArgumentNullException>(act);
     }
 
     [Fact]
@@ -78,7 +77,7 @@ public sealed class GoogleAuthProviderTests
         var act = () => Create("client.apps.googleusercontent.com")
             .AuthenticateAsync(ExternalAuthRequest.FromIdToken("x.y.z"), cts.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
     }
 
     [Fact]
@@ -87,8 +86,8 @@ public sealed class GoogleAuthProviderTests
         var result = await Create("client.apps.googleusercontent.com")
             .AuthenticateAsync(ExternalAuthRequest.FromIdToken("not.a.valid.jwt"));
 
-        result.Succeeded.Should().BeFalse();
-        result.Error.Should().Be("Invalid Google id_token.");
+        Assert.False(result.Succeeded);
+        Assert.Equal("Invalid Google id_token.", result.Error);
     }
 
     [Fact]
@@ -97,8 +96,8 @@ public sealed class GoogleAuthProviderTests
         var result = await Create("client.apps.googleusercontent.com")
             .AuthenticateAsync(ExternalAuthRequest.FromAuthorizationCode("code", "https://app/cb"));
 
-        result.Succeeded.Should().BeFalse();
-        result.Error.Should().Contain("not supported");
+        Assert.False(result.Succeeded);
+        Assert.Contains("not supported", result.Error);
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public sealed class GoogleAuthProviderTests
 
         using var sp = services.BuildServiceProvider();
         var provider = sp.GetRequiredService<IExternalAuthProvider>();
-        provider.Should().BeOfType<GoogleAuthProvider>();
-        provider.ProviderName.Should().Be("Google");
+        Assert.IsType<GoogleAuthProvider>(provider);
+        Assert.Equal("Google", provider.ProviderName);
     }
 }

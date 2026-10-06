@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
@@ -30,7 +29,7 @@ public sealed class MongoHealthCheckTests
         var db = sp.GetRequiredService<IMongoDatabase>();
 
         var result = await db.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
-        result["ok"].ToDouble().Should().Be(1);
+        Assert.Equal(1, result["ok"].ToDouble());
     }
 
     [Fact]
@@ -48,6 +47,6 @@ public sealed class MongoHealthCheckTests
         await using var sp = services.BuildServiceProvider();
 
         var report = await sp.GetRequiredService<HealthCheckService>().CheckHealthAsync();
-        report.Status.Should().Be(HealthStatus.Healthy);
+        Assert.Equal(HealthStatus.Healthy, report.Status);
     }
 }

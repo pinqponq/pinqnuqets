@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Pinqponq.Identity.Otp.DependencyInjection;
 using Xunit;
@@ -21,8 +20,8 @@ public sealed class ServiceCollectionExtensionsTests
         });
 
         using var sp = services.BuildServiceProvider();
-        sp.GetService<IOtpService>().Should().NotBeNull();
-        sp.GetService<IOtpSendRateLimiter>().Should().BeOfType<AllowAllOtpSendRateLimiter>();
+        Assert.NotNull(sp.GetService<IOtpService>());
+        Assert.IsType<AllowAllOtpSendRateLimiter>(sp.GetService<IOtpSendRateLimiter>());
     }
 
     /// <summary>
@@ -42,7 +41,7 @@ public sealed class ServiceCollectionExtensionsTests
             ValidateScopes = true,
         });
 
-        build.Should().NotThrow();
+        Assert.Null(Record.Exception(build));
     }
 
     [Fact]
@@ -59,7 +58,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         await otp.GenerateAndSendAsync("user@example.com");
 
-        mail.Sent.Should().ContainSingle();
+        Assert.Single(mail.Sent);
     }
 
     [Fact]
@@ -75,8 +74,8 @@ public sealed class ServiceCollectionExtensionsTests
 
         var send = () => otp.GenerateAndSendAsync("+905550000000", OtpChannel.Sms);
 
-        (await send.Should().ThrowAsync<InvalidOperationException>())
-            .WithMessage("*AddPinqponqSms*");
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(send);
+        Assert.Contains("AddPinqponqSms", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -89,7 +88,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         var resolve = provider.GetRequiredService<IOtpService>;
 
-        resolve.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{nameof(IOtpStore)}*");
+        var exception = Assert.ThrowsAny<InvalidOperationException>(resolve);
+        Assert.Contains(nameof(IOtpStore), exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
