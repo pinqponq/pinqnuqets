@@ -55,13 +55,15 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
 
-    <!-- Testcontainers -->
-    <PackageVersion Include="Testcontainers" Version="4.13.0" />
-    <PackageVersion Include="Testcontainers.Redis" Version="4.13.0" />
-    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.13.0" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
-    <PackageVersion Include="Testcontainers.MongoDb" Version="4.13.0" />
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
+    <!-- Testcontainers. 4.13.0 pulled SSH.NET 2025.1.0 (GHSA-mggc-4xg6-vcxf,
+         GHSA-q939-rpr3-3284), which the transitive audit turns into a restore error.
+         4.15.0 is the library's own fix: it ships SSH.NET 2026.0.0. -->
+    <PackageVersion Include="Testcontainers" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.MongoDb" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.15.0" />
   </ItemGroup>
 
   <!-- Microsoft.Extensions.* and Microsoft.AspNetCore.* ship in lockstep with the runtime,
