@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Pinqponq.TestSupport.Fixtures;
 using Xunit;
@@ -66,8 +65,8 @@ public sealed class SmtpEmailSenderIntegrationTests
             }
         }
 
-        found.Should().NotBeNull($"MailHog should receive message with marker {marker}");
+        Assert.True(found is not null, $"MailHog should receive message with marker {marker}");
         var to = found!.Value.GetProperty("Content").GetProperty("Headers").GetProperty("To")[0].GetString();
-        to.Should().Contain("user@example.com");
+        Assert.Contains("user@example.com", to);
     }
 }

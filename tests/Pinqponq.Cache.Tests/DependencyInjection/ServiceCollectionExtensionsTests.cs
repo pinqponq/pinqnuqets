@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Pinqponq.Cache.DependencyInjection;
@@ -14,8 +13,8 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379");
 
-        services.Should().Contain(d => d.ServiceType == typeof(ICacheService));
-        services.Should().Contain(d => d.ServiceType == typeof(IDistributedLock));
+        Assert.Contains(services, d => d.ServiceType == typeof(ICacheService));
+        Assert.Contains(services, d => d.ServiceType == typeof(IDistributedLock));
     }
 
     [Fact]
@@ -26,6 +25,6 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddPinqponqCache(o => o.ConnectionString = "localhost:6379,abortConnect=false");
         services.AddHealthChecks().AddPinqponqRedis();
 
-        services.Should().Contain(d => d.ServiceType == typeof(HealthCheckService));
+        Assert.Contains(services, d => d.ServiceType == typeof(HealthCheckService));
     }
 }

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -51,13 +50,13 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.Status.Should().BeFalse();
-            body.StatusCode.Should().Be(400);
-            body.ResponseCode.Should().Be("bad_request");
-            body.Message.Should().Be("The request was invalid.");
-            body.TraceId.Should().NotBeNullOrWhiteSpace();
+            Assert.False(body!.Status);
+            Assert.Equal(400, body.StatusCode);
+            Assert.Equal("bad_request", body.ResponseCode);
+            Assert.Equal("The request was invalid.", body.Message);
+            Assert.False(string.IsNullOrWhiteSpace(body.TraceId));
         }
     }
 
@@ -68,9 +67,9 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.ResponseCode.Should().Be("unauthorized");
+            Assert.Equal("unauthorized", body!.ResponseCode);
         }
     }
 
@@ -81,9 +80,9 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.ResponseCode.Should().Be("not_found");
+            Assert.Equal("not_found", body!.ResponseCode);
         }
     }
 
@@ -94,10 +93,10 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.ResponseCode.Should().Be("internal_error");
-            body.Message.Should().Be("An unexpected error occurred.");
+            Assert.Equal("internal_error", body!.ResponseCode);
+            Assert.Equal("An unexpected error occurred.", body.Message);
         }
     }
 
@@ -111,7 +110,7 @@ public sealed class ExceptionHandlingMiddlewareTests
         {
             var response = await client.GetAsync("/");
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.Message.Should().Be("secret-detail");
+            Assert.Equal("secret-detail", body!.Message);
         }
     }
 
@@ -125,7 +124,7 @@ public sealed class ExceptionHandlingMiddlewareTests
             request.Headers.Add("X-Correlation-ID", "corr-123");
             var response = await client.SendAsync(request);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.TraceId.Should().Be("corr-123");
+            Assert.Equal("corr-123", body!.TraceId);
         }
     }
 
@@ -139,11 +138,11 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be((HttpStatusCode)422);
+            Assert.Equal((HttpStatusCode)422, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.StatusCode.Should().Be(422);
-            body.ResponseCode.Should().Be("unprocessable");
-            body.Message.Should().Be("The request could not be processed.");
+            Assert.Equal(422, body!.StatusCode);
+            Assert.Equal("unprocessable", body.ResponseCode);
+            Assert.Equal("The request could not be processed.", body.Message);
         }
     }
 
@@ -155,9 +154,9 @@ public sealed class ExceptionHandlingMiddlewareTests
         {
             var json = await (await client.GetAsync("/")).Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
-            doc.RootElement.TryGetProperty("statusCode", out _).Should().BeTrue();
-            doc.RootElement.TryGetProperty("responseCode", out _).Should().BeTrue();
-            doc.RootElement.TryGetProperty("traceId", out _).Should().BeTrue();
+            Assert.True(doc.RootElement.TryGetProperty("statusCode", out _));
+            Assert.True(doc.RootElement.TryGetProperty("responseCode", out _));
+            Assert.True(doc.RootElement.TryGetProperty("traceId", out _));
         }
     }
 
@@ -168,9 +167,9 @@ public sealed class ExceptionHandlingMiddlewareTests
         using (host)
         {
             var response = await client.GetAsync("/");
-            response.StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
+            Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            body!.ResponseCode.Should().Be("timeout");
+            Assert.Equal("timeout", body!.ResponseCode);
         }
     }
 
@@ -205,7 +204,7 @@ public sealed class ExceptionHandlingMiddlewareTests
         var httpContext = new DefaultHttpContext();
         httpContext.RequestAborted = new CancellationToken(canceled: true);
         await middleware.InvokeAsync(httpContext);
-        httpContext.Response.StatusCode.Should().Be(499);
+        Assert.Equal(499, httpContext.Response.StatusCode);
     }
 
     [Fact]
@@ -214,7 +213,7 @@ public sealed class ExceptionHandlingMiddlewareTests
         var services = new ServiceCollection();
         services.AddPinqponqErrorHandling(o => o.IncludeExceptionMessage = true);
         using var sp = services.BuildServiceProvider();
-        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ErrorHandlingOptions>>()
-            .Value.IncludeExceptionMessage.Should().BeTrue();
+        var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ErrorHandlingOptions>>();
+        Assert.True(options.Value.IncludeExceptionMessage);
     }
 }

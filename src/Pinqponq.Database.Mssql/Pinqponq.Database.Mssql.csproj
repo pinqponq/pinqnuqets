@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <PackageId>Pinqponq.Database.Mssql</PackageId>
     <Title>Pinqponq Database MSSQL</Title>
     <Description>MSSQL (Microsoft.Data.SqlClient) connection setup, retry/resiliency, and health-check layer. Does not include repositories or entities.</Description>

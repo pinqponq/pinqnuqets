@@ -1,5 +1,4 @@
 using System.Text;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,8 +42,8 @@ public sealed class RabbitMqPublisherTests
 
         await using var channel = await connection.CreateChannelAsync();
         var result = await channel.BasicGetAsync(queue, autoAck: true);
-        result.Should().NotBeNull();
-        Encoding.UTF8.GetString(result!.Body.ToArray()).Should().Be("hello-rabbit");
+        Assert.NotNull(result);
+        Assert.Equal("hello-rabbit", Encoding.UTF8.GetString(result!.Body.ToArray()));
     }
 
     [Fact]
@@ -55,7 +54,7 @@ public sealed class RabbitMqPublisherTests
         var publisher = new RabbitMqPublisher(connection, Microsoft.Extensions.Options.Options.Create(Options()));
 
         var act = () => publisher.PublishAsync("", "rk", (string)null!);
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThrowsAnyAsync<ArgumentNullException>(act);
     }
 
     [Fact]
@@ -69,7 +68,7 @@ public sealed class RabbitMqPublisherTests
         var publisher = new RabbitMqPublisher(connection, Microsoft.Extensions.Options.Options.Create(options));
 
         var act = () => publisher.PublishAsync(exchange: "", routingKey: missing, "orphan");
-        await act.Should().ThrowAsync<Exception>();
+        await Assert.ThrowsAnyAsync<Exception>(act);
     }
 
     [Fact]
@@ -119,14 +118,14 @@ public sealed class RabbitMqPublisherTests
                 await Task.Delay(100, cts.Token);
             }
 
-            Volatile.Read(ref attempts).Should().BeGreaterThanOrEqualTo(3);
+            Assert.True(Volatile.Read(ref attempts) >= 3);
 
             await using var connection = new RabbitMqConnection(Microsoft.Extensions.Options.Options.Create(Options()));
             await using var channel = await connection.CreateChannelAsync();
             // Give the consumer a moment to drop the poison message.
             await Task.Delay(500);
             var leftover = await channel.BasicGetAsync(queue, autoAck: true);
-            leftover.Should().BeNull("poison message should be dropped after MaxRedeliveryCount");
+            Assert.True(leftover is null, "poison message should be dropped after MaxRedeliveryCount");
         }
         finally
         {
@@ -192,11 +191,11 @@ public sealed class RabbitMqPublisherTests
                 }
             }
 
-            lastPublishError.Should().BeNull("consumer should accept publishes within the readiness window");
+            Assert.True(lastPublishError is null, "consumer should accept publishes within the readiness window");
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var message = await tcs.Task.WaitAsync(cts.Token);
-            message.Should().Be("from-consumer-test");
+            Assert.Equal("from-consumer-test", message);
         }
         finally
         {

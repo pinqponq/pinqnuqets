@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Pinqponq.Messaging.RabbitMq.DependencyInjection;
 using Xunit;
@@ -17,8 +16,8 @@ public sealed class ServiceCollectionExtensionsTests
             o.Port = 5672;
         });
 
-        services.Should().Contain(d => d.ServiceType == typeof(IMessagePublisher));
-        services.Should().Contain(d => d.ServiceType == typeof(IRabbitMqConnection));
+        Assert.Contains(services, d => d.ServiceType == typeof(IMessagePublisher));
+        Assert.Contains(services, d => d.ServiceType == typeof(IRabbitMqConnection));
     }
 
     [Fact]
@@ -26,7 +25,7 @@ public sealed class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
         var act = () => services.AddRabbitMqConsumer<NoopHandler>(o => o.Queue = " ");
-        act.Should().Throw<InvalidOperationException>();
+        Assert.ThrowsAny<InvalidOperationException>(act);
     }
 
     private sealed class NoopHandler : IMessageHandler

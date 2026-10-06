@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Pinqponq.TestSupport.Fixtures;
@@ -37,10 +36,10 @@ public sealed class RedisCacheServiceTests
         {
             var key = $"str-{Guid.NewGuid():N}";
             await cache.SetStringAsync(key, "hello");
-            (await cache.GetStringAsync(key)).Should().Be("hello");
-            (await cache.ExistsAsync(key)).Should().BeTrue();
-            (await cache.RemoveAsync(key)).Should().BeTrue();
-            (await cache.ExistsAsync(key)).Should().BeFalse();
+            Assert.Equal("hello", (await cache.GetStringAsync(key)));
+            Assert.True((await cache.ExistsAsync(key)));
+            Assert.True((await cache.RemoveAsync(key)));
+            Assert.False((await cache.ExistsAsync(key)));
         }
     }
 
@@ -54,9 +53,9 @@ public sealed class RedisCacheServiceTests
             var key = $"json-{Guid.NewGuid():N}";
             await cache.SetAsync(key, new Sample { Name = "pinq", Count = 3 });
             var loaded = await cache.GetAsync<Sample>(key);
-            loaded.Should().NotBeNull();
-            loaded!.Name.Should().Be("pinq");
-            loaded.Count.Should().Be(3);
+            Assert.NotNull(loaded);
+            Assert.Equal("pinq", loaded!.Name);
+            Assert.Equal(3, loaded.Count);
         }
     }
 
@@ -71,8 +70,8 @@ public sealed class RedisCacheServiceTests
             var key = "k1";
             await cache.SetStringAsync(key, "v");
             var db = mux.GetDatabase();
-            (await db.StringGetAsync(prefix + key)).ToString().Should().Be("v");
-            (await db.KeyExistsAsync(key)).Should().BeFalse();
+            Assert.Equal("v", (await db.StringGetAsync(prefix + key)).ToString());
+            Assert.False((await db.KeyExistsAsync(key)));
         }
     }
 
@@ -84,7 +83,7 @@ public sealed class RedisCacheServiceTests
         await using (mux)
         {
             var act = () => cache.GetStringAsync("");
-            await act.Should().ThrowAsync<ArgumentException>();
+            await Assert.ThrowsAnyAsync<ArgumentException>(act);
         }
     }
 
@@ -97,7 +96,7 @@ public sealed class RedisCacheServiceTests
         {
             var key = $"bad-{Guid.NewGuid():N}";
             await cache.SetStringAsync(key, "{not-json");
-            (await cache.GetAsync<Sample>(key)).Should().BeNull();
+            Assert.Null((await cache.GetAsync<Sample>(key)));
         }
     }
 
@@ -110,7 +109,7 @@ public sealed class RedisCacheServiceTests
         {
             var key = $"empty-{Guid.NewGuid():N}";
             await cache.SetStringAsync(key, "");
-            (await cache.GetStringAsync(key)).Should().Be("");
+            Assert.Equal("", (await cache.GetStringAsync(key)));
         }
     }
 
@@ -128,18 +127,18 @@ public sealed class RedisCacheServiceTests
         var resource = "res-1";
 
         await using var first = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
-        first.Acquired.Should().BeTrue();
-        first.Token.Should().NotBeNullOrWhiteSpace();
-        first.FencingToken.Should().NotBeNull();
+        Assert.True(first.Acquired);
+        Assert.False(string.IsNullOrWhiteSpace(first.Token));
+        Assert.NotNull(first.FencingToken);
 
         await using var second = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
-        second.Acquired.Should().BeFalse();
-        second.FencingToken.Should().BeNull();
+        Assert.False(second.Acquired);
+        Assert.Null(second.FencingToken);
 
         await first.DisposeAsync();
         await using var third = await locks.AcquireAsync(resource, TimeSpan.FromSeconds(30));
-        third.Acquired.Should().BeTrue();
-        third.FencingToken.Should().BeGreaterThan(first.FencingToken!.Value);
+        Assert.True(third.Acquired);
+        Assert.True(third.FencingToken > first.FencingToken!.Value);
     }
 
     [Fact]
@@ -155,8 +154,8 @@ public sealed class RedisCacheServiceTests
         var locks = new RedisDistributedLock(mux, options);
 
         await using var handle = await locks.AcquireAsync("res-ext", TimeSpan.FromSeconds(5));
-        handle.Acquired.Should().BeTrue();
-        (await handle.TryExtendAsync(TimeSpan.FromSeconds(30))).Should().BeTrue();
+        Assert.True(handle.Acquired);
+        Assert.True((await handle.TryExtendAsync(TimeSpan.FromSeconds(30))));
     }
 
     [Fact]
@@ -166,7 +165,7 @@ public sealed class RedisCacheServiceTests
         await using var mux = await ConnectionMultiplexer.ConnectAsync(_fixture.ConnectionString);
         var check = new RedisHealthCheck(mux);
         var result = await check.CheckHealthAsync(new HealthCheckContext());
-        result.Status.Should().Be(HealthStatus.Healthy);
+        Assert.Equal(HealthStatus.Healthy, result.Status);
     }
 
     private sealed class Sample

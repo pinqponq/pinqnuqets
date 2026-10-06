@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Pinqponq.Identity.Passwords;
 using Xunit;
 
@@ -13,14 +12,14 @@ public sealed class Pbkdf2PasswordHasherTests
     {
         var hash = _hasher.Hash("s3cret!");
 
-        hash.Should().NotBeNullOrWhiteSpace();
-        hash.Should().NotContain("s3cret!");
+        Assert.False(string.IsNullOrWhiteSpace(hash));
+        Assert.DoesNotContain("s3cret!", hash);
     }
 
     [Fact]
     public void Hash_is_salted_so_two_hashes_differ()
     {
-        _hasher.Hash("s3cret!").Should().NotBe(_hasher.Hash("s3cret!"));
+        Assert.NotEqual(_hasher.Hash("s3cret!"), _hasher.Hash("s3cret!"));
     }
 
     [Fact]
@@ -28,7 +27,7 @@ public sealed class Pbkdf2PasswordHasherTests
     {
         var hash = _hasher.Hash("s3cret!");
 
-        _hasher.Verify(hash, "s3cret!").Should().Be(PasswordVerificationOutcome.Success);
+        Assert.Equal(PasswordVerificationOutcome.Success, _hasher.Verify(hash, "s3cret!"));
     }
 
     [Fact]
@@ -36,7 +35,7 @@ public sealed class Pbkdf2PasswordHasherTests
     {
         var hash = _hasher.Hash("s3cret!");
 
-        _hasher.Verify(hash, "wrong").Should().Be(PasswordVerificationOutcome.Failed);
+        Assert.Equal(PasswordVerificationOutcome.Failed, _hasher.Verify(hash, "wrong"));
     }
 
     [Theory]
@@ -46,6 +45,6 @@ public sealed class Pbkdf2PasswordHasherTests
     {
         var act = () => _hasher.Hash(password!);
 
-        act.Should().Throw<ArgumentException>();
+        Assert.ThrowsAny<ArgumentException>(act);
     }
 }

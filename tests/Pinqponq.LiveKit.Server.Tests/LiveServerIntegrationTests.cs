@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Pinqponq.LiveKit.Server.Auth;
 using Pinqponq.LiveKit.Server.Rooms;
 using Pinqponq.LiveKit.Server.Twirp;
@@ -53,25 +52,25 @@ public sealed class LiveServerIntegrationTests
         var roomName = $"sdk-integration-{Guid.NewGuid():N}";
 
         var missingRoom = await roomServiceClient.GetRoom(roomName);
-        missingRoom.Should().BeNull();
+        Assert.Null(missingRoom);
 
         await CreateRoom(twirpClient, roomName);
         try
         {
             var createdRoom = await roomServiceClient.GetRoom(roomName);
-            createdRoom.Should().NotBeNull();
-            createdRoom!.NumParticipants.Should().Be(0u);
-            createdRoom.Sid.Should().NotBeEmpty();
-            createdRoom.CreationTime.Should().BePositive();
+            Assert.NotNull(createdRoom);
+            Assert.Equal(0u, createdRoom!.NumParticipants);
+            Assert.NotEmpty(createdRoom.Sid);
+            Assert.True(createdRoom.CreationTime > 0);
             _output.WriteLine($"GetRoom: sid={createdRoom.Sid} participants={createdRoom.NumParticipants} created={createdRoom.CreationTime}");
 
             var participants = await roomServiceClient.ListParticipants(roomName);
-            participants.Should().BeEmpty();
+            Assert.Empty(participants);
 
             var removeAbsentParticipant = () => roomServiceClient.RemoveParticipant(roomName, "nobody");
-            var removeException = (await removeAbsentParticipant.Should().ThrowExactlyAsync<LiveKitApiException>()).Which;
+            var removeException = await Assert.ThrowsAsync<LiveKitApiException>(removeAbsentParticipant);
             _output.WriteLine($"RemoveParticipant(absent): code={removeException.ErrorCode} status={(int)removeException.StatusCode} message={removeException.Message}");
-            removeException.IsNotFound.Should().BeTrue();
+            Assert.True(removeException.IsNotFound);
         }
         finally
         {
@@ -79,7 +78,7 @@ public sealed class LiveServerIntegrationTests
         }
 
         var deletedRoom = await roomServiceClient.GetRoom(roomName);
-        deletedRoom.Should().BeNull();
+        Assert.Null(deletedRoom);
     }
 
     [Fact]

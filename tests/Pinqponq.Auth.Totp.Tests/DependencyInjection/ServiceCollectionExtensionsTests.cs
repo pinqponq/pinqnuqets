@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Pinqponq.Auth.Totp.DependencyInjection;
 using Xunit;
@@ -17,8 +16,8 @@ public sealed class ServiceCollectionExtensionsTests
         using var sp = services.BuildServiceProvider();
         using var scope = sp.CreateScope();
         var totp = scope.ServiceProvider.GetRequiredService<ITotpService>();
-        totp.Should().NotBeNull();
-        totp.GenerateSecret().Should().NotBeNullOrWhiteSpace();
+        Assert.NotNull(totp);
+        Assert.False(string.IsNullOrWhiteSpace(totp.GenerateSecret()));
     }
 
     [Fact]
@@ -39,7 +38,7 @@ public sealed class ServiceCollectionExtensionsTests
         var secret = totp.GenerateSecret();
         var code = totp.ComputeCode(secret);
 
-        (await totp.ValidateAsync(secret, code, "user-1")).Should().BeTrue();
+        Assert.True((await totp.ValidateAsync(secret, code, "user-1")));
     }
 
     /// <summary>
@@ -54,7 +53,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         using var sp = services.BuildServiceProvider();
 
-        sp.GetRequiredService<ITotpService>().GenerateSecret().Should().NotBeNullOrWhiteSpace();
+        Assert.False(string.IsNullOrWhiteSpace(sp.GetRequiredService<ITotpService>().GenerateSecret()));
     }
 
     private sealed class AllowAllReplayStore : ITotpReplayStore

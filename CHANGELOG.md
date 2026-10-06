@@ -23,6 +23,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Packages are versioned individually from now on: each carries its own `<Version>` in its project file and the shared `Version` in `Directory.Build.props` is gone. Every package starts at the version it has on nuget.org (1.0.1, and `Pinqponq.Identity` 1.0.2). Up to and including 1.0.2 all packages shared one version.
+- `Pinqponq.Database.Mssql` 1.0.2: `Microsoft.Data.SqlClient` 5.2.2 → 7.1.1. This is a major
+  step of the driver, and consumers resolve to it through the package: read the
+  `Microsoft.Data.SqlClient` 6.0 and 7.0 release notes before upgrading.
+- `Pinqponq.Auth.Sso.Google` 1.0.2: `Google.Apis.Auth` 1.70.0 → 1.77.0.
+- `Pinqponq.LiveKit.Server` 1.0.2: `Microsoft.Bcl.Memory` 9.0.18 → 10.0.12 on the `net8.0` leg.
+- Test and build tooling: `Microsoft.AspNetCore.TestHost` 8.0.11 → 8.0.31, `coverlet.collector`
+  6.0.4 → 10.1.0, and the CI actions `actions/checkout` 4 → 7, `actions/setup-dotnet` 4 → 6,
+  `actions/upload-artifact` 4 → 7. No shipped package changes.
+
+### Fixed
+
+- Restore failed with `NU1903` on every branch: `Testcontainers` 4.13.0 pulled `SSH.NET`
+  2025.1.0, which carries two high severity advisories (GHSA-mggc-4xg6-vcxf,
+  GHSA-q939-rpr3-3284). `Testcontainers` 4.15.0 ships `SSH.NET` 2026.0.0. Only the test
+  projects and the Playground referenced it; no shipped package was affected.
 
 ## [1.0.2] - 2026-09-29
 
