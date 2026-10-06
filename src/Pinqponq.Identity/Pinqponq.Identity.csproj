@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.2</Version>
     <PackageId>Pinqponq.Identity</PackageId>
     <Title>Pinqponq Identity</Title>
     <Description>Generic auth primitives in one package: JWT issue/validate, ASP.NET Core JWT bearer authentication derived from the same options, refresh token issue/rotate/revoke, and password hash/verify.</Description>

@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Database.Mongo</PackageId>
     <Title>Pinqponq Database MongoDB</Title>
     <Description>MongoDB (MongoDB.Driver) connection setup and health-check layer. Does not include repositories or entities.</Description>
