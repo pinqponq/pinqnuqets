@@ -39,7 +39,7 @@
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
 
     <!-- SSO Google (PIN-392) -->
-    <PackageVersion Include="Google.Apis.Auth" Version="1.70.0" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.77.0" />
 
     <!-- LiveKit. Microsoft.Bcl.Memory backports System.Buffers.Text.Base64Url, which
          Pinqponq.LiveKit.Server signs tokens with; .NET 9 ships it in the BCL, so only the
@@ -89,7 +89,7 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
-    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.31" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
