@@ -33,7 +33,7 @@
          was never tested against. -->
     <PackageVersion Include="Npgsql" Version="8.0.5" />
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
 
     <!-- Messaging (PIN-388): async v7 API, matches consumers -->
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
