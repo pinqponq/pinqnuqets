@@ -53,7 +53,7 @@
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
 
     <!-- Testcontainers. 4.13.0 pulled SSH.NET 2025.1.0 (GHSA-mggc-4xg6-vcxf,
          GHSA-q939-rpr3-3284), which the transitive audit turns into a restore error.
