@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using System.Net;
 using Xunit;
@@ -24,8 +23,9 @@ public sealed class VaultConfigurationExtensionsTests
 
         var addVault = () => configuration.AddPinqponqVault();
 
-        addVault.Should().Throw<VaultConfigurationException>().WithMessage($"{missingSettingKey}*");
-        configuration.Sources.Should().NotContain(source => source is VaultConfigurationSource);
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(addVault);
+        Assert.StartsWith(missingSettingKey, exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(configuration.Sources, source => source is VaultConfigurationSource);
     }
 
     [Fact]
@@ -39,7 +39,8 @@ public sealed class VaultConfigurationExtensionsTests
 
         var addVault = () => configuration.AddPinqponqVault(sectionName: "Secrets");
 
-        addVault.Should().Throw<VaultConfigurationException>().WithMessage("Secrets:Path*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(addVault);
+        Assert.StartsWith("Secrets:Path", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -58,7 +59,8 @@ public sealed class VaultConfigurationExtensionsTests
 
         var addVault = () => configuration.AddPinqponqVault();
 
-        addVault.Should().Throw<VaultConfigurationException>().WithMessage("Vault:RequestTimeoutSeconds*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(addVault);
+        Assert.StartsWith("Vault:RequestTimeoutSeconds", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -82,8 +84,8 @@ public sealed class VaultConfigurationExtensionsTests
             vaultOptions.HttpMessageHandler = handler;
         });
 
-        configuration["RabbitMQ:Password"].Should().Be("from-vault");
-        configuration["RabbitMQ:HostName"].Should().Be("rabbit-host");
+        Assert.Equal("from-vault", configuration["RabbitMQ:Password"]);
+        Assert.Equal("rabbit-host", configuration["RabbitMQ:HostName"]);
     }
 
     private static ConfigurationManager CreateConfiguration(Dictionary<string, string?> settings)

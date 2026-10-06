@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http.Json;
 using Xunit;
@@ -71,10 +70,10 @@ public sealed class LiveVaultIntegrationTests
                 vaultOptions.Path = recordPath;
             });
 
-            configuration["ConnectionStrings:PostgreSql"].Should().Be("Host=db;Password=from-vault");
-            configuration["RabbitMQ:Password"].Should().Be("rabbit-secret");
-            configuration["RabbitMQ:Port"].Should().Be("5672");
-            configuration["RabbitMQ:HostName"].Should().Be("rabbit-host");
+            Assert.Equal("Host=db;Password=from-vault", configuration["ConnectionStrings:PostgreSql"]);
+            Assert.Equal("rabbit-secret", configuration["RabbitMQ:Password"]);
+            Assert.Equal("5672", configuration["RabbitMQ:Port"]);
+            Assert.Equal("rabbit-host", configuration["RabbitMQ:HostName"]);
         }
         finally
         {
@@ -103,7 +102,8 @@ public sealed class LiveVaultIntegrationTests
             vaultOptions.Path = $"pinqponq-configuration-vault-tests/missing-{Guid.NewGuid():N}";
         });
 
-        addVault.Should().Throw<VaultConfigurationException>().WithMessage("*does not exist*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(addVault);
+        Assert.Contains("does not exist", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -126,7 +126,8 @@ public sealed class LiveVaultIntegrationTests
             vaultOptions.Path = "pinqponq-configuration-vault-tests/any";
         });
 
-        addVault.Should().Throw<VaultConfigurationException>().WithMessage("*rejected the configured token*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(addVault);
+        Assert.Contains("rejected the configured token", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private HttpClient CreateVaultClient()

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Net;
 using Xunit;
 
@@ -29,13 +28,13 @@ public sealed class VaultConfigurationProviderTests
 
         provider.Load();
 
-        GetValue(provider, "ConnectionStrings:PostgreSql").Should().Be("Host=db;Password=from-vault");
-        GetValue(provider, "RabbitMQ:Password").Should().Be("rabbit-secret");
-        GetValue(provider, "RabbitMQ:Port").Should().Be("5672");
-        GetValue(provider, "RabbitMQ:Requeue").Should().Be("false");
-        GetValue(provider, "Hosts:0").Should().Be("first");
-        GetValue(provider, "Hosts:1").Should().Be("second");
-        GetValue(provider, "Optional").Should().BeNull();
+        Assert.Equal("Host=db;Password=from-vault", GetValue(provider, "ConnectionStrings:PostgreSql"));
+        Assert.Equal("rabbit-secret", GetValue(provider, "RabbitMQ:Password"));
+        Assert.Equal("5672", GetValue(provider, "RabbitMQ:Port"));
+        Assert.Equal("false", GetValue(provider, "RabbitMQ:Requeue"));
+        Assert.Equal("first", GetValue(provider, "Hosts:0"));
+        Assert.Equal("second", GetValue(provider, "Hosts:1"));
+        Assert.Null(GetValue(provider, "Optional"));
     }
 
     [Fact]
@@ -46,7 +45,7 @@ public sealed class VaultConfigurationProviderTests
 
         provider.Load();
 
-        provider.TryGet("metadata:version", out _).Should().BeFalse();
+        Assert.False(provider.TryGet("metadata:version", out _));
     }
 
     [Fact]
@@ -57,11 +56,11 @@ public sealed class VaultConfigurationProviderTests
 
         provider.Load();
 
-        var request = handler.ReceivedRequests.Should().ContainSingle().Subject;
-        request.Method.Should().Be(HttpMethod.Get);
-        (request.RequestUri?.ToString()).Should().Be("http://vault.test:8200/v1/apps/data/my-product/my-service");
-        request.Headers.GetValues("X-Vault-Token").Should().Equal(CONFIGURED_TOKEN);
-        request.Headers.Contains("X-Vault-Namespace").Should().BeFalse();
+        var request = Assert.Single(handler.ReceivedRequests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("http://vault.test:8200/v1/apps/data/my-product/my-service", (request.RequestUri?.ToString()));
+        Assert.Equal(CONFIGURED_TOKEN, Assert.Single(request.Headers.GetValues("X-Vault-Token")));
+        Assert.False(request.Headers.Contains("X-Vault-Namespace"));
     }
 
     [Fact]
@@ -72,7 +71,7 @@ public sealed class VaultConfigurationProviderTests
 
         provider.Load();
 
-        handler.ReceivedRequests[0].Headers.GetValues("X-Vault-Namespace").Should().Equal("team-a");
+        Assert.Equal("team-a", Assert.Single(handler.ReceivedRequests[0].Headers.GetValues("X-Vault-Namespace")));
     }
 
     [Fact]
@@ -83,8 +82,10 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>().WithMessage("*apps/my-product/my-service*does not exist*");
-        handler.ReceivedRequests.Should().ContainSingle();
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains("apps/my-product/my-service", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("does not exist", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(handler.ReceivedRequests);
     }
 
     [Theory]
@@ -97,11 +98,11 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>()
-            .Where(exception => exception.Message.Contains("rejected the configured token")
-                && exception.Message.Contains("http://vault.test:8200")
-                && !exception.Message.Contains(CONFIGURED_TOKEN));
-        handler.ReceivedRequests.Should().ContainSingle();
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains("rejected the configured token", exception.Message);
+        Assert.Contains("http://vault.test:8200", exception.Message);
+        Assert.DoesNotContain(CONFIGURED_TOKEN, exception.Message);
+        Assert.Single(handler.ReceivedRequests);
     }
 
     [Fact]
@@ -116,8 +117,9 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>()
-            .WithMessage("*'http://vault.test:8200/' rejected the token saved by the Vault CLI*vault login -address=http://vault.test:8200/*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains("'http://vault.test:8200/' rejected the token saved by the Vault CLI", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("vault login -address=http://vault.test:8200/", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -131,8 +133,8 @@ public sealed class VaultConfigurationProviderTests
 
         provider.Load();
 
-        GetValue(provider, "RabbitMQ:Password").Should().Be("rabbit-secret");
-        handler.ReceivedRequests.Should().HaveCount(3);
+        Assert.Equal("rabbit-secret", GetValue(provider, "RabbitMQ:Password"));
+        Assert.Equal(3, handler.ReceivedRequests.Count);
     }
 
     [Fact]
@@ -146,10 +148,10 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>()
-            .WithMessage("*unreachable*")
-            .WithInnerException<HttpRequestException>();
-        handler.ReceivedRequests.Should().HaveCount(3);
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains("unreachable", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsAssignableFrom<HttpRequestException>(exception.InnerException);
+        Assert.Equal(3, handler.ReceivedRequests.Count);
     }
 
     [Theory]
@@ -163,7 +165,8 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>().WithMessage("*missing or malformed*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains("missing or malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -180,8 +183,9 @@ public sealed class VaultConfigurationProviderTests
 
         var load = provider.Load;
 
-        load.Should().Throw<VaultConfigurationException>().WithMessage($"*'{settingName}'*");
-        handler.ReceivedRequests.Should().BeEmpty();
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(load);
+        Assert.Contains($"'{settingName}'", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(handler.ReceivedRequests);
     }
 
     private static VaultConfigurationProvider CreateProvider(
@@ -210,8 +214,8 @@ public sealed class VaultConfigurationProviderTests
 
     private static string? GetValue(VaultConfigurationProvider provider, string configurationKey)
     {
-        provider.TryGet(configurationKey, out var configurationValue)
-            .Should().BeTrue($"configuration key '{configurationKey}' should be loaded");
+        var isLoaded = provider.TryGet(configurationKey, out var configurationValue);
+        Assert.True(isLoaded, $"configuration key '{configurationKey}' should be loaded");
         return configurationValue;
     }
 }

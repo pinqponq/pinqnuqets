@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Xunit;
 
 namespace Pinqponq.Configuration.Vault.Tests;
@@ -13,7 +12,7 @@ public sealed class VaultCredentialResolverTests
 
         var token = resolver.ResolveToken(" configured-token ");
 
-        token.Should().Be(new VaultToken("configured-token", VaultTokenSource.Configuration));
+        Assert.Equal(new VaultToken("configured-token", VaultTokenSource.Configuration), token);
     }
 
     [Fact]
@@ -24,7 +23,7 @@ public sealed class VaultCredentialResolverTests
 
         var token = resolver.ResolveToken(configuredToken: null);
 
-        token.Should().Be(new VaultToken("environment-token", VaultTokenSource.EnvironmentVariable));
+        Assert.Equal(new VaultToken("environment-token", VaultTokenSource.EnvironmentVariable), token);
     }
 
     [Fact]
@@ -35,7 +34,7 @@ public sealed class VaultCredentialResolverTests
 
         var token = resolver.ResolveToken(configuredToken: "  ");
 
-        token.Should().Be(new VaultToken("file-token", VaultTokenSource.TokenFile));
+        Assert.Equal(new VaultToken("file-token", VaultTokenSource.TokenFile), token);
     }
 
     [Fact]
@@ -44,9 +43,11 @@ public sealed class VaultCredentialResolverTests
         using var userProfile = new TemporaryUserProfile();
         var resolver = CreateResolver(userProfile);
 
-        var resolve = () => resolver.ResolveToken(configuredToken: null);
+        Action resolve = () => resolver.ResolveToken(configuredToken: null);
 
-        resolve.Should().Throw<VaultConfigurationException>().WithMessage("*vault login*VAULT_TOKEN*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(resolve);
+        Assert.Contains("vault login", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VAULT_TOKEN", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -54,9 +55,9 @@ public sealed class VaultCredentialResolverTests
     {
         var resolver = new VaultCredentialResolver(_ => null, userProfileDirectory: null);
 
-        var resolve = () => resolver.ResolveToken(configuredToken: null);
+        Action resolve = () => resolver.ResolveToken(configuredToken: null);
 
-        resolve.Should().Throw<VaultConfigurationException>();
+        Assert.ThrowsAny<VaultConfigurationException>(resolve);
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public sealed class VaultCredentialResolverTests
     {
         var resolver = new VaultCredentialResolver(_ => "http://from-environment:8200", userProfileDirectory: null);
 
-        resolver.ResolveAddress(" http://configured:8200 ").Should().Be("http://configured:8200");
+        Assert.Equal("http://configured:8200", resolver.ResolveAddress(" http://configured:8200 "));
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public sealed class VaultCredentialResolverTests
             variableName => variableName == VaultCredentialResolver.ADDRESS_ENVIRONMENT_VARIABLE ? "http://from-environment:8200" : null,
             userProfileDirectory: null);
 
-        resolver.ResolveAddress(configuredAddress: null).Should().Be("http://from-environment:8200");
+        Assert.Equal("http://from-environment:8200", resolver.ResolveAddress(configuredAddress: null));
     }
 
     [Fact]
@@ -84,7 +85,9 @@ public sealed class VaultCredentialResolverTests
 
         var resolve = () => resolver.ResolveAddress(configuredAddress: null);
 
-        resolve.Should().Throw<VaultConfigurationException>().WithMessage("*Address*VAULT_ADDR*");
+        var exception = Assert.ThrowsAny<VaultConfigurationException>(resolve);
+        Assert.Contains("Address", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VAULT_ADDR", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static VaultCredentialResolver CreateResolver(TemporaryUserProfile userProfile, string? environmentToken = null)
