@@ -54,7 +54,7 @@ export function createScenarioView({ onStatusChange, onShowLogs }) {
           el(
             'p',
             { style: 'color:var(--text-muted);max-width:68ch' },
-            'This console runs the repo\'s 13 packages against real dependencies and shows ' +
+            'This console runs the repo\'s 14 packages against real dependencies and shows ' +
               'the structured log records each run produces alongside the result. ' +
               'Pick a scenario on the left; change its option fields to see how the behavior changes.',
           ),

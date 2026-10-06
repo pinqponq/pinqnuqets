@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\Pinqponq.ErrorHandling\Pinqponq.ErrorHandling.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Identity\Pinqponq.Identity.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Identity.Otp\Pinqponq.Identity.Otp.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.LiveKit.Server\Pinqponq.LiveKit.Server.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Mail\Pinqponq.Mail.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Messaging.RabbitMq\Pinqponq.Messaging.RabbitMq.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Sms\Pinqponq.Sms.csproj" />

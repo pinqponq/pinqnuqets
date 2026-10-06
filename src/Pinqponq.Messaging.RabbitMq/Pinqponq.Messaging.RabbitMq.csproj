@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Messaging.RabbitMq</PackageId>
     <Title>Pinqponq RabbitMQ Messaging</Title>
     <Description>RabbitMQ publish/consume transport layer with connection/channel management, retry, and dead-letter (DLX). Does not include message contracts.</Description>
