@@ -23,7 +23,7 @@ is the monorepo overview — the fastest way to try everything is the **Playgrou
 ## Playground — try packages and their logs in the browser
 
 [`samples/Pinqponq.Playground`](samples/Pinqponq.Playground) is a browser test console
-that runs all 13 packages against **real** dependencies. Every run shows:
+that runs all 14 packages against **real** dependencies. Every run shows:
 
 1. What the package did (steps, outputs, assertions)
 2. The **structured log records** it produced (`traceId` / `correlationId` field names,
@@ -35,7 +35,7 @@ dotnet run --project samples/Pinqponq.Playground
 ```
 
 - Packages are referenced as **source** (`ProjectReference`) — edits under `src/` show up immediately
-- **No containers on launch**; most scenarios work without Docker (Identity, OTP/SMS, TOTP, SSO negatives, ErrorHandling, SMS via a fake NetGSM endpoint)
+- **No containers on launch**; most scenarios work without Docker (Identity, OTP/SMS, TOTP, SSO negatives, ErrorHandling, LiveKit tokens/webhooks, SMS via a fake NetGSM endpoint)
 - With Docker: start Redis, Postgres, RabbitMQ, Mongo, MailHog, or SQL Server from the top bar (Testcontainers) to unlock the matching scenarios
 - Full guide: [samples/README.md](samples/README.md)
 
@@ -56,6 +56,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Database.Mssql** | SqlClient connection, retry, health-check (no repository/entity) | [README](src/Pinqponq.Database.Mssql/README.md) |
 | **Pinqponq.Messaging.RabbitMq** | Publish (confirms + mandatory) / consume, reconnect, DLX or MaxRedelivery | [README](src/Pinqponq.Messaging.RabbitMq/README.md) |
 | **Pinqponq.ErrorHandling** | Global exception middleware + standard error contract + Pinqloq-compatible structured logging | [README](src/Pinqponq.ErrorHandling/README.md) |
+| **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |
 
 Each package exposes an `AddPinqponqXxx(...)` DI extension (where applicable) and an options class. Install from nuget.org once published, or reference the project under `src/`.
 

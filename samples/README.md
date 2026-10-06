@@ -1,6 +1,6 @@
 # Pinqponq.Playground — package and log test console
 
-An ASP.NET Core application that exercises the repo's 13 `Pinqponq.*` packages from a
+An ASP.NET Core application that exercises the repo's 14 `Pinqponq.*` packages from a
 browser, against **real** dependencies. Every run shows two things at once: what the
 package does, and **which structured log records it produces** while doing it.
 
@@ -16,8 +16,8 @@ shows up in the console instantly.
 
 No — no container is started on launch, the app comes up instantly.
 Most scenarios work without Docker: Identity, OTP (SMS), TOTP, SSO negative paths,
-ErrorHandling, and all of SMS (SMS traffic goes to the console's own fake NetGSM
-endpoint — HTTPS ApiUrl + loopback rewrite; GET and RestV2).
+ErrorHandling, LiveKit tokens and webhooks, and all of SMS (SMS traffic goes to the
+console's own fake NetGSM endpoint — HTTPS ApiUrl + loopback rewrite; GET and RestV2).
 
 If Docker is available, click the service in the top strip and say **Start**;
 Testcontainers spins up a container and the scenarios tied to that service unlock.

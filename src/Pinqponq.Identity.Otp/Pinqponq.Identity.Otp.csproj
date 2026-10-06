@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Identity.Otp</PackageId>
     <Title>Pinqponq Identity OTP</Title>
     <Description>One-time code send/verify flow over email or SMS; channel routing (mail/sms) lives in the package. Storage interface is left to the consumer.</Description>

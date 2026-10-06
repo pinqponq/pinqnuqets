@@ -8,7 +8,7 @@ These rules apply to all projects and all languages unless a language-specific f
 
 This file always loads. Stack-specific rules load automatically only when you touch a matching file, so they may not be in context yet. Before writing stack code, make sure the relevant rule is loaded:
 
-- **Kotlin / KMP / Compose** (`*.kt`, `*.kts`) → `kotlin-architecture.md` (structure, MVI, shared module), `kotlin-naming.md`, `kotlin-conventions.md` (style), plus `kotlin-deveng-core.md` when the project depends on deveng-core-kmp. Deep references live in `.pinq-doq/references/kotlin/` (architecture, data-layer, mvi-pattern, naming, shared-module, …) and `.pinq-doq/references/kotlin/deveng-core-reference.md`, read on demand.
+- **Kotlin / KMP / Compose** (`*.kt`, `*.kts`) → `kotlin-architecture.md` (structure, MVI, shared module), `kotlin-naming.md`, `kotlin-conventions.md` (style), `kotlin-testing.md` (test stack and what every change must test), plus `kotlin-deveng-core.md` when the project depends on deveng-core-kmp. Deep references live in `.pinq-doq/references/kotlin/` (architecture, data-layer, mvi-pattern, naming, shared-module, testing, …) and `.pinq-doq/references/kotlin/deveng-core-reference.md`, read on demand.
 - **C# / .NET** (`*.cs`, `*.csproj`, `*.sln`) → `dotnet-conventions.md`.
 
 ---
@@ -28,7 +28,7 @@ This file always loads. Stack-specific rules load automatically only when you to
 | Packages | lowercase, dot-separated | `com.protein.android.domain.user.usecase` |
 | Lambda / Callback Parameters | camelCase, contextual prefix | `onRegistrationItemClick` |
 
-- Do not prefix interfaces with `I`.
+- Do not prefix interfaces with 'I' in Kotlin.
 - Do not add an `Async` suffix to async methods — the return type already signals it.
 - If a method only checks → use `validate`, `check`. If it creates or saves → use action verbs.
 
@@ -39,6 +39,7 @@ This file always loads. Stack-specific rules load automatically only when you to
 - Each code unit must have exactly one responsibility.
 - Extract large logical blocks (retry logic, setup, try-catch) into well-named sub-functions.
 - Apply SRP without over-engineering. Do not create abstractions without real value.
+- Before adding infrastructure the task did not ask for (a test project, CI step, shared helper, package), check the repo's open pull requests and branches for the same work. If one exists, build on it (branch from it and target it as the base) instead of opening a parallel one.
 - Layer dependency rules:
   - Application depends only on Domain.
   - Domain must not depend on any other layer; Domain may only depend on other Domain modules.
@@ -67,7 +68,6 @@ This file always loads. Stack-specific rules load automatically only when you to
 
 - Never hardcode tunable or performance-sensitive values. Use named constants or config.
 - Never use inline strings or numeric codes for domain-meaningful values. Use enums or constants.
-- Comments must not explain magic values — the identifier name must carry the meaning.
 - Never assign hardcoded numeric values to variables ending with `Id`. If a static value is needed, it should be an enum or well-named constant.
 
 ---
@@ -81,6 +81,27 @@ This file always loads. Stack-specific rules load automatically only when you to
 - Variable names must clearly describe what the data represents, not its technical type.
 - Do not create variables that simply mirror a parameter — unless they add validation or semantic meaning.
 - Attributes/annotations must be on a separate line above the target member, never inline.
+
+---
+
+## Comment Standards
+
+- Do not add comments by default. Prefer readable code, meaningful naming, and small functions.
+- Do not write comments that only restate what the code already says.
+- Only comment information that cannot be inferred from the code and can be verified from the existing context:
+  - business rules and deliberate exceptions,
+  - technical constraints and temporary workarounds,
+  - security or performance trade-offs,
+  - unexpected behavior of external systems,
+  - deliberate implementations that look like a mistake at first glance.
+- Do not guess a decision's rationale if it was not given by the user or is not explicit in the project. Ask the user for clarification when it is needed.
+- If the need for a comment can be resolved with better naming or a refactor, improve the code first instead.
+- When changing code, also check the comments tied to it: update or remove any that are no longer valid, but never delete a comment without understanding the context and rationale it carries.
+- In `TODO` comments, state the rationale, a tracking reference, and the removal condition where possible.
+- Do not auto-generate line-by-line comments just to explain generated code.
+- Keep comments short and concrete.
+
+**Core test:** if removing a comment would not lose an important, verifiable rationale or warning, the comment was unnecessary.
 
 ---
 

@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <Version>1.0.1</Version>
     <PackageId>Pinqponq.Cache</PackageId>
     <Title>Pinqponq Cache</Title>
     <Description>Redis cache wrapper: get/set/remove/exists, distributed lock, and health-check. Single StackExchange.Redis version.</Description>
