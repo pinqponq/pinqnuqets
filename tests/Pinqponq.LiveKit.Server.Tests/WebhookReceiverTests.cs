@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Pinqponq.LiveKit.Server.Models;
 using Pinqponq.LiveKit.Server.Webhooks;
 using System.Security.Cryptography;
@@ -41,21 +40,21 @@ public sealed class WebhookReceiverTests
 
         var webhookEvent = await _receiver.Receive(PARTICIPANT_JOINED_BODY, authorizationHeader);
 
-        webhookEvent.EventType.Should().Be(WebhookEventType.ParticipantJoined);
-        webhookEvent.Id.Should().Be("EV_123");
-        webhookEvent.CreatedAt.Should().Be(1758441602);
-        (webhookEvent.Room?.Name).Should().Be("project-1-call-c1");
-        (webhookEvent.Room?.CreationTime).Should().Be(1758441600);
-        (webhookEvent.Room?.NumParticipants).Should().Be(2u);
+        Assert.Equal(WebhookEventType.ParticipantJoined, webhookEvent.EventType);
+        Assert.Equal("EV_123", webhookEvent.Id);
+        Assert.Equal(1758441602, webhookEvent.CreatedAt);
+        Assert.Equal("project-1-call-c1", (webhookEvent.Room?.Name));
+        Assert.Equal(1758441600, (webhookEvent.Room?.CreationTime));
+        Assert.Equal(2u, (webhookEvent.Room?.NumParticipants));
 
         var participant = webhookEvent.Participant;
-        participant.Should().NotBeNull();
-        participant!.Identity.Should().Be("user-1");
-        participant.State.Should().Be(ParticipantState.Active);
-        participant.Kind.Should().Be(ParticipantKind.Agent);
-        participant.Attributes["userName"].Should().Be("kept-as-is");
-        (participant.Permission?.CanPublishSources).Should().Equal(TrackSource.Microphone, TrackSource.Camera);
-        participant.DisconnectReason.Should().Be(DisconnectReason.Unrecognized);
+        Assert.NotNull(participant);
+        Assert.Equal("user-1", participant!.Identity);
+        Assert.Equal(ParticipantState.Active, participant.State);
+        Assert.Equal(ParticipantKind.Agent, participant.Kind);
+        Assert.Equal("kept-as-is", participant.Attributes["userName"]);
+        Assert.Equal(new[] { TrackSource.Microphone, TrackSource.Camera }, participant.Permission?.CanPublishSources);
+        Assert.Equal(DisconnectReason.Unrecognized, participant.DisconnectReason);
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public sealed class WebhookReceiverTests
 
         var webhookEvent = await receiver.Receive(PARTICIPANT_JOINED_BODY, referenceToken);
 
-        webhookEvent.EventType.Should().Be(WebhookEventType.ParticipantJoined);
+        Assert.Equal(WebhookEventType.ParticipantJoined, webhookEvent.EventType);
     }
 
     [Fact]
@@ -83,7 +82,7 @@ public sealed class WebhookReceiverTests
 
         var referenceEvent = referenceReceiver.Receive(body, authorizationHeader);
 
-        referenceEvent.Event.Should().Be("participant_joined");
+        Assert.Equal("participant_joined", referenceEvent.Event);
     }
 
     [Fact]
@@ -93,7 +92,7 @@ public sealed class WebhookReceiverTests
 
         var webhookEvent = await _receiver.Receive(PARTICIPANT_JOINED_BODY, $"Bearer {token}");
 
-        webhookEvent.Id.Should().Be("EV_123");
+        Assert.Equal("EV_123", webhookEvent.Id);
     }
 
     [Fact]
@@ -104,7 +103,7 @@ public sealed class WebhookReceiverTests
 
         var act = () => _receiver.Receive(tamperedBody, authorizationHeader);
 
-        await act.Should().ThrowExactlyAsync<LiveKitWebhookValidationException>();
+        await Assert.ThrowsAsync<LiveKitWebhookValidationException>(act);
     }
 
     [Fact]
@@ -118,9 +117,9 @@ public sealed class WebhookReceiverTests
         var receiveWithExpiredHeader = () => _receiver.Receive(PARTICIPANT_JOINED_BODY, expiredHeader);
         var receiveWithoutHeader = () => _receiver.Receive(PARTICIPANT_JOINED_BODY, null);
 
-        await receiveWithForeignHeader.Should().ThrowExactlyAsync<LiveKitWebhookValidationException>();
-        await receiveWithExpiredHeader.Should().ThrowExactlyAsync<LiveKitWebhookValidationException>();
-        await receiveWithoutHeader.Should().ThrowExactlyAsync<LiveKitWebhookValidationException>();
+        await Assert.ThrowsAsync<LiveKitWebhookValidationException>(receiveWithForeignHeader);
+        await Assert.ThrowsAsync<LiveKitWebhookValidationException>(receiveWithExpiredHeader);
+        await Assert.ThrowsAsync<LiveKitWebhookValidationException>(receiveWithoutHeader);
     }
 
     [Fact]
@@ -131,7 +130,7 @@ public sealed class WebhookReceiverTests
 
         var webhookEvent = await _receiver.Receive(body, authorizationHeader);
 
-        webhookEvent.EventType.Should().Be(WebhookEventType.Unrecognized);
-        webhookEvent.Event.Should().Be("agent_session_paused");
+        Assert.Equal(WebhookEventType.Unrecognized, webhookEvent.EventType);
+        Assert.Equal("agent_session_paused", webhookEvent.Event);
     }
 }

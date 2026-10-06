@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Pinqponq.LiveKit.Server.Auth;
 using Pinqponq.LiveKit.Server.Models;
 using System.Text.Json;
@@ -37,20 +36,21 @@ public sealed class AccessTokenIssuerTests
         var payload = JwtPayload.Decode(token.Value);
         var video = payload.GetProperty("video");
 
-        payload.GetProperty("iss").GetString().Should().Be(TestCredentials.API_KEY);
-        payload.GetProperty("sub").GetString().Should().Be("user-1");
-        payload.GetProperty("name").GetString().Should().Be("User One");
-        payload.GetProperty("metadata").GetString().Should().Be("""{"callId":"c1"}""");
-        (payload.GetProperty("exp").GetInt64() - payload.GetProperty("nbf").GetInt64()).Should().Be(120);
-        payload.GetProperty("exp").GetInt64().Should().Be(token.ExpiresAt.ToUnixTimeSeconds());
+        Assert.Equal(TestCredentials.API_KEY, payload.GetProperty("iss").GetString());
+        Assert.Equal("user-1", payload.GetProperty("sub").GetString());
+        Assert.Equal("User One", payload.GetProperty("name").GetString());
+        Assert.Equal("""{"callId":"c1"}""", payload.GetProperty("metadata").GetString());
+        Assert.Equal(120, (payload.GetProperty("exp").GetInt64() - payload.GetProperty("nbf").GetInt64()));
+        Assert.Equal(token.ExpiresAt.ToUnixTimeSeconds(), payload.GetProperty("exp").GetInt64());
 
-        video.GetProperty("roomJoin").GetBoolean().Should().BeTrue();
-        video.GetProperty("room").GetString().Should().Be("project-1-call-c1");
-        video.GetProperty("canPublishData").GetBoolean().Should().BeFalse();
-        video.GetProperty("canPublishSources").EnumerateArray().Select(source => source.GetString())
-            .Should().Equal("microphone", "camera");
-        video.TryGetProperty("roomCreate", out _).Should().BeFalse();
-        video.TryGetProperty("roomAdmin", out _).Should().BeFalse();
+        Assert.True(video.GetProperty("roomJoin").GetBoolean());
+        Assert.Equal("project-1-call-c1", video.GetProperty("room").GetString());
+        Assert.False(video.GetProperty("canPublishData").GetBoolean());
+        Assert.Equal(
+            new[] { "microphone", "camera" },
+            video.GetProperty("canPublishSources").EnumerateArray().Select(source => source.GetString()));
+        Assert.False(video.TryGetProperty("roomCreate", out _));
+        Assert.False(video.TryGetProperty("roomAdmin", out _));
     }
 
     [Fact]
@@ -62,9 +62,9 @@ public sealed class AccessTokenIssuerTests
         var verifier = new Reference.TokenVerifier(TestCredentials.API_KEY, TestCredentials.API_SECRET);
         var claims = verifier.Verify(token.Value);
 
-        claims.Identity.Should().Be("user-1");
-        claims.Video.Room.Should().Be("project-1-call-c1");
-        claims.Video.CanPublishSources.Should().Equal("microphone", "camera");
+        Assert.Equal("user-1", claims.Identity);
+        Assert.Equal("project-1-call-c1", claims.Video.Room);
+        Assert.Equal(new[] { "microphone", "camera" }, claims.Video.CanPublishSources);
     }
 
     [Fact]
@@ -79,9 +79,9 @@ public sealed class AccessTokenIssuerTests
 
         var claims = JsonWebToken.Verify(referenceToken, TestCredentials.Credentials, DateTimeOffset.UtcNow);
 
-        claims.Subject.Should().Be("user-2");
-        (claims.Video?.Room).Should().Be("room-1");
-        (claims.Video?.RoomJoin).Should().BeTrue();
+        Assert.Equal("user-2", claims.Subject);
+        Assert.Equal("room-1", (claims.Video?.Room));
+        Assert.True((claims.Video?.RoomJoin));
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class AccessTokenIssuerTests
 
         var act = () => issuer.CreateToken(tokenOptions);
 
-        await act.Should().ThrowExactlyAsync<ArgumentException>();
+        await Assert.ThrowsAsync<ArgumentException>(act);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class AccessTokenIssuerTests
 
         var act = () => issuer.CreateToken(tokenOptions);
 
-        await act.Should().ThrowExactlyAsync<ArgumentException>();
+        await Assert.ThrowsAsync<ArgumentException>(act);
     }
 
     [Fact]
@@ -124,11 +124,11 @@ public sealed class AccessTokenIssuerTests
         var verifyAfterExpiry = () => JsonWebToken.Verify(token, TestCredentials.Credentials, Now.AddMinutes(10));
         var verifyNonJwt = () => JsonWebToken.Verify("not-a-jwt", TestCredentials.Credentials, Now);
 
-        verifyWithOtherApiKey.Should().ThrowExactly<InvalidAccessTokenException>();
-        verifyWithWrongSecret.Should().ThrowExactly<InvalidAccessTokenException>();
-        verifyUnsignedToken.Should().ThrowExactly<InvalidAccessTokenException>();
-        verifyAfterExpiry.Should().ThrowExactly<InvalidAccessTokenException>();
-        verifyNonJwt.Should().ThrowExactly<InvalidAccessTokenException>();
+        Assert.Throws<InvalidAccessTokenException>(verifyWithOtherApiKey);
+        Assert.Throws<InvalidAccessTokenException>(verifyWithWrongSecret);
+        Assert.Throws<InvalidAccessTokenException>(verifyUnsignedToken);
+        Assert.Throws<InvalidAccessTokenException>(verifyAfterExpiry);
+        Assert.Throws<InvalidAccessTokenException>(verifyNonJwt);
     }
 
     [Fact]
@@ -139,8 +139,8 @@ public sealed class AccessTokenIssuerTests
         var verifyBeforeNotBefore = () => JsonWebToken.Verify(token, TestCredentials.Credentials, Now.AddSeconds(-50));
         var verifyAfterExpiry = () => JsonWebToken.Verify(token, TestCredentials.Credentials, Now.AddSeconds(170));
 
-        verifyBeforeNotBefore.Should().NotThrow();
-        verifyAfterExpiry.Should().NotThrow();
+        Assert.Null(Record.Exception(verifyBeforeNotBefore));
+        Assert.Null(Record.Exception(verifyAfterExpiry));
     }
 
     private static string Base64UrlJson(string json) =>

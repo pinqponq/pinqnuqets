@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -22,11 +21,11 @@ public class JwtBearerServiceCollectionExtensionsTests
             .AddPinqponqJwtBearer());
 
         var parameters = bearerOptions.TokenValidationParameters;
-        parameters.ValidIssuer.Should().Be("https://auth.example.com");
-        parameters.ValidAudience.Should().Be("example-clients");
-        parameters.ClockSkew.Should().Be(TimeSpan.FromSeconds(45));
-        parameters.ValidateIssuerSigningKey.Should().BeTrue();
-        parameters.IssuerSigningKey.Should().BeOfType<SymmetricSecurityKey>();
+        Assert.Equal("https://auth.example.com", parameters.ValidIssuer);
+        Assert.Equal("example-clients", parameters.ValidAudience);
+        Assert.Equal(TimeSpan.FromSeconds(45), parameters.ClockSkew);
+        Assert.True(parameters.ValidateIssuerSigningKey);
+        Assert.IsType<SymmetricSecurityKey>(parameters.IssuerSigningKey);
     }
 
     [Fact]
@@ -40,8 +39,8 @@ public class JwtBearerServiceCollectionExtensionsTests
                 bearer.TokenValidationParameters.ValidAudience = "overridden";
             }));
 
-        bearerOptions.SaveToken.Should().BeTrue();
-        bearerOptions.TokenValidationParameters.ValidAudience.Should().Be("overridden");
+        Assert.True(bearerOptions.SaveToken);
+        Assert.Equal("overridden", bearerOptions.TokenValidationParameters.ValidAudience);
     }
 
     [Fact]
@@ -56,8 +55,9 @@ public class JwtBearerServiceCollectionExtensionsTests
             .Get(JwtBearerDefaults.AuthenticationScheme)
             .TokenValidationParameters;
 
-        parameters.ValidIssuer.Should().Be("https://auth.example.com");
-        provider.GetService<IPasswordHasher>().Should().BeNull(
+        Assert.Equal("https://auth.example.com", parameters.ValidIssuer);
+        Assert.True(
+            provider.GetService<IPasswordHasher>() is null,
             "a service that only validates tokens has no use for the password hasher");
     }
 
@@ -74,7 +74,7 @@ public class JwtBearerServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         var resolve = () => provider.GetRequiredService<IOptions<JwtOptions>>().Value;
 
-        resolve.Should().Throw<OptionsValidationException>();
+        Assert.ThrowsAny<OptionsValidationException>(resolve);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class JwtBearerServiceCollectionExtensionsTests
             services => services.AddPinqponqJwtBearer(ConfigureIssuer, authenticationScheme: "Mobile"),
             scheme: "Mobile");
 
-        bearerOptions.TokenValidationParameters.ValidIssuer.Should().Be("https://auth.example.com");
+        Assert.Equal("https://auth.example.com", bearerOptions.TokenValidationParameters.ValidIssuer);
     }
 
     private static void ConfigureIssuer(JwtOptions jwt)

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -34,7 +33,8 @@ public sealed class SmtpEmailSenderValidationTests
         };
 
         var act = () => sender.SendAsync(message);
-        (await act.Should().ThrowAsync<ArgumentException>()).Which.Message.Should().ContainEquivalentOf(because);
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+        Assert.Contains(because, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class SmtpEmailSenderValidationTests
     {
         var sender = Create();
         var act = () => sender.SendAsync(null!);
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThrowsAnyAsync<ArgumentNullException>(act);
     }
 
     [Fact]
@@ -58,7 +58,8 @@ public sealed class SmtpEmailSenderValidationTests
         };
 
         var act = () => sender.SendAsync(message);
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*AttachmentRoot*");
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+        Assert.Contains("AttachmentRoot", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -81,7 +82,8 @@ public sealed class SmtpEmailSenderValidationTests
             };
 
             var act = () => sender.SendAsync(message);
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*outside*");
+            var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+            Assert.Contains("outside", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -107,7 +109,8 @@ public sealed class SmtpEmailSenderValidationTests
             };
 
             var act = () => sender.SendAsync(message);
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*not found*");
+            var exception = await Assert.ThrowsAnyAsync<ArgumentException>(act);
+            Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -127,7 +130,7 @@ public sealed class SmtpEmailSenderValidationTests
         });
 
         using var sp = services.BuildServiceProvider();
-        sp.GetService<IEmailSender>().Should().BeOfType<SmtpEmailSender>();
+        Assert.IsType<SmtpEmailSender>(sp.GetService<IEmailSender>());
     }
 
     [Fact]
@@ -136,6 +139,6 @@ public sealed class SmtpEmailSenderValidationTests
         var services = new ServiceCollection();
         var config = new ConfigurationBuilder().Build();
         var act = () => services.AddPinqponqMail(config, "Smtp");
-        act.Should().Throw<InvalidOperationException>();
+        Assert.ThrowsAny<InvalidOperationException>(act);
     }
 }

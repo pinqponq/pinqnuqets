@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Pinqponq.Auth.Totp;
 using Xunit;
@@ -28,9 +27,9 @@ public sealed class TotpServiceTests
         var now = DateTimeOffset.UtcNow;
         var code = totp.ComputeCode(secret, now);
 
-        (await totp.ValidateAsync(secret, code, "user-1", now)).Should().BeTrue();
-        (await totp.ValidateAsync(secret, code, "user-1", now)).Should().BeFalse();
-        (await totp.ValidateAsync(secret, code, "user-2", now)).Should().BeTrue();
+        Assert.True((await totp.ValidateAsync(secret, code, "user-1", now)));
+        Assert.False((await totp.ValidateAsync(secret, code, "user-1", now)));
+        Assert.True((await totp.ValidateAsync(secret, code, "user-2", now)));
     }
 
     private sealed class AllowAllReplayStore : ITotpReplayStore
@@ -74,7 +73,7 @@ public sealed class TotpServiceTests
         });
 
         var at = DateTimeOffset.UnixEpoch.AddSeconds(unixSeconds);
-        totp.ComputeCode(Rfc6238Sha1Secret, at).Should().Be(expected);
+        Assert.Equal(expected, totp.ComputeCode(Rfc6238Sha1Secret, at));
     }
 
     [Fact]
@@ -86,7 +85,7 @@ public sealed class TotpServiceTests
 
         var code = totp.ComputeCode(secret, now);
 
-        totp.Validate(secret, code, now).Should().BeTrue();
+        Assert.True(totp.Validate(secret, code, now));
     }
 
     [Fact]
@@ -95,7 +94,7 @@ public sealed class TotpServiceTests
         var totp = Create();
         var secret = totp.GenerateSecret();
 
-        totp.Validate(secret, "000000").Should().BeFalse();
+        Assert.False(totp.Validate(secret, "000000"));
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public sealed class TotpServiceTests
         // Code from the previous 30s step should still validate with window = 1.
         var previousStepCode = totp.ComputeCode(secret, now.AddSeconds(-30));
 
-        totp.Validate(secret, previousStepCode, now).Should().BeTrue();
+        Assert.True(totp.Validate(secret, previousStepCode, now));
     }
 
     [Fact]
@@ -120,7 +119,7 @@ public sealed class TotpServiceTests
 
         var farCode = totp.ComputeCode(secret, now.AddSeconds(-120));
 
-        totp.Validate(secret, farCode, now).Should().BeFalse();
+        Assert.False(totp.Validate(secret, farCode, now));
     }
 
     [Fact]
@@ -130,7 +129,7 @@ public sealed class TotpServiceTests
 
         var secret = totp.GenerateSecret();
 
-        Base32.Decode(secret).Should().HaveCount(20);
+        Assert.Equal(20, Base32.Decode(secret).Length);
     }
 
     [Fact]
@@ -145,11 +144,11 @@ public sealed class TotpServiceTests
 
         var uri = totp.GetProvisioningUri("JBSWY3DPEHPK3PXP", "user@example.com");
 
-        uri.Should().StartWith("otpauth://totp/");
-        uri.Should().Contain("secret=JBSWY3DPEHPK3PXP");
-        uri.Should().Contain("issuer=Pinqponq");
-        uri.Should().Contain("digits=6");
-        uri.Should().Contain("period=30");
-        uri.Should().Contain("algorithm=SHA1");
+        Assert.StartsWith("otpauth://totp/", uri);
+        Assert.Contains("secret=JBSWY3DPEHPK3PXP", uri);
+        Assert.Contains("issuer=Pinqponq", uri);
+        Assert.Contains("digits=6", uri);
+        Assert.Contains("period=30", uri);
+        Assert.Contains("algorithm=SHA1", uri);
     }
 }

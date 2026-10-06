@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Pinqponq.Identity.Otp;
 using Xunit;
@@ -36,9 +35,9 @@ public sealed class OtpServiceTests
             rateLimiter: new DenyAllOtpSendRateLimiter());
 
         var act = () => service.GenerateAndSendAsync("+905551112233");
-        await act.Should().ThrowAsync<OtpSendRateLimitedException>();
-        _sms.Sent.Should().BeEmpty();
-        _store.Count.Should().Be(0);
+        await Assert.ThrowsAnyAsync<OtpSendRateLimitedException>(act);
+        Assert.Empty(_sms.Sent);
+        Assert.Equal(0, _store.Count);
     }
 
     [Fact]
@@ -49,7 +48,7 @@ public sealed class OtpServiceTests
             rateLimiter: new AllowAllOtpSendRateLimiter());
 
         await service.GenerateAndSendAsync("+905551112233");
-        _sms.Sent.Should().ContainSingle();
+        Assert.Single(_sms.Sent);
     }
 
     private sealed class DenyAllOtpSendRateLimiter : IOtpSendRateLimiter
@@ -68,8 +67,8 @@ public sealed class OtpServiceTests
 
         await service.GenerateAndSendAsync("user@example.com");
 
-        _email.Sent.Should().ContainSingle();
-        _sms.Sent.Should().BeEmpty();
+        Assert.Single(_email.Sent);
+        Assert.Empty(_sms.Sent);
     }
 
     [Fact]
@@ -79,8 +78,8 @@ public sealed class OtpServiceTests
 
         await service.GenerateAndSendAsync("+905551112233");
 
-        _sms.Sent.Should().ContainSingle();
-        _email.Sent.Should().BeEmpty();
+        Assert.Single(_sms.Sent);
+        Assert.Empty(_email.Sent);
     }
 
     [Fact]
@@ -92,8 +91,8 @@ public sealed class OtpServiceTests
 
         var result = await service.VerifyAsync("+905551112233", code);
 
-        result.Should().Be(OtpVerifyStatus.Success);
-        code.Should().HaveLength(6);
+        Assert.Equal(OtpVerifyStatus.Success, result);
+        Assert.Equal(6, code.Length);
     }
 
     [Fact]
@@ -103,9 +102,9 @@ public sealed class OtpServiceTests
         await service.GenerateAndSendAsync("+905551112233");
         var code = ExtractCode(_sms.Sent[0].Text);
 
-        (await service.VerifyAsync("+905551112233", "000000")).Should().Be(OtpVerifyStatus.Mismatch);
-        (await service.VerifyAsync("+905551112233", code)).Should().Be(OtpVerifyStatus.Success);
-        (await service.VerifyAsync("+905551112233", code)).Should().Be(OtpVerifyStatus.NotFound);
+        Assert.Equal(OtpVerifyStatus.Mismatch, (await service.VerifyAsync("+905551112233", "000000")));
+        Assert.Equal(OtpVerifyStatus.Success, (await service.VerifyAsync("+905551112233", code)));
+        Assert.Equal(OtpVerifyStatus.NotFound, (await service.VerifyAsync("+905551112233", code)));
     }
 
     [Fact]
@@ -117,7 +116,7 @@ public sealed class OtpServiceTests
         await service.VerifyAsync("+905551112233", "111111");
         await service.VerifyAsync("+905551112233", "222222");
 
-        (await service.VerifyAsync("+905551112233", "333333")).Should().Be(OtpVerifyStatus.TooManyAttempts);
+        Assert.Equal(OtpVerifyStatus.TooManyAttempts, (await service.VerifyAsync("+905551112233", "333333")));
     }
 
     [Fact]
@@ -128,7 +127,7 @@ public sealed class OtpServiceTests
         var code = ExtractCode(_sms.Sent[0].Text);
         await Task.Delay(20);
 
-        (await service.VerifyAsync("+905551112233", code)).Should().Be(OtpVerifyStatus.Expired);
+        Assert.Equal(OtpVerifyStatus.Expired, (await service.VerifyAsync("+905551112233", code)));
     }
 
     [Fact]
@@ -138,8 +137,8 @@ public sealed class OtpServiceTests
 
         await service.GenerateAndSendAsync("user@example.com", OtpChannel.Sms);
 
-        _sms.Sent.Should().ContainSingle();
-        _email.Sent.Should().BeEmpty();
+        Assert.Single(_sms.Sent);
+        Assert.Empty(_email.Sent);
     }
 
     [Fact]
@@ -148,8 +147,8 @@ public sealed class OtpServiceTests
         var service = Create();
         await service.GenerateAndSendAsync("+905551112233");
 
-        (await service.VerifyAsync("+905551112233", "  ")).Should().Be(OtpVerifyStatus.Mismatch);
-        (await service.VerifyAsync("+905551112233", null!)).Should().Be(OtpVerifyStatus.Mismatch);
+        Assert.Equal(OtpVerifyStatus.Mismatch, (await service.VerifyAsync("+905551112233", "  ")));
+        Assert.Equal(OtpVerifyStatus.Mismatch, (await service.VerifyAsync("+905551112233", null!)));
     }
 
     [Fact]
@@ -159,9 +158,9 @@ public sealed class OtpServiceTests
         var service = Create();
 
         var act = () => service.GenerateAndSendAsync("+905551112233");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(act);
 
-        (await service.VerifyAsync("+905551112233", "000000")).Should().Be(OtpVerifyStatus.NotFound);
+        Assert.Equal(OtpVerifyStatus.NotFound, (await service.VerifyAsync("+905551112233", "000000")));
     }
 
     [Fact]
@@ -185,10 +184,10 @@ public sealed class OtpServiceTests
             ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(1),
         });
 
-        (await _store.TryRemoveAsync(key, "OLD")).Should().BeFalse();
-        _store.SingleRecord().CodeHash.Should().Be("NEW");
-        (await _store.TryRemoveAsync(key, "NEW")).Should().BeTrue();
-        _store.Count.Should().Be(0);
+        Assert.False((await _store.TryRemoveAsync(key, "OLD")));
+        Assert.Equal("NEW", _store.SingleRecord().CodeHash);
+        Assert.True((await _store.TryRemoveAsync(key, "NEW")));
+        Assert.Equal(0, _store.Count);
     }
 
     [Fact]
@@ -201,8 +200,8 @@ public sealed class OtpServiceTests
         await service.GenerateAndSendAsync("baz", purpose: "foo:bar");
         var code2 = ExtractCode(_sms.Sent[^1].Text);
 
-        (await service.VerifyAsync("bar:baz", code1, purpose: "foo")).Should().Be(OtpVerifyStatus.Success);
-        (await service.VerifyAsync("baz", code2, purpose: "foo:bar")).Should().Be(OtpVerifyStatus.Success);
+        Assert.Equal(OtpVerifyStatus.Success, (await service.VerifyAsync("bar:baz", code1, purpose: "foo")));
+        Assert.Equal(OtpVerifyStatus.Success, (await service.VerifyAsync("baz", code2, purpose: "foo:bar")));
     }
 
     [Fact]
@@ -218,7 +217,7 @@ public sealed class OtpServiceTests
         await serviceB.GenerateAndSendAsync("+905551112233");
         var hashB = _store.SingleRecord().CodeHash;
 
-        hashA.Should().NotBe(hashB);
+        Assert.NotEqual(hashB, hashA);
     }
 
     [Fact]
@@ -233,9 +232,8 @@ public sealed class OtpServiceTests
             .ToArray();
 
         var results = await Task.WhenAll(tasks);
-        results.Count(r => r == OtpVerifyStatus.Success).Should().Be(1);
-        results.Count(r => r is OtpVerifyStatus.NotFound or OtpVerifyStatus.Success)
-            .Should().Be(20);
+        Assert.Equal(1, results.Count(r => r == OtpVerifyStatus.Success));
+        Assert.Equal(20, results.Count(r => r is OtpVerifyStatus.NotFound or OtpVerifyStatus.Success));
     }
 
     private static string ExtractCode(string text) =>

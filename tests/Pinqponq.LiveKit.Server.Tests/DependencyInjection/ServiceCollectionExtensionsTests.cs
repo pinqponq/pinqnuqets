@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Pinqponq.LiveKit.Server.Auth;
@@ -20,9 +19,9 @@ public sealed class ServiceCollectionExtensionsTests
 
         using var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 
-        serviceProvider.GetRequiredService<RoomServiceClient>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<AccessTokenIssuer>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<WebhookReceiver>().Should().NotBeNull();
+        Assert.NotNull(serviceProvider.GetRequiredService<RoomServiceClient>());
+        Assert.NotNull(serviceProvider.GetRequiredService<AccessTokenIssuer>());
+        Assert.NotNull(serviceProvider.GetRequiredService<WebhookReceiver>());
     }
 
     [Fact]
@@ -36,6 +35,6 @@ public sealed class ServiceCollectionExtensionsTests
 
         var act = () => serviceProvider.GetRequiredService<IOptions<LiveKitServerOptions>>().Value;
 
-        act.Should().ThrowExactly<OptionsValidationException>();
+        Assert.Throws<OptionsValidationException>(act);
     }
 }

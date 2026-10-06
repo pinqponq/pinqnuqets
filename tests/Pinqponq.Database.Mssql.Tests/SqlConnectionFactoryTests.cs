@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Pinqponq.Database.Mssql.DependencyInjection;
@@ -24,7 +23,7 @@ public sealed class SqlConnectionFactoryTests
         var factory = sp.GetRequiredService<ISqlConnectionFactory>();
 
         await using var conn = await factory.OpenConnectionAsync();
-        conn.State.Should().Be(System.Data.ConnectionState.Open);
+        Assert.Equal(System.Data.ConnectionState.Open, conn.State);
     }
 
     [Fact]
@@ -38,6 +37,6 @@ public sealed class SqlConnectionFactoryTests
         await using var sp = services.BuildServiceProvider();
 
         var report = await sp.GetRequiredService<HealthCheckService>().CheckHealthAsync();
-        report.Status.Should().Be(HealthStatus.Healthy);
+        Assert.Equal(HealthStatus.Healthy, report.Status);
     }
 }

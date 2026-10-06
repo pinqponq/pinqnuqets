@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Pinqponq.LiveKit.Server.Models;
 using Pinqponq.LiveKit.Server.Rooms;
 using Pinqponq.LiveKit.Server.Twirp;
@@ -28,13 +27,13 @@ public sealed class RoomServiceClientTests
 
         await client.GetRoom("room-1");
 
-        (handler.LastRequest?.Method).Should().Be(HttpMethod.Post);
-        (handler.LastRequest?.RequestUri?.ToString()).Should().Be("http://10.0.0.1:7880/twirp/livekit.RoomService/ListRooms");
-        handler.LastRequestBody.Should().Be("""{"names":["room-1"]}""");
+        Assert.Equal(HttpMethod.Post, (handler.LastRequest?.Method));
+        Assert.Equal("http://10.0.0.1:7880/twirp/livekit.RoomService/ListRooms", (handler.LastRequest?.RequestUri?.ToString()));
+        Assert.Equal("""{"names":["room-1"]}""", handler.LastRequestBody);
 
         var video = ReadGrant(handler);
-        video.GetProperty("roomList").GetBoolean().Should().BeTrue();
-        video.TryGetProperty("roomAdmin", out _).Should().BeFalse();
+        Assert.True(video.GetProperty("roomList").GetBoolean());
+        Assert.False(video.TryGetProperty("roomAdmin", out _));
     }
 
     [Theory]
@@ -46,10 +45,10 @@ public sealed class RoomServiceClientTests
 
         var room = await client.GetRoom("room-1");
 
-        room.Should().NotBeNull();
-        room!.Sid.Should().Be("RM_1");
-        room.NumParticipants.Should().Be(2u);
-        room.CreationTime.Should().Be(1758441600);
+        Assert.NotNull(room);
+        Assert.Equal("RM_1", room!.Sid);
+        Assert.Equal(2u, room.NumParticipants);
+        Assert.Equal(1758441600, room.CreationTime);
     }
 
     [Theory]
@@ -62,7 +61,7 @@ public sealed class RoomServiceClientTests
 
         var room = await client.GetRoom("room-1");
 
-        room.Should().BeNull();
+        Assert.Null(room);
     }
 
     [Fact]
@@ -76,16 +75,16 @@ public sealed class RoomServiceClientTests
 
         var participants = await client.ListParticipants("room-1");
 
-        var participant = participants.Should().ContainSingle().Subject;
-        participant.Identity.Should().Be("user-1");
-        participant.State.Should().Be(ParticipantState.Active);
-        participant.IsPublisher.Should().BeTrue();
-        participant.Tracks.Should().ContainSingle().Which.Source.Should().Be(TrackSource.Microphone);
+        var participant = Assert.Single(participants);
+        Assert.Equal("user-1", participant.Identity);
+        Assert.Equal(ParticipantState.Active, participant.State);
+        Assert.True(participant.IsPublisher);
+        Assert.Equal(TrackSource.Microphone, Assert.Single(participant.Tracks).Source);
 
         var video = ReadGrant(handler);
-        video.GetProperty("roomAdmin").GetBoolean().Should().BeTrue();
-        video.GetProperty("room").GetString().Should().Be("room-1");
-        handler.LastRequestBody.Should().Be("""{"room":"room-1"}""");
+        Assert.True(video.GetProperty("roomAdmin").GetBoolean());
+        Assert.Equal("room-1", video.GetProperty("room").GetString());
+        Assert.Equal("""{"room":"room-1"}""", handler.LastRequestBody);
     }
 
     [Fact]
@@ -95,11 +94,11 @@ public sealed class RoomServiceClientTests
 
         var act = () => client.RemoveParticipant("room-1", "user-9");
 
-        var exception = (await act.Should().ThrowExactlyAsync<LiveKitApiException>()).Which;
-        exception.IsNotFound.Should().BeTrue();
-        exception.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        exception.Message.Should().Contain("participant does not exist");
-        handler.LastRequestBody.Should().Be("""{"room":"room-1","identity":"user-9"}""");
+        var exception = await Assert.ThrowsAsync<LiveKitApiException>(act);
+        Assert.True(exception.IsNotFound);
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.Contains("participant does not exist", exception.Message);
+        Assert.Equal("""{"room":"room-1","identity":"user-9"}""", handler.LastRequestBody);
     }
 
     [Fact]
@@ -110,7 +109,7 @@ public sealed class RoomServiceClientTests
 
         await client.RemoveParticipant("room-1", "user-9", revokeTokensIssuedBefore);
 
-        handler.LastRequestBody.Should().Be("""{"room":"room-1","identity":"user-9","revokeTokenTs":1758441600}""");
+        Assert.Equal("""{"room":"room-1","identity":"user-9","revokeTokenTs":1758441600}""", handler.LastRequestBody);
     }
 
     [Fact]
@@ -120,12 +119,12 @@ public sealed class RoomServiceClientTests
 
         await client.DeleteRoom("room-1");
 
-        (handler.LastRequest?.RequestUri?.ToString()).Should().Be("http://10.0.0.1:7880/twirp/livekit.RoomService/DeleteRoom");
-        handler.LastRequestBody.Should().Be("""{"room":"room-1"}""");
+        Assert.Equal("http://10.0.0.1:7880/twirp/livekit.RoomService/DeleteRoom", (handler.LastRequest?.RequestUri?.ToString()));
+        Assert.Equal("""{"room":"room-1"}""", handler.LastRequestBody);
 
         var video = ReadGrant(handler);
-        video.GetProperty("roomCreate").GetBoolean().Should().BeTrue();
-        video.TryGetProperty("roomAdmin", out _).Should().BeFalse();
+        Assert.True(video.GetProperty("roomCreate").GetBoolean());
+        Assert.False(video.TryGetProperty("roomAdmin", out _));
     }
 
     [Fact]
@@ -135,8 +134,8 @@ public sealed class RoomServiceClientTests
 
         var act = () => client.DeleteRoom("room-1");
 
-        var exception = (await act.Should().ThrowExactlyAsync<LiveKitApiException>()).Which;
-        exception.IsNotFound.Should().BeTrue();
+        var exception = await Assert.ThrowsAsync<LiveKitApiException>(act);
+        Assert.True(exception.IsNotFound);
     }
 
     [Fact]
@@ -146,10 +145,10 @@ public sealed class RoomServiceClientTests
 
         var act = () => client.ListRooms();
 
-        var exception = (await act.Should().ThrowExactlyAsync<LiveKitApiException>()).Which;
-        exception.ErrorCode.Should().BeNull();
-        exception.IsNotFound.Should().BeFalse();
-        exception.StatusCode.Should().Be(HttpStatusCode.BadGateway);
+        var exception = await Assert.ThrowsAsync<LiveKitApiException>(act);
+        Assert.Null(exception.ErrorCode);
+        Assert.False(exception.IsNotFound);
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
     }
 
     [Theory]
@@ -162,7 +161,7 @@ public sealed class RoomServiceClientTests
 
         await client.ListRooms();
 
-        (handler.LastRequest?.RequestUri?.ToString()).Should().Be(expectedRequestUrl);
+        Assert.Equal(expectedRequestUrl, (handler.LastRequest?.RequestUri?.ToString()));
     }
 
     [Fact]
@@ -172,13 +171,13 @@ public sealed class RoomServiceClientTests
 
         var act = () => new RoomServiceClient(new HttpClient(), serverOptions, TestCredentials.Provider);
 
-        act.Should().ThrowExactly<ArgumentException>();
+        Assert.Throws<ArgumentException>(act);
     }
 
     private static JsonElement ReadGrant(StubHttpMessageHandler handler)
     {
         var authorization = handler.LastRequest?.Headers.Authorization;
-        (authorization?.Scheme).Should().Be("Bearer");
+        Assert.Equal("Bearer", (authorization?.Scheme));
         return JwtPayload.Decode(authorization!.Parameter!).GetProperty("video"); // Asserted non-null by the Bearer check above.
     }
 }

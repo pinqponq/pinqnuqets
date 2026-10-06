@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Pinqponq.Identity.Jwt;
@@ -38,8 +37,8 @@ public sealed class JwtTokenTests
 
             var principal = await val.ValidateAsync(token);
 
-            principal.Should().NotBeNull();
-            principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value.Should().Be("user-1");
+            Assert.NotNull(principal);
+            Assert.Equal("user-1", principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         }
     }
 
@@ -63,8 +62,8 @@ public sealed class JwtTokenTests
 
             var principal = await val.ValidateAsync(token);
 
-            principal.Should().NotBeNull();
-            principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value.Should().Be("user-9");
+            Assert.NotNull(principal);
+            Assert.Equal("user-9", principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         }
     }
 
@@ -87,8 +86,8 @@ public sealed class JwtTokenTests
         var validationA = resolver.CreateValidationKey();
         var validationB = resolver.CreateValidationKey();
 
-        ReferenceEquals(signingA, signingB).Should().BeTrue();
-        ReferenceEquals(validationA, validationB).Should().BeTrue();
+        Assert.True(ReferenceEquals(signingA, signingB));
+        Assert.True(ReferenceEquals(validationA, validationB));
     }
 
     [Fact]
@@ -104,7 +103,7 @@ public sealed class JwtTokenTests
             var (_, otherVal, otherResolver) = Build(otherOptions);
             using (otherResolver)
             {
-                (await otherVal.ValidateAsync(token)).Should().BeNull();
+                Assert.Null((await otherVal.ValidateAsync(token)));
             }
         }
     }
@@ -122,7 +121,7 @@ public sealed class JwtTokenTests
                 [new Claim(ClaimTypes.NameIdentifier, "user-1")],
                 issuedAt: DateTimeOffset.UtcNow.AddHours(-1));
 
-            (await val.ValidateAsync(token)).Should().BeNull();
+            Assert.Null((await val.ValidateAsync(token)));
         }
     }
 
@@ -139,7 +138,7 @@ public sealed class JwtTokenTests
             var (_, val, otherResolver) = Build(otherAudience);
             using (otherResolver)
             {
-                (await val.ValidateAsync(token)).Should().BeNull();
+                Assert.Null((await val.ValidateAsync(token)));
             }
         }
     }
@@ -156,7 +155,7 @@ public sealed class JwtTokenTests
             var parts = token.Split('.');
             var tampered = parts[0] + "." + parts[1] + ".AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-            (await val.ValidateAsync(tampered)).Should().BeNull();
+            Assert.Null((await val.ValidateAsync(tampered)));
         }
     }
 
@@ -166,8 +165,8 @@ public sealed class JwtTokenTests
         var (_, val, resolver) = Build(HmacOptions());
         using (resolver)
         {
-            (await val.ValidateAsync(string.Empty)).Should().BeNull();
-            (await val.ValidateAsync("   ")).Should().BeNull();
+            Assert.Null((await val.ValidateAsync(string.Empty)));
+            Assert.Null((await val.ValidateAsync("   ")));
         }
     }
 
@@ -179,7 +178,7 @@ public sealed class JwtTokenTests
         {
             var token = gen.GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-1")]);
             var jwt = new JsonWebToken(token);
-            jwt.GetPayloadValue<string>(JwtRegisteredClaimNames.Jti).Should().NotBeNullOrWhiteSpace();
+            Assert.False(string.IsNullOrWhiteSpace(jwt.GetPayloadValue<string>(JwtRegisteredClaimNames.Jti)));
         }
     }
 
@@ -200,7 +199,7 @@ public sealed class JwtTokenTests
 
             await store.RevokeAsync(jti, DateTimeOffset.UtcNow.AddHours(1));
 
-            (await val.ValidateAsync(token)).Should().BeNull();
+            Assert.Null((await val.ValidateAsync(token)));
         }
     }
 
@@ -217,11 +216,11 @@ public sealed class JwtTokenTests
         using (resolver)
         {
             var token = gen.GenerateToken([new Claim(ClaimTypes.NameIdentifier, "user-1")]);
-            (await val.ValidateAsync(token)).Should().NotBeNull();
+            Assert.NotNull((await val.ValidateAsync(token)));
 
             await revocation.RevokeAccessTokenAsync(token);
 
-            (await val.ValidateAsync(token)).Should().BeNull();
+            Assert.Null((await val.ValidateAsync(token)));
         }
     }
 
@@ -244,7 +243,7 @@ public sealed class JwtTokenTests
 
             await revocation.RevokeAccessTokenAsync(badSignature);
 
-            (await store.IsRevokedAsync(jti)).Should().BeFalse();
+            Assert.False((await store.IsRevokedAsync(jti)));
         }
     }
 

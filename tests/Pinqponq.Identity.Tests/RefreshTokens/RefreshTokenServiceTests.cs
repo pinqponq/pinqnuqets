@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Pinqponq.Identity.RefreshTokens;
 using Xunit;
@@ -25,11 +24,11 @@ public sealed class RefreshTokenServiceTests
     {
         var result = await _service.IssueAsync("user-1");
 
-        result.Token.Should().NotBeNullOrWhiteSpace();
-        result.Descriptor.Subject.Should().Be("user-1");
-        result.Descriptor.TokenHash.Should().NotBe(result.Token, "the raw token must not be stored");
-        result.Descriptor.IsActive(DateTimeOffset.UtcNow).Should().BeTrue();
-        _store.Count.Should().Be(1);
+        Assert.False(string.IsNullOrWhiteSpace(result.Token));
+        Assert.Equal("user-1", result.Descriptor.Subject);
+        Assert.True(result.Descriptor.TokenHash != result.Token, "the raw token must not be stored");
+        Assert.True(result.Descriptor.IsActive(DateTimeOffset.UtcNow));
+        Assert.Equal(1, _store.Count);
     }
 
     [Fact]
@@ -39,13 +38,13 @@ public sealed class RefreshTokenServiceTests
 
         var rotated = await _service.RotateAsync(original.Token);
 
-        rotated.Token.Should().NotBe(original.Token);
-        rotated.Descriptor.Subject.Should().Be("user-1");
+        Assert.NotEqual(original.Token, rotated.Token);
+        Assert.Equal("user-1", rotated.Descriptor.Subject);
 
         var oldRecord = await _store.FindByHashAsync(original.Descriptor.TokenHash);
-        oldRecord!.RevokedAt.Should().NotBeNull();
-        oldRecord.ReplacedByTokenHash.Should().Be(rotated.Descriptor.TokenHash);
-        oldRecord.IsActive(DateTimeOffset.UtcNow).Should().BeFalse();
+        Assert.NotNull(oldRecord!.RevokedAt);
+        Assert.Equal(rotated.Descriptor.TokenHash, oldRecord.ReplacedByTokenHash);
+        Assert.False(oldRecord.IsActive(DateTimeOffset.UtcNow));
     }
 
     [Fact]
@@ -56,7 +55,7 @@ public sealed class RefreshTokenServiceTests
 
         var act = () => _service.RotateAsync(original.Token);
 
-        await act.Should().ThrowAsync<InvalidRefreshTokenException>();
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(act);
     }
 
     [Fact]
@@ -75,10 +74,11 @@ public sealed class RefreshTokenServiceTests
         await Task.Delay(40);
 
         var act = () => service.RotateAsync(original.Token);
-        await act.Should().ThrowAsync<InvalidRefreshTokenException>();
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(act);
 
         var replacement = await _store.FindByHashAsync(rotated.Descriptor.TokenHash);
-        replacement!.IsActive(DateTimeOffset.UtcNow).Should().BeFalse(
+        Assert.False(
+            replacement!.IsActive(DateTimeOffset.UtcNow),
             "reuse after grace must revoke the active replacement");
     }
 
@@ -97,12 +97,13 @@ public sealed class RefreshTokenServiceTests
         var rotated = await service.RotateAsync(original.Token);
 
         var act = () => service.RotateAsync(original.Token);
-        await act.Should().ThrowAsync<InvalidRefreshTokenException>();
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(act);
 
         var replacement = await _store.FindByHashAsync(rotated.Descriptor.TokenHash);
-        replacement!.IsActive(DateTimeOffset.UtcNow).Should().BeTrue(
+        Assert.True(
+            replacement!.IsActive(DateTimeOffset.UtcNow),
             "within grace, concurrent-safe path must not kill an unused replacement");
-        _store.ActiveCount.Should().Be(1);
+        Assert.Equal(1, _store.ActiveCount);
     }
 
     [Fact]
@@ -121,10 +122,11 @@ public sealed class RefreshTokenServiceTests
         var leaf = await service.RotateAsync(rotated.Token);
 
         var act = () => service.RotateAsync(original.Token);
-        await act.Should().ThrowAsync<InvalidRefreshTokenException>();
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(act);
 
         var leafEntity = await _store.FindByHashAsync(leaf.Descriptor.TokenHash);
-        leafEntity!.IsActive(DateTimeOffset.UtcNow).Should().BeFalse(
+        Assert.False(
+            leafEntity!.IsActive(DateTimeOffset.UtcNow),
             "reuse detection must revoke the current leaf (and the whole family)");
     }
 
@@ -133,7 +135,7 @@ public sealed class RefreshTokenServiceTests
     {
         var act = () => _service.RotateAsync("does-not-exist");
 
-        await act.Should().ThrowAsync<InvalidRefreshTokenException>();
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(act);
     }
 
     [Fact]
@@ -144,7 +146,7 @@ public sealed class RefreshTokenServiceTests
         await _service.RevokeAsync(original.Token);
 
         var record = await _store.FindByHashAsync(original.Descriptor.TokenHash);
-        record!.IsActive(DateTimeOffset.UtcNow).Should().BeFalse();
+        Assert.False(record!.IsActive(DateTimeOffset.UtcNow));
     }
 
     [Fact]
@@ -159,9 +161,8 @@ public sealed class RefreshTokenServiceTests
         var issued = await service.IssueAsync("user-1");
         await Task.Delay(20);
 
-        issued.Descriptor.IsActive(DateTimeOffset.UtcNow).Should().BeFalse();
-        await FluentActions.Awaiting(() => service.RotateAsync(issued.Token))
-            .Should().ThrowAsync<InvalidRefreshTokenException>();
+        Assert.False(issued.Descriptor.IsActive(DateTimeOffset.UtcNow));
+        await Assert.ThrowsAnyAsync<InvalidRefreshTokenException>(() => service.RotateAsync(issued.Token));
     }
 
     [Fact]
@@ -184,8 +185,8 @@ public sealed class RefreshTokenServiceTests
             .ToArray();
 
         var results = await Task.WhenAll(tasks);
-        results.Count(r => r is not null).Should().Be(1);
-        _store.ActiveCount.Should().Be(1);
+        Assert.Equal(1, results.Count(r => r is not null));
+        Assert.Equal(1, _store.ActiveCount);
     }
 
     [Fact]
@@ -196,10 +197,10 @@ public sealed class RefreshTokenServiceTests
         _store.ThrowOnCompleteRotation = new InvalidOperationException("crash");
 
         var act = () => _service.RotateAsync(original.Token);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(act);
 
-        _store.ActiveCount.Should().Be(0, "failed rotation must revoke the subject family");
+        Assert.True(_store.ActiveCount == 0, "failed rotation must revoke the subject family");
         var old = await _store.FindByHashAsync(original.Descriptor.TokenHash);
-        old!.RevokedAt.Should().NotBeNull();
+        Assert.NotNull(old!.RevokedAt);
     }
 }

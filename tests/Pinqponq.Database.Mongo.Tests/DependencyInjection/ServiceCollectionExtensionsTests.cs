@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
@@ -19,8 +18,8 @@ public sealed class ServiceCollectionExtensionsTests
             o.DatabaseName = "testdb";
         });
 
-        services.Should().Contain(d => d.ServiceType == typeof(IMongoClient));
-        services.Should().Contain(d => d.ServiceType == typeof(IMongoDatabase));
+        Assert.Contains(services, d => d.ServiceType == typeof(IMongoClient));
+        Assert.Contains(services, d => d.ServiceType == typeof(IMongoDatabase));
     }
 
     [Fact]
@@ -35,6 +34,6 @@ public sealed class ServiceCollectionExtensionsTests
         });
         services.AddHealthChecks().AddPinqponqMongo();
 
-        services.Should().Contain(d => d.ServiceType == typeof(HealthCheckService));
+        Assert.Contains(services, d => d.ServiceType == typeof(HealthCheckService));
     }
 }

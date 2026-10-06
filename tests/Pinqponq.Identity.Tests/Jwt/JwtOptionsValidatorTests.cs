@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using FluentAssertions;
 using Pinqponq.Identity.Jwt;
 using Xunit;
 
@@ -21,7 +20,7 @@ public sealed class JwtOptionsValidatorTests
             RsaPrivateKeyPem = rsa.ExportPkcs8PrivateKeyPem(),
         };
 
-        _validator.Validate(null, options).Succeeded.Should().BeFalse();
+        Assert.False(_validator.Validate(null, options).Succeeded);
     }
 
     [Fact]
@@ -36,6 +35,6 @@ public sealed class JwtOptionsValidatorTests
             RsaPrivateKeyPem = rsa.ExportPkcs8PrivateKeyPem(),
         };
 
-        _validator.Validate(null, options).Succeeded.Should().BeTrue();
+        Assert.True(_validator.Validate(null, options).Succeeded);
     }
 }
