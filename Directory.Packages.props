@@ -39,13 +39,13 @@
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
 
     <!-- SSO Google (PIN-392) -->
-    <PackageVersion Include="Google.Apis.Auth" Version="1.70.0" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.77.0" />
 
     <!-- LiveKit. Microsoft.Bcl.Memory backports System.Buffers.Text.Base64Url, which
          Pinqponq.LiveKit.Server signs tokens with; .NET 9 ships it in the BCL, so only the
          net8.0 leg references it. Livekit.Server.Sdk.Dotnet is used only by
          Pinqponq.LiveKit.Server.Tests, to assert wire-compatibility with the official client. -->
-    <PackageVersion Include="Microsoft.Bcl.Memory" Version="9.0.18" />
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.12" />
     <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.3" />
 
     <!-- Test stack. FluentAssertions stays on 6.x: 7.0 moved to a commercial licence. -->
@@ -53,7 +53,7 @@
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
 
     <!-- Testcontainers. 4.13.0 pulled SSH.NET 2025.1.0 (GHSA-mggc-4xg6-vcxf,
          GHSA-q939-rpr3-3284), which the transitive audit turns into a restore error.
