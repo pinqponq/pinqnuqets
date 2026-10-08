@@ -57,6 +57,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Messaging.RabbitMq** | Publish (confirms + mandatory) / consume, reconnect, DLX or MaxRedelivery | [README](src/Pinqponq.Messaging.RabbitMq/README.md) |
 | **Pinqponq.ErrorHandling** | Global exception middleware + standard error contract + Pinqloq-compatible structured logging | [README](src/Pinqponq.ErrorHandling/README.md) |
 | **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |
+| **Pinqponq.Configuration.Vault** | HashiCorp Vault configuration provider: one KV v2 record shaped like `appsettings.json`, Vault CLI token lookup | [README](src/Pinqponq.Configuration.Vault/README.md) |
 
 Each package exposes an `AddPinqponqXxx(...)` DI extension (where applicable) and an options class. Install from nuget.org once published, or reference the project under `src/`.
 
