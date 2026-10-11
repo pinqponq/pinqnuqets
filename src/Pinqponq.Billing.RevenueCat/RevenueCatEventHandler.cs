@@ -36,8 +36,8 @@ public sealed class RevenueCatEventHandler(
                 revenueCatEvent.Id, revenueCatEvent.Type);
             Observe(RevenueCatWebhookLogLevel.Info, RevenueCatWebhookLogEvents.EventDuplicate,
                 "RevenueCat event already processed — skipping.",
-                ("eventId", revenueCatEvent.Id),
-                ("eventType", revenueCatEvent.Type));
+                (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+                (RevenueCatWebhookLogKeys.EventType, revenueCatEvent.Type));
             return true;
         }
 
@@ -46,8 +46,8 @@ public sealed class RevenueCatEventHandler(
             logger.LogInformation("RevenueCat TEST event {EventId} received — recording and returning OK.", revenueCatEvent.Id);
             Observe(RevenueCatWebhookLogLevel.Info, RevenueCatWebhookLogEvents.TestReceived,
                 "RevenueCat TEST event received — recording and returning OK.",
-                ("eventId", revenueCatEvent.Id));
-            MarkProcessed(revenueCatEvent);
+                (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id));
+            MarkProcessed(revenueCatEvent.Id, revenueCatEvent.Type);
             await store.Commit(cancellationToken);
             return true;
         }
@@ -83,8 +83,8 @@ public sealed class RevenueCatEventHandler(
                     revenueCatEvent.Id, revenueCatEvent.AppUserId);
                 Observe(RevenueCatWebhookLogLevel.Info, RevenueCatWebhookLogEvents.SubscriberAliasReceived,
                     "RevenueCat SUBSCRIBER_ALIAS event received — no state change required.",
-                    ("eventId", revenueCatEvent.Id),
-                    ("appUserId", revenueCatEvent.AppUserId));
+                    (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+                    (RevenueCatWebhookLogKeys.AppUserId, revenueCatEvent.AppUserId));
                 break;
 
             default:
@@ -92,27 +92,20 @@ public sealed class RevenueCatEventHandler(
                     revenueCatEvent.Type, revenueCatEvent.Id);
                 Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.EventUnhandled,
                     "Unhandled RevenueCat event type.",
-                    ("eventType", revenueCatEvent.Type),
-                    ("eventId", revenueCatEvent.Id));
+                    (RevenueCatWebhookLogKeys.EventType, revenueCatEvent.Type),
+                    (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id));
                 break;
         }
 
-        MarkProcessed(revenueCatEvent);
+        MarkProcessed(revenueCatEvent.Id, revenueCatEvent.Type);
         await store.Commit(cancellationToken);
         return true;
     }
 
     private async Task HandleActivation(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
     {
-        if (!TryResolveSubscriberId(revenueCatEvent, out var subscriberId))
+        if (!TryResolveSubscriberIdOrLog(revenueCatEvent, out var subscriberId))
         {
-            logger.LogWarning("Cannot resolve subscriber from app_user_id '{AppUserId}' or aliases for event {EventId} ({EventType}).",
-                revenueCatEvent.AppUserId, revenueCatEvent.Id, revenueCatEvent.Type);
-            Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.UserUnresolved,
-                "Cannot resolve subscriber from app_user_id or aliases.",
-                ("appUserId", revenueCatEvent.AppUserId),
-                ("eventId", revenueCatEvent.Id),
-                ("eventType", revenueCatEvent.Type));
             return;
         }
 
@@ -124,9 +117,9 @@ public sealed class RevenueCatEventHandler(
                 revenueCatEvent.Id, entitlements, _options.PremiumEntitlementId);
             Observe(RevenueCatWebhookLogLevel.Info, RevenueCatWebhookLogEvents.EntitlementNotPremium,
                 "Event entitlements do not include premium — recording but not activating.",
-                ("eventId", revenueCatEvent.Id),
-                ("entitlements", entitlements),
-                ("premiumEntitlementId", _options.PremiumEntitlementId));
+                (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+                (RevenueCatWebhookLogKeys.Entitlements, entitlements),
+                (RevenueCatWebhookLogKeys.PremiumEntitlementId, _options.PremiumEntitlementId));
         }
 
         var subscription = await GetOrCreate(subscriberId, revenueCatEvent, cancellationToken);
@@ -145,7 +138,7 @@ public sealed class RevenueCatEventHandler(
 
     private async Task HandleCancellation(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
     {
-        if (!TryResolveSubscriberId(revenueCatEvent, out var subscriberId))
+        if (!TryResolveSubscriberIdOrLog(revenueCatEvent, out var subscriberId))
         {
             return;
         }
@@ -153,11 +146,7 @@ public sealed class RevenueCatEventHandler(
         var subscription = await store.FindSubscription(subscriberId, cancellationToken);
         if (subscription is null)
         {
-            logger.LogWarning("CANCELLATION received for unknown subscriber {SubscriberId} (event {EventId}).", subscriberId, revenueCatEvent.Id);
-            Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.CancellationUnknownUser,
-                "RevenueCat CANCELLATION received for unknown user.",
-                ("userId", subscriberId),
-                ("eventId", revenueCatEvent.Id));
+            LogUnknownSubscriber(revenueCatEvent, subscriberId, RevenueCatWebhookLogEvents.CancellationUnknownUser);
             return;
         }
 
@@ -174,13 +163,19 @@ public sealed class RevenueCatEventHandler(
 
     private async Task HandleExpiration(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
     {
-        if (!TryResolveSubscriberId(revenueCatEvent, out var subscriberId))
+        if (!TryResolveSubscriberIdOrLog(revenueCatEvent, out var subscriberId))
         {
             return;
         }
 
         var subscription = await store.FindSubscription(subscriberId, cancellationToken);
-        if (subscription is null || IsSupersededEvent(subscription, revenueCatEvent))
+        if (subscription is null)
+        {
+            LogUnknownSubscriber(revenueCatEvent, subscriberId, RevenueCatWebhookLogEvents.SubscriptionUnknown);
+            return;
+        }
+
+        if (IsSupersededEvent(subscription, revenueCatEvent))
         {
             return;
         }
@@ -194,13 +189,19 @@ public sealed class RevenueCatEventHandler(
 
     private async Task HandleBillingIssue(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
     {
-        if (!TryResolveSubscriberId(revenueCatEvent, out var subscriberId))
+        if (!TryResolveSubscriberIdOrLog(revenueCatEvent, out var subscriberId))
         {
             return;
         }
 
         var subscription = await store.FindSubscription(subscriberId, cancellationToken);
-        if (subscription is null || IsSupersededEvent(subscription, revenueCatEvent))
+        if (subscription is null)
+        {
+            LogUnknownSubscriber(revenueCatEvent, subscriberId, RevenueCatWebhookLogEvents.SubscriptionUnknown);
+            return;
+        }
+
+        if (IsSupersededEvent(subscription, revenueCatEvent))
         {
             return;
         }
@@ -225,9 +226,9 @@ public sealed class RevenueCatEventHandler(
                     logger.LogWarning("TRANSFER from unresolvable app_user_id '{AppUserId}' (event {EventId}) — skipping deactivation.",
                         oldAppUserId, revenueCatEvent.Id);
                     Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.TransferSkipped,
-                        "RevenueCat TRANSFER from non-numeric app_user_id — skipping deactivation.",
-                        ("appUserId", oldAppUserId),
-                        ("eventId", revenueCatEvent.Id));
+                        "RevenueCat TRANSFER from unresolvable app_user_id — skipping deactivation.",
+                        (RevenueCatWebhookLogKeys.AppUserId, oldAppUserId),
+                        (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id));
                     continue;
                 }
 
@@ -251,6 +252,12 @@ public sealed class RevenueCatEventHandler(
         {
             if (!store.TryResolveSubscriberId(newAppUserId, out var newSubscriberId))
             {
+                logger.LogWarning("TRANSFER to unresolvable app_user_id '{AppUserId}' (event {EventId}) — skipping activation.",
+                    newAppUserId, revenueCatEvent.Id);
+                Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.TransferSkipped,
+                    "RevenueCat TRANSFER to unresolvable app_user_id — skipping activation.",
+                    (RevenueCatWebhookLogKeys.AppUserId, newAppUserId),
+                    (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id));
                 continue;
             }
 
@@ -288,8 +295,8 @@ public sealed class RevenueCatEventHandler(
         };
     }
 
-    private void MarkProcessed(RevenueCatEvent revenueCatEvent)
-        => store.RecordProcessedEvent(revenueCatEvent.Id!, revenueCatEvent.Type!, DateTime.UtcNow);
+    private void MarkProcessed(string eventId, string eventType)
+        => store.RecordProcessedEvent(eventId, eventType, DateTime.UtcNow);
 
     private static void UpdateAudit(RevenueCatSubscription subscription, RevenueCatEvent revenueCatEvent)
     {
@@ -327,19 +334,47 @@ public sealed class RevenueCatEventHandler(
             subscription.OriginalTransactionId, subscription.ExpiresAt);
         Observe(RevenueCatWebhookLogLevel.Info, RevenueCatWebhookLogEvents.EventSuperseded,
             "RevenueCat event superseded by a newer subscription period — skipping.",
-            ("eventId", revenueCatEvent.Id),
-            ("eventType", revenueCatEvent.Type),
-            ("userId", subscription.SubscriberId),
-            ("eventOriginalTransactionId", revenueCatEvent.OriginalTransactionId),
-            ("eventExpiresAt", eventExpiresAt),
-            ("storedOriginalTransactionId", subscription.OriginalTransactionId),
-            ("storedExpiresAt", subscription.ExpiresAt));
+            (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+            (RevenueCatWebhookLogKeys.EventType, revenueCatEvent.Type),
+            (RevenueCatWebhookLogKeys.SubscriberId, subscription.SubscriberId),
+            (RevenueCatWebhookLogKeys.EventOriginalTransactionId, revenueCatEvent.OriginalTransactionId),
+            (RevenueCatWebhookLogKeys.EventExpiresAt, eventExpiresAt),
+            (RevenueCatWebhookLogKeys.StoredOriginalTransactionId, subscription.OriginalTransactionId),
+            (RevenueCatWebhookLogKeys.StoredExpiresAt, subscription.ExpiresAt));
         return true;
     }
 
     private bool IsPremiumEntitlement(RevenueCatEvent revenueCatEvent)
         => revenueCatEvent.EntitlementIds is { Count: > 0 }
             && revenueCatEvent.EntitlementIds.Contains(_options.PremiumEntitlementId);
+
+    private bool TryResolveSubscriberIdOrLog(RevenueCatEvent revenueCatEvent, out string subscriberId)
+    {
+        if (TryResolveSubscriberId(revenueCatEvent, out subscriberId))
+        {
+            return true;
+        }
+
+        logger.LogWarning("Cannot resolve subscriber from app_user_id '{AppUserId}' or aliases for event {EventId} ({EventType}).",
+            revenueCatEvent.AppUserId, revenueCatEvent.Id, revenueCatEvent.Type);
+        Observe(RevenueCatWebhookLogLevel.Warning, RevenueCatWebhookLogEvents.UserUnresolved,
+            "Cannot resolve subscriber from app_user_id or aliases.",
+            (RevenueCatWebhookLogKeys.AppUserId, revenueCatEvent.AppUserId),
+            (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+            (RevenueCatWebhookLogKeys.EventType, revenueCatEvent.Type));
+        return false;
+    }
+
+    private void LogUnknownSubscriber(RevenueCatEvent revenueCatEvent, string subscriberId, string eventName)
+    {
+        logger.LogWarning("{EventType} received for unknown subscriber {SubscriberId} (event {EventId}).",
+            revenueCatEvent.Type, subscriberId, revenueCatEvent.Id);
+        Observe(RevenueCatWebhookLogLevel.Warning, eventName,
+            "RevenueCat event received for unknown subscriber.",
+            (RevenueCatWebhookLogKeys.SubscriberId, subscriberId),
+            (RevenueCatWebhookLogKeys.EventId, revenueCatEvent.Id),
+            (RevenueCatWebhookLogKeys.EventType, revenueCatEvent.Type));
+    }
 
     private bool TryResolveSubscriberId(RevenueCatEvent revenueCatEvent, out string subscriberId)
     {

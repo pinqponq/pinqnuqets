@@ -36,6 +36,22 @@ public static class RevenueCatWebhookLogEvents
     public const string CancellationUnknownUser = "webhook_revenuecat_cancellation_unknown_user";
     public const string TransferSkipped = "webhook_revenuecat_transfer_skipped";
     public const string EventSuperseded = "webhook_revenuecat_event_superseded";
+    public const string SubscriptionUnknown = "webhook_revenuecat_subscription_unknown";
+}
+
+/// <summary>Keys of <see cref="RevenueCatWebhookLog.Data"/>.</summary>
+public static class RevenueCatWebhookLogKeys
+{
+    public const string EventId = "eventId";
+    public const string EventType = "eventType";
+    public const string AppUserId = "appUserId";
+    public const string SubscriberId = "subscriberId";
+    public const string Entitlements = "entitlements";
+    public const string PremiumEntitlementId = "premiumEntitlementId";
+    public const string EventOriginalTransactionId = "eventOriginalTransactionId";
+    public const string EventExpiresAt = "eventExpiresAt";
+    public const string StoredOriginalTransactionId = "storedOriginalTransactionId";
+    public const string StoredExpiresAt = "storedExpiresAt";
 }
 
 internal sealed class NullRevenueCatWebhookObserver : IRevenueCatWebhookObserver

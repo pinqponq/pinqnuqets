@@ -1,22 +1,37 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Pinqponq.Billing.RevenueCat.Tests;
 
-public sealed class RevenueCatEventHandlerTests
+public sealed class RevenueCatEventHandlerTests : IDisposable
 {
     private const string PremiumEntitlementId = "premium";
     private const string UserId = "21";
 
     private readonly InMemoryRevenueCatStore _store = new();
     private readonly RecordingObserver _observer = new();
+    private readonly CapturingLogger<RevenueCatEventHandler> _logger = new();
 
     private RevenueCatEventHandler CreateSut() => new(
         _store,
         Options.Create(new RevenueCatOptions { WebhookAuthHeader = "Bearer test", PremiumEntitlementId = PremiumEntitlementId }),
         _observer,
-        NullLogger<RevenueCatEventHandler>.Instance);
+        _logger);
+
+    /// <summary>Every observed step is also written to the logger, at the matching level, with a message.</summary>
+    public void Dispose()
+    {
+        Assert.Equal(_observer.Logs.Count, _logger.Entries.Count);
+        foreach (var (log, entry) in _observer.Logs.Zip(_logger.Entries))
+        {
+            Assert.False(string.IsNullOrWhiteSpace(log.Message));
+            Assert.False(string.IsNullOrWhiteSpace(entry.Message));
+            Assert.Equal(
+                log.Level == RevenueCatWebhookLogLevel.Warning ? LogLevel.Warning : LogLevel.Information,
+                entry.Level);
+        }
+    }
 
     private static RevenueCatWebhookPayload Payload(
         string id,
@@ -107,7 +122,7 @@ public sealed class RevenueCatEventHandlerTests
         Assert.Contains(_store.Processed, entry => entry.EventId == "e2");
         var log = Assert.Single(_observer.Logs, log => log.EventName == RevenueCatWebhookLogEvents.EventSuperseded);
         Assert.Equal(RevenueCatWebhookLogLevel.Info, log.Level);
-        Assert.Equal("e2", log.Data!["eventId"]);
+        Assert.Equal("e2", log.Data![RevenueCatWebhookLogKeys.EventId]);
     }
 
     [Fact]
@@ -213,14 +228,42 @@ public sealed class RevenueCatEventHandlerTests
         Assert.Single(_store.Processed);
     }
 
-    [Fact]
-    public async Task Expiration_for_unknown_subscriber_changes_nothing()
+    [Theory]
+    [InlineData(RevenueCatEventType.Expiration)]
+    [InlineData(RevenueCatEventType.BillingIssue)]
+    public async Task Expiration_or_billing_issue_for_unknown_subscriber_is_observed_and_changes_nothing(string type)
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.Expiration));
+        await sut.Handle(Payload("e1", type));
 
         Assert.Null(_store.Get(UserId));
+        var log = Assert.Single(_observer.Logs);
+        Assert.Equal(RevenueCatWebhookLogEvents.SubscriptionUnknown, log.EventName);
+        Assert.Equal(RevenueCatWebhookLogLevel.Warning, log.Level);
+        Assert.Equal(type, log.Data![RevenueCatWebhookLogKeys.EventType]);
+        Assert.Equal(UserId, log.Data[RevenueCatWebhookLogKeys.SubscriberId]);
+    }
+
+    [Theory]
+    [InlineData(RevenueCatEventType.Cancellation)]
+    [InlineData(RevenueCatEventType.Expiration)]
+    [InlineData(RevenueCatEventType.BillingIssue)]
+    public async Task Unresolvable_subscriber_on_cancellation_expiration_or_billing_issue_is_observed(string type)
+    {
+        var sut = CreateSut();
+
+        var handled = await sut.Handle(Payload("e1", type, customize: e =>
+        {
+            e.AppUserId = "$RCAnonymousID:abc";
+            e.Aliases = null;
+        }));
+
+        Assert.True(handled);
+        Assert.Single(_store.Processed);
+        var log = Assert.Single(_observer.Logs);
+        Assert.Equal(RevenueCatWebhookLogEvents.UserUnresolved, log.EventName);
+        Assert.Equal(type, log.Data![RevenueCatWebhookLogKeys.EventType]);
     }
 
     [Fact]
@@ -234,7 +277,7 @@ public sealed class RevenueCatEventHandlerTests
         var log = Assert.Single(_observer.Logs);
         Assert.Equal(RevenueCatWebhookLogEvents.CancellationUnknownUser, log.EventName);
         Assert.Equal(RevenueCatWebhookLogLevel.Warning, log.Level);
-        Assert.Equal(UserId, log.Data!["userId"]);
+        Assert.Equal(UserId, log.Data![RevenueCatWebhookLogKeys.SubscriberId]);
     }
 
     [Fact]
@@ -264,7 +307,7 @@ public sealed class RevenueCatEventHandlerTests
         Assert.Single(_store.Processed);
         var log = Assert.Single(_observer.Logs);
         Assert.Equal(RevenueCatWebhookLogEvents.UserUnresolved, log.EventName);
-        Assert.Equal("$RCAnonymousID:abc", log.Data!["appUserId"]);
+        Assert.Equal("$RCAnonymousID:abc", log.Data![RevenueCatWebhookLogKeys.AppUserId]);
     }
 
     [Fact]
@@ -321,7 +364,7 @@ public sealed class RevenueCatEventHandlerTests
         Assert.Single(_store.Processed);
         var log = Assert.Single(_observer.Logs);
         Assert.Equal(RevenueCatWebhookLogEvents.EventUnhandled, log.EventName);
-        Assert.Equal("SOMETHING_NEW", log.Data!["eventType"]);
+        Assert.Equal("SOMETHING_NEW", log.Data![RevenueCatWebhookLogKeys.EventType]);
     }
 
     [Theory]
@@ -379,8 +422,11 @@ public sealed class RevenueCatEventHandlerTests
         Assert.Equal("txn-1", moved.OriginalTransactionId);
         Assert.Equal(Utc(1784793702131), moved.ExpiresAt);
 
-        var skipped = Assert.Single(_observer.Logs, log => log.EventName == RevenueCatWebhookLogEvents.TransferSkipped);
-        Assert.Equal("$RCAnonymousID:gone", skipped.Data!["appUserId"]);
+        Assert.Equal(
+            ["$RCAnonymousID:gone", "$RCAnonymousID:skipped"],
+            _observer.Logs
+                .Where(log => log.EventName == RevenueCatWebhookLogEvents.TransferSkipped)
+                .Select(log => log.Data![RevenueCatWebhookLogKeys.AppUserId]));
     }
 
     [Fact]
@@ -416,6 +462,260 @@ public sealed class RevenueCatEventHandlerTests
         }));
 
         Assert.False(_store.Get("22")!.IsActive);
+    }
+
+    [Fact]
+    public async Task Activation_without_new_values_keeps_the_stored_ones()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, customize: e =>
+        {
+            e.ProductId = null;
+            e.Store = null;
+            e.ExpirationAtMs = null;
+            e.OriginalTransactionId = null;
+        }));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Equal("pro_monthly", subscription.ProductId);
+        Assert.Equal("PLAY_STORE", subscription.Store);
+        Assert.Equal(Utc(1784793702131), subscription.ExpiresAt);
+        Assert.Equal("txn-1", subscription.OriginalTransactionId);
+    }
+
+    [Fact]
+    public async Task Activation_replaces_the_stored_values_with_the_event_ones()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, expirationAtMs: 1790000000000, customize: e =>
+        {
+            e.ProductId = "pro_yearly";
+            e.Store = "APP_STORE";
+        }));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Equal("pro_yearly", subscription.ProductId);
+        Assert.Equal("APP_STORE", subscription.Store);
+        Assert.Equal(Utc(1790000000000), subscription.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task Activation_of_a_new_subscriber_without_values_leaves_them_empty()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e =>
+        {
+            e.ProductId = null;
+            e.Store = null;
+            e.OriginalTransactionId = null;
+            e.EventTimestampMs = null;
+        }));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Null(subscription.ProductId);
+        Assert.Null(subscription.Store);
+        Assert.Null(subscription.OriginalTransactionId);
+        Assert.NotNull(subscription.LastEventAt);
+        Assert.True(subscription.LastEventAt > DateTime.UtcNow.AddMinutes(-1));
+    }
+
+    [Fact]
+    public async Task Transfer_to_an_existing_subscriber_without_new_values_keeps_the_stored_ones()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        {
+            e.TransferredTo = [UserId];
+            e.ProductId = null;
+            e.Store = null;
+            e.ExpirationAtMs = null;
+            e.OriginalTransactionId = null;
+        }));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Equal("pro_monthly", subscription.ProductId);
+        Assert.Equal("PLAY_STORE", subscription.Store);
+        Assert.Equal(Utc(1784793702131), subscription.ExpiresAt);
+        Assert.Equal("txn-1", subscription.OriginalTransactionId);
+    }
+
+    [Fact]
+    public async Task Transfer_to_an_existing_subscriber_takes_the_event_values()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, originalTransactionId: "txn-2", expirationAtMs: 1790000000000, customize: e =>
+        {
+            e.TransferredTo = [UserId];
+            e.ProductId = "pro_yearly";
+            e.Store = "APP_STORE";
+        }));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Equal("pro_yearly", subscription.ProductId);
+        Assert.Equal("APP_STORE", subscription.Store);
+        Assert.Equal(Utc(1790000000000), subscription.ExpiresAt);
+        Assert.Equal("txn-2", subscription.OriginalTransactionId);
+    }
+
+    [Fact]
+    public async Task Transfer_with_empty_transferred_lists_falls_back_correctly()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        {
+            e.TransferredFrom = [];
+            e.TransferredTo = [];
+        }));
+
+        Assert.True(_store.Get(UserId)!.IsActive);
+        Assert.Equal(RevenueCatEventType.InitialPurchase, _store.Get(UserId)!.LastEventType);
+    }
+
+    [Fact]
+    public async Task Event_with_the_same_expiry_as_stored_is_not_superseded()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, expirationAtMs: 5000));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+        Assert.DoesNotContain(_observer.Logs, log => log.EventName == RevenueCatWebhookLogEvents.EventSuperseded);
+    }
+
+    [Fact]
+    public async Task Event_with_a_later_expiry_than_stored_is_not_superseded()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, expirationAtMs: 6000));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Event_without_a_transaction_id_is_not_treated_as_another_transaction(string? eventTransaction)
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1"));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: e => e.OriginalTransactionId = eventTransaction));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+    }
+
+    [Fact]
+    public async Task Event_for_a_subscription_without_a_stored_transaction_is_not_superseded()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.OriginalTransactionId = null));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, originalTransactionId: "txn-9"));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+    }
+
+    [Fact]
+    public async Task Event_without_expiry_is_not_compared_to_the_stored_expiry()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: e => e.ExpirationAtMs = null));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+    }
+
+    [Fact]
+    public async Task Observed_data_carries_the_event_details()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "new", expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, originalTransactionId: "old", expirationAtMs: 1000));
+
+        var data = Assert.Single(_observer.Logs).Data!;
+        Assert.Equal("e2", data[RevenueCatWebhookLogKeys.EventId]);
+        Assert.Equal(RevenueCatEventType.Expiration, data[RevenueCatWebhookLogKeys.EventType]);
+        Assert.Equal(UserId, data[RevenueCatWebhookLogKeys.SubscriberId]);
+        Assert.Equal("old", data[RevenueCatWebhookLogKeys.EventOriginalTransactionId]);
+        Assert.Equal(Utc(1000), data[RevenueCatWebhookLogKeys.EventExpiresAt]);
+        Assert.Equal("new", data[RevenueCatWebhookLogKeys.StoredOriginalTransactionId]);
+        Assert.Equal(Utc(5000), data[RevenueCatWebhookLogKeys.StoredExpiresAt]);
+    }
+
+    [Fact]
+    public async Task Non_premium_activation_observes_the_entitlements()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = ["a", "b"]));
+
+        var log = Assert.Single(_observer.Logs);
+        Assert.Equal(RevenueCatWebhookLogLevel.Info, log.Level);
+        Assert.Equal("a,b", log.Data![RevenueCatWebhookLogKeys.Entitlements]);
+        Assert.Equal(PremiumEntitlementId, log.Data[RevenueCatWebhookLogKeys.PremiumEntitlementId]);
+        Assert.Equal("e1", log.Data[RevenueCatWebhookLogKeys.EventId]);
+    }
+
+    [Fact]
+    public async Task Non_premium_activation_without_entitlements_observes_an_empty_list()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = null));
+
+        Assert.Equal(string.Empty, Assert.Single(_observer.Logs).Data![RevenueCatWebhookLogKeys.Entitlements]);
+    }
+
+    [Fact]
+    public async Task Observed_records_carry_the_matching_details()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("t1", RevenueCatEventType.Test));
+        await sut.Handle(Payload("t1", RevenueCatEventType.Test));
+        await sut.Handle(Payload("a1", RevenueCatEventType.SubscriberAlias));
+        await sut.Handle(Payload("x1", "SOMETHING_NEW"));
+
+        Assert.Equal(
+            [
+                (RevenueCatWebhookLogEvents.TestReceived, RevenueCatWebhookLogLevel.Info),
+                (RevenueCatWebhookLogEvents.EventDuplicate, RevenueCatWebhookLogLevel.Info),
+                (RevenueCatWebhookLogEvents.SubscriberAliasReceived, RevenueCatWebhookLogLevel.Info),
+                (RevenueCatWebhookLogEvents.EventUnhandled, RevenueCatWebhookLogLevel.Warning),
+            ],
+            _observer.Logs.Select(log => (log.EventName, log.Level)));
+        Assert.Equal("t1", _observer.Logs[0].Data![RevenueCatWebhookLogKeys.EventId]);
+        Assert.Equal(RevenueCatEventType.Test, _observer.Logs[1].Data![RevenueCatWebhookLogKeys.EventType]);
+        Assert.Equal(UserId, _observer.Logs[2].Data![RevenueCatWebhookLogKeys.AppUserId]);
+        Assert.Equal("x1", _observer.Logs[3].Data![RevenueCatWebhookLogKeys.EventId]);
+    }
+
+    [Fact]
+    public async Task Invalid_payload_observation_has_no_data()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(new RevenueCatWebhookPayload());
+
+        var log = Assert.Single(_observer.Logs);
+        Assert.Equal(RevenueCatWebhookLogLevel.Warning, log.Level);
+        Assert.Null(log.Data);
     }
 
     [Fact]
