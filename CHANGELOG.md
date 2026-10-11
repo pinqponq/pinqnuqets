@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Billing.RevenueCat` 1.0.0: RevenueCat webhook handling extracted from a product backend.
+  `AddPinqponqRevenueCat<TStore>` registers `IRevenueCatEventHandler` (idempotency by event id, activation,
+  cancellation, expiration, billing issue, `TRANSFER`, and a guard that ignores `CANCELLATION`/`EXPIRATION`/
+  `BILLING_ISSUE` events of a superseded subscription period) and `IRevenueCatWebhookAuthenticator`
+  (constant-time Authorization header check). The product supplies storage through
+  `IRevenueCatSubscriptionStore`; an optional `IRevenueCatWebhookObserver` forwards structured step records
+  to its own log pipeline. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Configuration.Vault` 1.0.0: a HashiCorp Vault configuration provider. `AddPinqponqVault`
   reads one KV version 2 record shaped like `appsettings.json` at startup and lays it over the
   configuration sources registered before it, so secrets leave the settings files while every
