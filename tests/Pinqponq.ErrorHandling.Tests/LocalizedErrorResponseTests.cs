@@ -1,0 +1,163 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Pinqponq.Contracts;
+using Xunit;
+
+namespace Pinqponq.ErrorHandling.Tests;
+
+public sealed class LocalizedErrorResponseTests : IDisposable
+{
+    private readonly string _catalogDirectory = Path.Combine(Path.GetTempPath(), $"pinqponq-catalog-{Guid.NewGuid():N}");
+
+    private static ErrorResponseHarness CreateLocalizedHarness()
+    {
+        var harness = new ErrorResponseHarness();
+        harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.CatalogDirectory = null;
+        return harness;
+    }
+
+    [Fact]
+    public async Task Exception_message_known_to_the_catalog_is_the_response_code_with_the_message_in_the_requested_language()
+    {
+        var harness = CreateLocalizedHarness();
+
+        var httpContext = await harness.InvokeAsync(
+            _ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired),
+            context => context.Request.Headers["Language"] = "tr");
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+        Assert.Equal(CommonErrorCodes.ApiBodyRequired, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("İstek gövdesi gerekli.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Exception_message_unknown_to_the_catalog_falls_back_to_general_error_in_english()
+    {
+        var harness = CreateLocalizedHarness();
+
+        var httpContext = await harness.InvokeAsync(_ => throw new Exception("connection refused by 10.0.0.4"));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(StatusCodes.Status500InternalServerError, httpContext.Response.StatusCode);
+        Assert.Equal(CommonErrorCodes.GeneralError, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("An unexpected error occurred.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Language_without_a_catalog_answers_in_the_default_language()
+    {
+        var harness = CreateLocalizedHarness();
+
+        var httpContext = await harness.InvokeAsync(
+            _ => throw new InvalidOperationException(CommonErrorCodes.ApiPageSizeInvalid),
+            context => context.Request.Headers["Language"] = "XX");
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("Page size must be greater than 0.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Configured_fallback_code_and_default_message_are_used_when_the_catalog_has_neither()
+    {
+        var harness = CreateLocalizedHarness();
+        harness.LocalizationOptions.FallbackResponseCode = "order_error";
+        harness.LocalizationOptions.DefaultMessage = "Something went wrong.";
+
+        var httpContext = await harness.InvokeAsync(_ => throw new Exception("unknown"));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("order_error", body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Something went wrong.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Body_without_trace_id_has_the_base_response_fields_in_order()
+    {
+        var harness = CreateLocalizedHarness();
+        harness.Options.IncludeTraceId = false;
+
+        var httpContext = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        var fieldNames = body.RootElement.EnumerateObject().Select(field => field.Name).ToArray();
+        Assert.Equal(["status", "statusCode", "message", "responseCode"], fieldNames);
+        Assert.False(body.RootElement.GetProperty("status").GetBoolean());
+        Assert.Equal(400, body.RootElement.GetProperty("statusCode").GetInt32());
+    }
+
+    [Fact]
+    public async Task Localized_mode_ignores_IncludeExceptionMessage()
+    {
+        var harness = CreateLocalizedHarness();
+        harness.Options.IncludeExceptionMessage = true;
+
+        var httpContext = await harness.InvokeAsync(_ => throw new Exception("secret detail"));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("An unexpected error occurred.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Application_catalog_directory_adds_codes_and_overrides_embedded_messages()
+    {
+        Directory.CreateDirectory(_catalogDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(_catalogDirectory, "en.json"),
+            """{ "order_not_found": "Order was not found.", "general_error": "Order service failed." }""");
+        var harness = CreateLocalizedHarness();
+        harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
+
+        var knownCodeContext = await harness.InvokeAsync(_ => throw new KeyNotFoundException("order_not_found"));
+        var unknownCodeContext = await harness.InvokeAsync(_ => throw new Exception("unknown"));
+
+        using var knownCodeBody = ErrorResponseHarness.ReadBody(knownCodeContext);
+        using var unknownCodeBody = ErrorResponseHarness.ReadBody(unknownCodeContext);
+        Assert.Equal(StatusCodes.Status404NotFound, knownCodeContext.Response.StatusCode);
+        Assert.Equal("order_not_found", knownCodeBody.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Order was not found.", knownCodeBody.RootElement.GetProperty("message").GetString());
+        Assert.Equal("Order service failed.", unknownCodeBody.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Unreadable_catalog_file_is_logged_and_skipped()
+    {
+        Directory.CreateDirectory(_catalogDirectory);
+        await File.WriteAllTextAsync(Path.Combine(_catalogDirectory, "EN.json"), "{ not json");
+        await File.WriteAllTextAsync(Path.Combine(_catalogDirectory, "TR.json"), """{ "order_not_found": "Sipariş bulunamadı." }""");
+        var harness = CreateLocalizedHarness();
+        harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
+
+        var httpContext = await harness.InvokeAsync(
+            _ => throw new KeyNotFoundException("order_not_found"),
+            context => context.Request.Headers["Language"] = "TR");
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("Sipariş bulunamadı.", body.RootElement.GetProperty("message").GetString());
+        var catalogError = Assert.Single(harness.LoggerFactory.Records, record => record.Level == LogLevel.Error);
+        Assert.Contains("EN.json", catalogError.Message);
+        Assert.NotNull(catalogError.Exception);
+    }
+
+    [Fact]
+    public async Task Missing_catalog_directory_keeps_the_embedded_catalog()
+    {
+        var harness = CreateLocalizedHarness();
+        harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
+
+        var httpContext = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(CommonErrorCodes.ApiBodyRequired, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Empty(harness.LoggerFactory.Records);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_catalogDirectory))
+        {
+            Directory.Delete(_catalogDirectory, recursive: true);
+        }
+    }
+}

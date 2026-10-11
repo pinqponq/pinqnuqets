@@ -54,9 +54,9 @@ app.MapPinqponqClientLogs("/api/myapp/client-logs");
 | `ExcludedPathSegments` | `/health`, `/openapi`, `/scalar`, `/swagger`, `/client-logs` | Paths containing one of these are not logged. |
 | `DeviceUidExemptPathSegments` | none | Paths that skip the device uid check (e.g. third-party webhooks). |
 
-Missing collection names fail the application at startup. Binding a list from configuration
-adds to its defaults. `Pinqloq:SecretKey` is read as is; without it the Pinqloq client cannot
-deliver records.
+Missing collection names fail the application at startup, and so does a missing
+`Pinqloq:SecretKey` (the Pinqloq client validates it). Binding a list from configuration adds to
+its defaults.
 
 ## Request records
 
