@@ -69,6 +69,8 @@ downstream of it.
 | `CorrelationIdHeader` | `"X-Correlation-ID"` | Inbound request header read to resolve a correlation id. |
 | `IncludeExceptionMessage` | `false` | When `false` (recommended for production), the response `message` is a generic, status-derived string (e.g. "The requested resource was not found."), never the raw `Exception.Message` — so internal details never leak to a client. Set to `true` only in trusted/diagnostic environments. |
 | `StatusMappingResolver` | `null` | Optional `Func<Exception, ExceptionStatusMapping?>` to override the built-in status/response-code mapping for specific exception types. Return `null` from the delegate to fall back to the built-in mapping for that exception. If the resolver itself throws, the error is logged and the built-in mapping is used. |
+| `IncludeTraceId` | `true` | When `false`, the body has no `traceId` field: exactly `status`, `statusCode`, `message`, `responseCode` (the `Pinqponq.Contracts.BaseResponseModel` shape). |
+| `TreatAnyCancellationAsClientClosed` | `false` | When `true`, every `OperationCanceledException` is answered 499 without a body (by default only a cancelled `RequestAborted` is; any other cancellation is 504 `timeout`). |
 
 Example with a custom mapping for a domain exception:
 
@@ -84,6 +86,66 @@ builder.Services.AddPinqponqErrorHandling(options =>
 });
 ```
 
+## Localized error responses
+
+```csharp
+builder.Services.AddPinqponqErrorHandling(options => options.IncludeTraceId = false);
+builder.Services.AddPinqponqErrorLocalization();
+
+// throw new InvalidOperationException("order_not_found");
+```
+
+With localization on, the **exception message is the response code**: it is looked up in the
+message catalog and the message is returned in the language of the `Language` request header
+(`TR`, `de`, … — case-insensitive). A code the catalog does not know becomes `general_error`. The
+status code still comes from the mapping above (or an `IExceptionResolver`).
+
+| `ErrorLocalizationOptions` | Default | Notes |
+|---|---|---|
+| `LanguageHeader` | `Language` | Header carrying the language code. |
+| `DefaultLanguage` | `EN` | Used when the header is missing or the catalog has no message in that language. |
+| `FallbackResponseCode` | `general_error` | Code for an unknown code. |
+| `DefaultMessage` | `An unexpected error occurred.` | Used when the catalog has no message at all. |
+| `CatalogDirectory` | `Localization` | The application's catalog, relative to `AppContext.BaseDirectory`: one `<LANGUAGE>.json` per language, each a `{ "code": "message" }` object. Its entries add codes and override the embedded ones. A file that cannot be read is logged and skipped. |
+| `CatalogAssemblies` | this package | Assemblies whose embedded `*.Localization.<LANGUAGE>.json` resources form the built-in catalog. This package ships `general_error`, `api_body_required`, `api_page_size_invalid` and `api_page_number_invalid` in AR, DE, EN, ES, FR, HI, ID, IT, JA, KO, PT and TR; Pinqponq.ErrorHandling.Postgres adds the `database_*` codes. |
+
+## Maintenance mode
+
+```csharp
+builder.Services.AddPinqponqMaintenanceMode(builder.Configuration.GetSection("MaintenanceMode"));
+```
+
+```json
+{ "MaintenanceMode": { "Enabled": true, "Message": "Back at 10:00" } }
+```
+
+While `Enabled` is true every request is answered 503 `system_maintenance` with `Message`
+(default `System is under maintenance`) before the rest of the pipeline runs. The section is read
+per request, so a configuration reload switches it on or off without a restart.
+
+## Exception resolvers
+
+An `IExceptionResolver` handles the exceptions of one technology before `StatusMappingResolver`
+and the built-in table. Register it with `AddPinqponqExceptionResolver<T>()`; the first resolver
+that returns an `ExceptionResolution` wins, and a resolver that throws is logged and skipped.
+An `ExceptionResolution` names the status and response code (used as is, also with localization
+on), an optional `FallbackResponseCode`, the `ReportedException` that names the log event (e.g.
+the driver exception inside an ORM exception) and extra `LogDetail` fields.
+[Pinqponq.ErrorHandling.Postgres](../Pinqponq.ErrorHandling.Postgres/README.md) is one.
+
+## Request error feature
+
+Every answered failure — a handled exception, maintenance mode, a closed client request — is
+described on `HttpContext.Features` as `Pinqponq.Contracts.IRequestErrorFeature`:
+
+- `EventName`: `exception_<ExceptionType>`, `request_blocked_maintenance_mode` or
+  `request_cancelled_by_client` (constants in `ErrorHandlingEvents`);
+- `Detail`: `traceId`, `method`, `statusCode`, `errorCode`, `errorMessage`, `language` (with
+  localization on), `queryString` (when present), then the resolver's `LogDetail`.
+
+Pinqponq.Observability's request logging reads it, so a failed request still produces a single
+Pinqloq record that carries the error. Nothing is set when the response had already started.
+
 ## Main types
 
 - **`AddPinqponqErrorHandling`** / **`UsePinqponqErrorHandling`** — `IServiceCollection`
@@ -92,7 +154,7 @@ builder.Services.AddPinqponqErrorHandling(options =>
   the pipeline, logs a structured record, and writes the `ErrorResponse` JSON body.
   Also handles client-disconnect (`OperationCanceledException` when
   `HttpContext.RequestAborted` was signaled) by setting HTTP 499 without producing an
-  error body or log entry for that case.
+  error body; the console log entry for that case is `Information`.
 - **`ErrorHandlingOptions`** — configuration described above.
 - **`ErrorResponse`** — the response contract, serialized camelCase:
   `status` (always `false`), `statusCode`, `message`, `responseCode`, `traceId`.
@@ -153,13 +215,13 @@ builder.Services.AddPinqponqErrorHandling(options =>
 - **Client disconnects are not treated as errors.** A canceled request
   (`OperationCanceledException` while `RequestAborted.IsCancellationRequested`) sets
   HTTP 499 (if the response hasn't started) and produces no `ErrorResponse` body and
-  no error log entry — this is expected client behavior, not a server fault.
+  only an `Information` log entry — this is expected client behavior, not a server fault.
 
 ## Related packages
 
-This package has no direct dependency on the other `Pinqponq.*` packages, but is
-commonly combined with any of them in an ASP.NET Core host to give SMS/mail/database
-failures surfaced through the pipeline a consistent error shape and log record.
+This package depends only on `Pinqponq.Contracts` (for `IRequestErrorFeature` and
+`CommonErrorCodes`). It is commonly combined with Pinqponq.Observability (request logging that
+carries the error detail) and Pinqponq.ErrorHandling.Postgres (database error mapping).
 
 ## Samples
 

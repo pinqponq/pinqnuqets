@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Contracts` 1.0.0: the response envelope `BaseResponseModel` (`status`, `statusCode`,
+  `message`, `responseCode` — compatible with deveng-networking-kmp's `ErrorResponse`, documented in
+  the package README), `PagedRequestModel` / `PagedResponseModel<T>` with `ToPagedResponse`,
+  `CommonErrorCodes`, and `IRequestErrorFeature`, the `HttpContext.Features` entry through which
+  Pinqponq.ErrorHandling hands a failed request's event and detail to Pinqponq.Observability without
+  either package depending on the other. Moved from rindle-backend (`Rindle.Common.Shared`).
+- `Pinqponq.Observability` 1.0.0: Pinqloq logging for ASP.NET Core — `RequestLoggingMiddleware`
+  (one record per request with redacted bodies and route-based event names), `ILogService` /
+  `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming) and the
+  client-log relay endpoint `MapPinqponqClientLogs`. Collection names are required and validated at
+  startup. Moved from rindle-backend (`Rindle.Common.Observability`), where it ran in production.
+- `Pinqponq.ErrorHandling.Postgres` 1.0.0: maps Npgsql `PostgresException` (also wrapped in an EF Core
+  `DbUpdateException`) to 400 with `database_*` codes, the SQLSTATE detail in the log event, and the
+  codes' messages in 12 languages.
+- `Pinqponq.Database.Postgres.EntityFrameworkCore` 1.0.0: `AddPinqponqPostgresDbContext<TDbContext>`
+  registers an EF Core context on PostgreSQL with one `NpgsqlDataSource` per context and a hook to
+  configure it (e.g. dynamic JSON). Kept apart from `Pinqponq.Database.Postgres` so services
+  without EF Core do not take the dependency.
+
 - `Pinqponq.Configuration.Vault` 1.0.0: a HashiCorp Vault configuration provider. `AddPinqponqVault`
   reads one KV version 2 record shaped like `appsettings.json` at startup and lays it over the
   configuration sources registered before it, so secrets leave the settings files while every
@@ -21,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library is added. Targets `net8.0`, `net9.0` and `net10.0`.
 
 ### Changed
+
+- `Pinqponq.ErrorHandling` 1.1.0: optional localized error responses (`AddPinqponqErrorLocalization`:
+  the response code is looked up in a message catalog — embedded `general_error`/`api_*` messages
+  in 12 languages plus the application's `Localization/*.json` — and the message is returned in the
+  `Language` header's language), maintenance mode (`AddPinqponqMaintenanceMode`, 503
+  `system_maintenance`, follows configuration reloads), pluggable `IExceptionResolver`s,
+  `IncludeTraceId` and `TreatAnyCancellationAsClientClosed` options, and every handled failure is
+  described on `IRequestErrorFeature`. Existing behavior is unchanged unless these are turned on;
+  `ErrorResponse.traceId` is now left out of the body when it is null.
 
 - Packages are versioned individually from now on: each carries its own `<Version>` in its project file and the shared `Version` in `Directory.Build.props` is gone. Every package starts at the version it has on nuget.org (1.0.1, and `Pinqponq.Identity` 1.0.2). Up to and including 1.0.2 all packages shared one version.
 - `Pinqponq.Database.Mssql` 1.0.2: `Microsoft.Data.SqlClient` 5.2.2 → 7.1.1. This is a major
