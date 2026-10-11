@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Database.Postgres.EntityFrameworkCore</PackageId>
+    <Title>Pinqponq Database Postgres Entity Framework Core</Title>
+    <Description>Registers an EF Core DbContext on PostgreSQL (Npgsql) with one shared NpgsqlDataSource per context and a hook to configure it (e.g. dynamic JSON). Does not include entities or migrations.</Description>
+    <PackageTags>$(PackageTags);postgres;postgresql;npgsql;entity-framework-core;efcore;dbcontext</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

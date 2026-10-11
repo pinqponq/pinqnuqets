@@ -1,0 +1,8 @@
+{
+  "database_error": "데이터베이스 오류가 발생했습니다.",
+  "database_foreign_key_violation": "다른 데이터가 이 레코드를 참조하고 있어 처리할 수 없습니다.",
+  "database_value_too_long": "입력한 값 중 하나가 너무 깁니다.",
+  "database_unique_violation": "이 레코드는 이미 존재합니다.",
+  "database_not_null_violation": "필수 항목이 누락되었습니다.",
+  "database_invalid_format": "입력한 값 중 하나의 형식이 올바르지 않습니다."
+}

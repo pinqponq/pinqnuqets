@@ -1,0 +1,8 @@
+{
+  "database_error": "データベースエラーが発生しました。",
+  "database_foreign_key_violation": "このレコードは他のデータから参照されているため、処理できません。",
+  "database_value_too_long": "入力された値のいずれかが長すぎます。",
+  "database_unique_violation": "このレコードはすでに存在します。",
+  "database_not_null_violation": "必須項目が入力されていません。",
+  "database_invalid_format": "入力された値のいずれかの形式が正しくありません。"
+}

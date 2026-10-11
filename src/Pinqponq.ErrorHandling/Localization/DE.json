@@ -1,0 +1,6 @@
+{
+  "general_error": "Ein unerwarteter Fehler ist aufgetreten.",
+  "api_body_required": "Der Anfragetext ist erforderlich.",
+  "api_page_size_invalid": "Die Seitengröße muss größer als 0 sein.",
+  "api_page_number_invalid": "Die Seitenzahl muss größer als 0 sein."
+}

@@ -1,0 +1,8 @@
+{
+  "database_error": "डेटाबेस त्रुटि हुई।",
+  "database_foreign_key_violation": "यह रिकॉर्ड अन्य डेटा द्वारा संदर्भित है और इसे प्रोसेस नहीं किया जा सकता।",
+  "database_value_too_long": "दिए गए मानों में से एक बहुत लंबा है।",
+  "database_unique_violation": "यह रिकॉर्ड पहले से मौजूद है।",
+  "database_not_null_violation": "एक आवश्यक फ़ील्ड गायब है।",
+  "database_invalid_format": "दिए गए मानों में से एक का प्रारूप अमान्य है।"
+}

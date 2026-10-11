@@ -1,0 +1,8 @@
+{
+  "database_error": "Terjadi kesalahan basis data.",
+  "database_foreign_key_violation": "Data ini dirujuk oleh data lain dan tidak dapat diproses.",
+  "database_value_too_long": "Salah satu nilai yang diberikan terlalu panjang.",
+  "database_unique_violation": "Data ini sudah ada.",
+  "database_not_null_violation": "Ada kolom wajib yang belum diisi.",
+  "database_invalid_format": "Salah satu nilai yang diberikan memiliki format yang tidak valid."
+}

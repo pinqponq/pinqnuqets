@@ -1,0 +1,6 @@
+{
+  "general_error": "Terjadi kesalahan yang tidak terduga.",
+  "api_body_required": "Isi permintaan diperlukan.",
+  "api_page_size_invalid": "Ukuran halaman harus lebih besar dari 0.",
+  "api_page_number_invalid": "Nomor halaman harus lebih besar dari 0."
+}
