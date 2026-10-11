@@ -164,7 +164,9 @@ public sealed class LogServiceTests
         Assert.Equal(
             [LogLevel.Debug, LogLevel.Information, LogLevel.Warning, LogLevel.Warning, LogLevel.Error],
             _logger.Records.Select(record => record.Level).ToArray());
-        Assert.Equal("""i {"orderId":"42"}""", _logger.Records[1].Message);
+        Assert.Equal(
+            ["d (null)", """i {"orderId":"42"}""", "w (null)", "we (null)", "e (null)"],
+            _logger.Records.Select(record => record.Message).ToArray());
         Assert.IsType<TimeoutException>(_logger.Records[3].Exception);
     }
 
@@ -175,7 +177,8 @@ public sealed class LogServiceTests
 
         CreateLogService().Info("Nightly cleanup finished");
 
-        var failureRecord = _logger.Records.Last();
+        Assert.NotEmpty(_logger.Records);
+        var failureRecord = _logger.Records[^1];
         Assert.Equal(LogLevel.Warning, failureRecord.Level);
         Assert.Contains("pinqloq delivery failed", failureRecord.Message);
         Assert.Contains("503", failureRecord.Message);

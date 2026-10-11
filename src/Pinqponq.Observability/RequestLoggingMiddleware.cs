@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +28,7 @@ public sealed class RequestLoggingMiddleware
     private const string KeyIdKey = "KeyId";
     private const string DeviceUidRequiredResponseCode = "DEVICE_UID_REQUIRED";
     private const string DeviceUidRequiredMessage = "DeviceUid header is required.";
+    private const int StreamBufferSize = 8192;
 
     private static readonly JsonSerializerOptions ErrorResponseSerializerOptions = new()
     {
@@ -34,21 +36,9 @@ public sealed class RequestLoggingMiddleware
         DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private static readonly string[] AppVersionValueKeys =
-    [
-        "AppVersionName",
-        "App-Version-Name",
-        "X-App-Version-Name",
-        "AppVersion",
-        "App-Version",
-        "X-App-Version",
-        "Version"
-    ];
-
     private static readonly string[] DeviceUidValueKeys =
     [
         "DeviceUid",
-        "DeviceUID",
         "Device-Uid",
         "X-Device-Uid",
         "device_uid"
@@ -59,13 +49,9 @@ public sealed class RequestLoggingMiddleware
         "Authorization",
         "Cookie",
         "Set-Cookie",
-        "SecretKey",
         "X-Internal-Key",
         "ApiKey",
-        "X-Api-Key",
-        "AccessToken",
-        "RefreshToken",
-        "Password"
+        "X-Api-Key"
     };
 
     private readonly RequestDelegate _requestDelegate;
@@ -107,7 +93,7 @@ public sealed class RequestLoggingMiddleware
 
         if (_requireDeviceUid
             && !ShouldSkipDeviceUidCheck(requestPath)
-            && string.IsNullOrWhiteSpace(FindRequestValue(httpContext, requestBody: null, DeviceUidValueKeys)))
+            && string.IsNullOrWhiteSpace(FindRequestValue(httpContext, DeviceUidValueKeys)))
         {
             await WriteDeviceUidRequiredResponse(httpContext, logService, identifier, correlationId);
             return;
@@ -287,7 +273,7 @@ public sealed class RequestLoggingMiddleware
             StatusCode = StatusCodes.Status400BadRequest
         };
 
-        httpContext.Response.ContentType = "application/json";
+        httpContext.Response.ContentType = MediaTypeNames.Application.Json;
         httpContext.Response.StatusCode = responseModel.StatusCode;
         await httpContext.Response.WriteAsync(JsonSerializer.Serialize(responseModel,
             ErrorResponseSerializerOptions));
@@ -302,7 +288,7 @@ public sealed class RequestLoggingMiddleware
         int? fallbackStatusCode = null)
     {
         var request = httpContext.Request;
-        var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+        var elapsedMilliseconds = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
         var statusCode = httpContext.Response.HasStarted
             ? httpContext.Response.StatusCode
             : fallbackStatusCode ?? httpContext.Response.StatusCode;
@@ -313,7 +299,7 @@ public sealed class RequestLoggingMiddleware
             ["RequestMethod"] = request.Method,
             ["path"] = request.Path.Value,
             ["ResponseCode"] = statusCode,
-            ["elapsedMs"] = Math.Round(elapsedMs, 2)
+            ["elapsedMs"] = Math.Round(elapsedMilliseconds, 2)
         };
 
         if (request.Query.Count > 0)
@@ -358,7 +344,7 @@ public sealed class RequestLoggingMiddleware
         return exchangeLog;
     }
 
-    private string? FindRequestValue(HttpContext httpContext, object? requestBody, string[] fieldKeys)
+    private static string? FindRequestValue(HttpContext httpContext, string[] fieldKeys)
     {
         foreach (var fieldKey in fieldKeys)
         {
@@ -375,61 +361,7 @@ public sealed class RequestLoggingMiddleware
             }
         }
 
-        return TryFindValue(requestBody, fieldKeys, out var requestBodyValue)
-            ? requestBodyValue
-            : null;
-    }
-
-    private static bool TryFindValue(object? source, string[] fieldKeys, out string? value)
-    {
-        value = null;
-
-        if (source is IReadOnlyDictionary<string, object?> dictionary)
-        {
-            foreach (var item in dictionary)
-            {
-                if (fieldKeys.Any(fieldKey =>
-                        string.Equals(fieldKey, item.Key, StringComparison.OrdinalIgnoreCase)))
-                {
-                    value = ConvertLogScalarToString(item.Value);
-                    return !string.IsNullOrWhiteSpace(value);
-                }
-            }
-
-            foreach (var item in dictionary.Values)
-            {
-                if (TryFindValue(item, fieldKeys, out value))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (source is IEnumerable<object?> values && source is not string)
-        {
-            foreach (var item in values)
-            {
-                if (TryFindValue(item, fieldKeys, out value))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static string? ConvertLogScalarToString(object? value)
-    {
-        return value switch
-        {
-            null => null,
-            string stringValue => stringValue,
-            JsonElement jsonElement => jsonElement.ValueKind is JsonValueKind.String
-                ? jsonElement.GetString()
-                : jsonElement.ToString(),
-            _ => value.ToString()
-        };
+        return null;
     }
 
     private async Task<object?> ReadResponseBody(HttpResponse response, MemoryStream capturedResponseStream, PinqloqRedactionPlan redactionPlan)
@@ -543,7 +475,7 @@ public sealed class RequestLoggingMiddleware
     private static async Task<byte[]> ReadStreamPrefix(Stream stream, int maxBytesToRead)
     {
         using var memoryStream = new MemoryStream(capacity: maxBytesToRead);
-        var buffer = new byte[Math.Min(8192, maxBytesToRead)];
+        var buffer = new byte[Math.Min(StreamBufferSize, maxBytesToRead)];
         var remainingBytes = maxBytesToRead;
 
         while (remainingBytes > 0)
@@ -582,7 +514,7 @@ public sealed class RequestLoggingMiddleware
             stream,
             Encoding.UTF8,
             detectEncodingFromByteOrderMarks: false,
-            bufferSize: 8192,
+            bufferSize: StreamBufferSize,
             leaveOpen: true);
 
         return await reader.ReadToEndAsync();
@@ -590,11 +522,6 @@ public sealed class RequestLoggingMiddleware
 
     private object? FormatBody(string? contentType, string bodyText, PinqloqRedactionPlan redactionPlan)
     {
-        if (IsOpenApiDocument(bodyText))
-        {
-            return OpenApiBodyOmitted;
-        }
-
         if (TryParseJsonBody(bodyText, redactionPlan, out var jsonBody))
         {
             return jsonBody;
@@ -608,27 +535,6 @@ public sealed class RequestLoggingMiddleware
         }
 
         return bodyText;
-    }
-
-    private static bool IsOpenApiDocument(string bodyText)
-    {
-        var trimmedBody = bodyText.TrimStart();
-        if (!trimmedBody.StartsWith("{", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var parsedJsonDocument = JsonDocument.Parse(bodyText);
-            var root = parsedJsonDocument.RootElement;
-            return root.TryGetProperty("openapi", out _)
-                   && root.TryGetProperty("paths", out _);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
     }
 
     private bool TryParseJsonBody(string bodyText, PinqloqRedactionPlan redactionPlan, out object? jsonBody)

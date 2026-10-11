@@ -97,7 +97,7 @@ internal sealed class ErrorMessageCatalog
         }
     }
 
-    private static string? FindEmbeddedCatalogLanguage(string resourceName)
+    internal static string? FindEmbeddedCatalogLanguage(string resourceName)
     {
         var segmentIndex = resourceName.LastIndexOf(EmbeddedCatalogSegment, StringComparison.Ordinal);
         var isCatalog = segmentIndex >= 0

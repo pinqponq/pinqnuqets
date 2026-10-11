@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pinqponq.Contracts\Pinqponq.Contracts.csproj" />
+    <ProjectReference Include="..\Pinqponq.Observability.Abstractions\Pinqponq.Observability.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

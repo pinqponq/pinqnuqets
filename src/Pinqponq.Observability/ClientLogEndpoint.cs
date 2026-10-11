@@ -6,6 +6,12 @@ namespace Pinqponq.Observability;
 
 internal static class ClientLogEndpoint
 {
+    private const string DebugLevel = "DEBUG";
+    private const string WarningLevel = "WARNING";
+    private const string WarnLevel = "WARN";
+    private const string ErrorLevel = "ERROR";
+    private const string FatalLevel = "FATAL";
+
     public static IResult Relay(
         ClientLogRequest request,
         HttpContext httpContext,
@@ -36,10 +42,10 @@ internal static class ClientLogEndpoint
     {
         return logLevel.ToUpperInvariant() switch
         {
-            "DEBUG" => PinqloqLogLevel.Debug,
-            "WARNING" or "WARN" => PinqloqLogLevel.Warning,
-            "ERROR" => PinqloqLogLevel.Error,
-            "FATAL" => PinqloqLogLevel.Fatal,
+            DebugLevel => PinqloqLogLevel.Debug,
+            WarningLevel or WarnLevel => PinqloqLogLevel.Warning,
+            ErrorLevel => PinqloqLogLevel.Error,
+            FatalLevel => PinqloqLogLevel.Fatal,
             _ => PinqloqLogLevel.Information,
         };
     }

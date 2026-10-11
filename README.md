@@ -59,6 +59,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.ErrorHandling** | Global exception middleware + standard error contract + localized messages, maintenance mode + Pinqloq-compatible structured logging | [README](src/Pinqponq.ErrorHandling/README.md) |
 | **Pinqponq.ErrorHandling.Postgres** | PostgreSQL error mapping (`database_*` codes, SQLSTATE log detail) for Pinqponq.ErrorHandling | [README](src/Pinqponq.ErrorHandling.Postgres/README.md) |
 | **Pinqponq.Observability** | Pinqloq request logging, `ILogService` for app/job logs, client-log relay endpoint | [README](src/Pinqponq.Observability/README.md) |
+| **Pinqponq.Observability.Abstractions** | `ILogService` without dependencies, for domain/application layers | [README](src/Pinqponq.Observability.Abstractions/README.md) |
 | **Pinqponq.Contracts** | Response envelope (deveng-networking-kmp compatible), paging models, common error codes, request error feature | [README](src/Pinqponq.Contracts/README.md) |
 | **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |
 | **Pinqponq.Configuration.Vault** | HashiCorp Vault configuration provider: one KV v2 record shaped like `appsettings.json`, Vault CLI token lookup | [README](src/Pinqponq.Configuration.Vault/README.md) |

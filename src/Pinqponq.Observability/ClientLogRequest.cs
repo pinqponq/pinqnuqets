@@ -1,3 +1,5 @@
+using Pinqloq;
+
 namespace Pinqponq.Observability;
 
 /// <summary>
@@ -9,7 +11,7 @@ public sealed class ClientLogRequest
     public required string Event { get; set; }
 
     /// <summary><c>Debug</c>, <c>Information</c> (default), <c>Warning</c>/<c>Warn</c>, <c>Error</c> or <c>Fatal</c>.</summary>
-    public string LogLevel { get; set; } = "Information";
+    public string LogLevel { get; set; } = nameof(PinqloqLogLevel.Information);
 
     /// <summary>Record metadata.</summary>
     public Dictionary<string, string>? Metadata { get; set; }

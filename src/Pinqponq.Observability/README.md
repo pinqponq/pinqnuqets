@@ -78,6 +78,9 @@ its defaults.
 
 ## `ILogService`
 
+The interface ships in [Pinqponq.Observability.Abstractions](../Pinqponq.Observability.Abstractions/README.md)
+(no dependencies), so domain and application projects can log without this package.
+
 ```csharp
 logService.Error("Export failed", exception, new Dictionary<string, object?> { ["orderId"] = id },
     eventName: "order_export_failed");

@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming) and the
   client-log relay endpoint `MapPinqponqClientLogs`. Collection names are required and validated at
   startup. Moved from rindle-backend (`Rindle.Common.Observability`), where it ran in production.
+- `Pinqponq.Observability.Abstractions` 1.0.0: `ILogService` alone, without dependencies, for domain
+  and application layers; Pinqponq.Observability references it and registers the implementation.
 - `Pinqponq.ErrorHandling.Postgres` 1.0.0: maps Npgsql `PostgresException` (also wrapped in an EF Core
   `DbUpdateException`) to 400 with `database_*` codes, the SQLSTATE detail in the log event, and the
   codes' messages in 12 languages.
