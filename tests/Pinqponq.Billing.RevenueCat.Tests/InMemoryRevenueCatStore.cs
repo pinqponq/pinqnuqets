@@ -14,7 +14,7 @@ internal sealed class InMemoryRevenueCatStore : IRevenueCatSubscriptionStore
 
     public IReadOnlyList<(string EventId, string EventType)> Processed => _processed;
 
-    public RevenueCatSubscription? Get(string subscriberId) => _subscriptions.GetValueOrDefault(subscriberId);
+    public RevenueCatSubscription? Get(string subscriberId) => Copy(_subscriptions.GetValueOrDefault(subscriberId));
 
     public bool TryResolveSubscriberId(string? appUserId, out string subscriberId)
     {
@@ -35,10 +35,30 @@ internal sealed class InMemoryRevenueCatStore : IRevenueCatSubscriptionStore
         => _pendingProcessed.Add((eventId, eventType));
 
     public Task<RevenueCatSubscription?> FindSubscription(string subscriberId, CancellationToken cancellationToken = default)
-        => Task.FromResult(_pending.GetValueOrDefault(subscriberId) ?? _subscriptions.GetValueOrDefault(subscriberId));
+        => Task.FromResult(Copy(_pending.GetValueOrDefault(subscriberId) ?? _subscriptions.GetValueOrDefault(subscriberId)));
 
     public void SaveSubscription(RevenueCatSubscription subscription)
-        => _pending[subscription.SubscriberId] = subscription;
+        => _pending[subscription.SubscriberId] = Copy(subscription)!;
+
+    private static RevenueCatSubscription? Copy(RevenueCatSubscription? source) => source is null
+        ? null
+        : new RevenueCatSubscription
+        {
+            SubscriberId = source.SubscriberId,
+            RevenueCatAppUserId = source.RevenueCatAppUserId,
+            EntitlementId = source.EntitlementId,
+            ProductId = source.ProductId,
+            Store = source.Store,
+            IsActive = source.IsActive,
+            ExpiresAt = source.ExpiresAt,
+            WillRenew = source.WillRenew,
+            IsInGracePeriod = source.IsInGracePeriod,
+            OriginalTransactionId = source.OriginalTransactionId,
+            LastEventType = source.LastEventType,
+            LastEventAt = source.LastEventAt,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+        };
 
     public Task Commit(CancellationToken cancellationToken = default)
     {
