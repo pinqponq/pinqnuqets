@@ -29,7 +29,6 @@ public sealed class PostgresErrorHandlingTests
             _ => throw exception,
             serviceProvider.GetRequiredService<IOptions<ErrorHandlingOptions>>(),
             serviceProvider.GetRequiredService<IOptions<ErrorLocalizationOptions>>(),
-            serviceProvider.GetRequiredService<IOptionsMonitor<MaintenanceModeOptions>>(),
             serviceProvider.GetServices<IExceptionResolver>(),
             NullLoggerFactory.Instance,
             NullLogger<ExceptionHandlingMiddleware>.Instance);

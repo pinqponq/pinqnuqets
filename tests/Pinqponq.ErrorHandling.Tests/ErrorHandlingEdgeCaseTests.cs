@@ -25,6 +25,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddPinqponqMaintenanceMode(null!));
         Assert.Throws<ArgumentNullException>(() => missingServices.AddPinqponqExceptionResolver<NullExceptionResolver>());
         Assert.Throws<ArgumentNullException>(() => ((IApplicationBuilder)null!).UsePinqponqErrorHandling());
+        Assert.Throws<ArgumentNullException>(() => ((IApplicationBuilder)null!).UsePinqponqMaintenanceMode());
         Assert.Throws<ArgumentNullException>(() => ErrorHandlingEvents.BuildExceptionEventName(null!));
     }
 
@@ -65,7 +66,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         await failedHarness.InvokeAsync(_ => throw new KeyNotFoundException());
 
         Assert.StartsWith("Request cancelled by the client.", Assert.Single(cancelledHarness.Logger.Records).Message);
-        Assert.StartsWith("Request blocked by maintenance mode.", Assert.Single(maintenanceHarness.Logger.Records).Message);
+        Assert.StartsWith("Request blocked by maintenance mode.", Assert.Single(maintenanceHarness.MaintenanceLogger.Records).Message);
         Assert.StartsWith("Request failed. not_found 404", Assert.Single(failedHarness.Logger.Records).Message);
     }
 

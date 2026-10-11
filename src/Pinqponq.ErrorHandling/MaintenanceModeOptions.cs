@@ -2,7 +2,7 @@ namespace Pinqponq.ErrorHandling;
 
 /// <summary>
 /// Maintenance mode: while enabled every request is answered 503 <c>system_maintenance</c>.
-/// Bound by <c>AddPinqponqMaintenanceMode</c> and read per request, so a configuration reload
+/// Bound by <c>AddPinqponqMaintenanceMode</c> and read per request by <see cref="MaintenanceModeMiddleware"/>, so a configuration reload
 /// switches it without a restart.
 /// </summary>
 public sealed class MaintenanceModeOptions

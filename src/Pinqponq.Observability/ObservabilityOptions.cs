@@ -31,7 +31,7 @@ public sealed class ObservabilityOptions
     public string DeviceIdentifierHeader { get; set; } = "Identifier";
 
     /// <summary>Requests whose path contains one of these segments are not logged.</summary>
-    public IList<string> ExcludedPathSegments { get; set; } = ["/health", "/openapi", "/scalar", "/swagger", "/client-logs"];
+    public IList<string> ExcludedPathSegments { get; set; } = ["/health", "/openapi", "/scalar", "/swagger", ClientLogEndpoint.PathSegment];
 
     /// <summary>
     /// Requests whose path contains one of these segments skip the device uid check, e.g.

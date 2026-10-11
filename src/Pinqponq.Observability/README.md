@@ -95,7 +95,8 @@ an `ILogger` warning.
 
 ## Client-log relay
 
-`MapPinqponqClientLogs(route)` maps `POST route` with a `ClientLogRequest` body (`event`,
+`MapPinqponqClientLogs(route)` maps `POST route` (default `/api/client-logs`; keep `/client-logs` in a
+custom route, so request logging does not log the relay itself) with a `ClientLogRequest` body (`event`,
 `logLevel`, `metadata`, `detail`, `date`) and answers 204. The record goes to
 `ClientCollectionName` as a device log with the `DeviceIdentifierHeader` value.
 

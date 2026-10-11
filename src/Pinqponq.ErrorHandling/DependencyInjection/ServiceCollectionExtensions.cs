@@ -50,7 +50,8 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Binds <see cref="MaintenanceModeOptions"/> to <paramref name="maintenanceModeSection"/>
-    /// (e.g. <c>configuration.GetSection("MaintenanceMode")</c>); the middleware reads it per request.
+    /// (e.g. <c>configuration.GetSection("MaintenanceMode")</c>); <see cref="MaintenanceModeMiddleware"/>
+    /// reads it per request.
     /// </summary>
     public static IServiceCollection AddPinqponqMaintenanceMode(
         this IServiceCollection services,
@@ -71,6 +72,16 @@ public static class ServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IExceptionResolver, TExceptionResolver>());
         return services;
+    }
+
+    /// <summary>
+    /// Adds the <see cref="MaintenanceModeMiddleware"/>. Register it after <c>UsePinqponqErrorHandling</c>
+    /// (and after request logging), so the maintenance answer is logged like any other.
+    /// </summary>
+    public static IApplicationBuilder UsePinqponqMaintenanceMode(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        return app.UseMiddleware<MaintenanceModeMiddleware>();
     }
 
     /// <summary>Adds the <see cref="ExceptionHandlingMiddleware"/> to the pipeline.</summary>

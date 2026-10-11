@@ -42,7 +42,7 @@ public sealed class MaintenanceAndCancellationTests
         Assert.Equal(ErrorHandlingEvents.RequestBlockedMaintenanceMode, errorFeature.EventName);
         Assert.Equal(503, errorFeature.Detail["statusCode"]);
         Assert.False(errorFeature.Detail.ContainsKey("language"));
-        Assert.Equal(LogLevel.Warning, Assert.Single(harness.Logger.Records).Level);
+        Assert.Equal(LogLevel.Warning, Assert.Single(harness.MaintenanceLogger.Records).Level);
     }
 
     [Fact]
@@ -152,6 +152,7 @@ public sealed class MaintenanceAndCancellationTests
                 web.Configure(app =>
                 {
                     app.UsePinqponqErrorHandling();
+                    app.UsePinqponqMaintenanceMode();
                     app.Run(context => context.Response.WriteAsync("ok"));
                 });
             })

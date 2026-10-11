@@ -18,15 +18,23 @@ internal sealed class ErrorResponseHarness
 
     public CapturingLogger<ExceptionHandlingMiddleware> Logger { get; } = new();
 
-    public ExceptionHandlingMiddleware CreateMiddleware(RequestDelegate next) =>
-        new(
+    public CapturingLogger<MaintenanceModeMiddleware> MaintenanceLogger { get; } = new();
+
+    public ExceptionHandlingMiddleware CreateMiddleware(RequestDelegate next)
+    {
+        var maintenanceModeMiddleware = new MaintenanceModeMiddleware(
             next,
             Microsoft.Extensions.Options.Options.Create(Options),
-            Microsoft.Extensions.Options.Options.Create(LocalizationOptions),
             new FixedOptionsMonitor<MaintenanceModeOptions>(MaintenanceMode),
+            MaintenanceLogger);
+        return new ExceptionHandlingMiddleware(
+            maintenanceModeMiddleware.InvokeAsync,
+            Microsoft.Extensions.Options.Options.Create(Options),
+            Microsoft.Extensions.Options.Options.Create(LocalizationOptions),
             ExceptionResolvers,
             LoggerFactory,
             Logger);
+    }
 
     public async Task<HttpContext> InvokeAsync(RequestDelegate next, Action<HttpContext>? prepareRequest = null)
     {

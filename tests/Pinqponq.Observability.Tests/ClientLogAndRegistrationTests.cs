@@ -72,7 +72,7 @@ public sealed class ClientLogAndRegistrationTests
         var pinqloqLogger = new CapturingPinqloqLogger();
         using var host = await StartAsync(ValidSettings, pinqloqLogger);
         var date = new DateTime(2026, 10, 11, 9, 30, 0, DateTimeKind.Utc);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/logs/client")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/client-logs")
         {
             Content = JsonContent.Create(new
             {

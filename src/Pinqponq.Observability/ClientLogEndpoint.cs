@@ -6,6 +6,9 @@ namespace Pinqponq.Observability;
 
 internal static class ClientLogEndpoint
 {
+    public const string PathSegment = "/client-logs";
+    public const string DefaultRoute = "/api" + PathSegment;
+
     private const string DebugLevel = "DEBUG";
     private const string WarningLevel = "WARNING";
     private const string WarnLevel = "WARN";

@@ -113,6 +113,9 @@ status code still comes from the mapping above (or an `IExceptionResolver`).
 
 ```csharp
 builder.Services.AddPinqponqMaintenanceMode(builder.Configuration.GetSection("MaintenanceMode"));
+
+app.UsePinqponqErrorHandling();
+app.UsePinqponqMaintenanceMode();
 ```
 
 ```json
