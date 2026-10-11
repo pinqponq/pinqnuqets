@@ -75,16 +75,15 @@ public sealed class PaginationExtensionsTests
     }
 
     [Theory]
-    [InlineData(0, 10, "page", "Page number must be greater than 0.")]
-    [InlineData(-1, 10, "page", "Page number must be greater than 0.")]
-    [InlineData(1, 0, "size", "Page size must be greater than 0.")]
-    [InlineData(1, -5, "size", "Page size must be greater than 0.")]
-    public void Non_positive_page_or_size_is_rejected(int page, int size, string parameterName, string message)
+    [InlineData(0, 10, CommonErrorCodes.ApiPageNumberInvalid)]
+    [InlineData(-1, 10, CommonErrorCodes.ApiPageNumberInvalid)]
+    [InlineData(1, 0, CommonErrorCodes.ApiPageSizeInvalid)]
+    [InlineData(1, -5, CommonErrorCodes.ApiPageSizeInvalid)]
+    public void Non_positive_page_or_size_is_rejected_with_its_response_code_as_the_message(int page, int size, string expectedResponseCode)
     {
         var exception = Assert.Throws<ArgumentException>(() => TwentyThreeRows.ToPagedResponse(page, size, rows => rows));
 
-        Assert.Equal(parameterName, exception.ParamName);
-        Assert.StartsWith(message, exception.Message);
+        Assert.Equal(expectedResponseCode, exception.Message);
     }
 
     [Fact]

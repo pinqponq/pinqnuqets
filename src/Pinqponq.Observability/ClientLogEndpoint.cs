@@ -41,9 +41,9 @@ internal static class ClientLogEndpoint
         return Results.NoContent();
     }
 
-    public static PinqloqLogLevel ParseLogLevel(string logLevel)
+    public static PinqloqLogLevel ParseLogLevel(string? logLevel)
     {
-        return logLevel.ToUpperInvariant() switch
+        return logLevel?.ToUpperInvariant() switch
         {
             DebugLevel => PinqloqLogLevel.Debug,
             WarningLevel or WarnLevel => PinqloqLogLevel.Warning,

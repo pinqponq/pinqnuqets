@@ -137,7 +137,7 @@ internal sealed class HttpBodyReader
 
     private static async Task<byte[]> ReadStreamPrefix(Stream stream, int maxBytesToRead)
     {
-        using var memoryStream = new MemoryStream(capacity: maxBytesToRead);
+        using var memoryStream = new MemoryStream(capacity: Math.Min(StreamBufferSize, maxBytesToRead));
         var buffer = new byte[Math.Min(StreamBufferSize, maxBytesToRead)];
         var remainingBytes = maxBytesToRead;
 

@@ -28,6 +28,12 @@ internal sealed class ObservabilityOptionsValidator : IValidateOptions<Observabi
             failures.Add($"{ObservabilityOptions.SectionName}:{nameof(ObservabilityOptions.MaxLoggedBodyBytes)} must be greater than 0.");
         }
 
+        // The reader buffers one byte past the limit to detect a longer body.
+        if (options.MaxLoggedBodyBytes >= Array.MaxLength)
+        {
+            failures.Add($"{ObservabilityOptions.SectionName}:{nameof(ObservabilityOptions.MaxLoggedBodyBytes)} must be less than {Array.MaxLength}.");
+        }
+
         return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
             : ValidateOptionsResult.Success;

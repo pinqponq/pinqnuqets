@@ -243,6 +243,7 @@ public sealed class ObservabilityEdgeCaseTests
     public void Client_log_level_defaults_to_information()
     {
         Assert.Equal("Information", new ClientLogRequest { Event = "app_started" }.LogLevel);
+        Assert.Equal(Pinqloq.PinqloqLogLevel.Information, ClientLogEndpoint.ParseLogLevel(null));
     }
 
     [Fact]
@@ -253,7 +254,12 @@ public sealed class ObservabilityEdgeCaseTests
         var valid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c" });
         var invalid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = " ", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = -1 });
 
+        var tooLarge = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = Array.MaxLength });
+        var largestAllowed = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = Array.MaxLength - 1 });
+
         Assert.True(valid.Succeeded);
+        Assert.True(largestAllowed.Succeeded);
+        Assert.Equal([$"Observability:MaxLoggedBodyBytes must be less than {Array.MaxLength}."], tooLarge.Failures!.ToArray());
         Assert.True(invalid.Failed);
         Assert.Equal(
             ["Observability:HttpCollectionName is required.", "Observability:MaxLoggedBodyBytes must be greater than 0."],

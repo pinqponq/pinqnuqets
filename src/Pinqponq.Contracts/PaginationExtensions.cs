@@ -9,7 +9,10 @@ public static class PaginationExtensions
     /// Orders <paramref name="source"/> (optionally), takes the requested page and wraps it.
     /// A page number past the last page returns the last page.
     /// </summary>
-    /// <exception cref="ArgumentException">The page number or the page size is not positive.</exception>
+    /// <exception cref="ArgumentException">
+    /// The page number or the page size is not positive; the message is <see cref="CommonErrorCodes.ApiPageNumberInvalid"/>
+    /// or <see cref="CommonErrorCodes.ApiPageSizeInvalid"/>, so Pinqponq.ErrorHandling's localized mode answers with that code.
+    /// </exception>
     public static PagedResponseModel<TData> ToPagedResponse<TEntity, TData>(
         this IEnumerable<TEntity> source,
         int page,
@@ -19,8 +22,8 @@ public static class PaginationExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(dataFactory);
-        if (size <= 0) throw new ArgumentException("Page size must be greater than 0.", nameof(size));
-        if (page <= 0) throw new ArgumentException("Page number must be greater than 0.", nameof(page));
+        if (size <= 0) throw new ArgumentException(CommonErrorCodes.ApiPageSizeInvalid);
+        if (page <= 0) throw new ArgumentException(CommonErrorCodes.ApiPageNumberInvalid);
 
         var orderedSource = orderBy is null ? source : orderBy(source);
         var rows = orderedSource.ToList();
