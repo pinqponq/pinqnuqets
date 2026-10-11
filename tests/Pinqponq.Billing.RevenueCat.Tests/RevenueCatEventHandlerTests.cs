@@ -12,11 +12,13 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     private readonly InMemoryRevenueCatStore _store = new();
     private readonly RecordingObserver _observer = new();
     private readonly CapturingLogger<RevenueCatEventHandler> _logger = new();
+    private readonly RecordingListener _listener = new();
 
     private RevenueCatEventHandler CreateSut() => new(
         _store,
         Options.Create(new RevenueCatOptions { WebhookAuthHeader = "Bearer test", PremiumEntitlementId = PremiumEntitlementId }),
         _observer,
+        [_listener],
         _logger);
 
     /// <summary>Every observed step is also written to the logger, at the matching level, with a message.</summary>
@@ -716,6 +718,245 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var log = Assert.Single(_observer.Logs);
         Assert.Equal(RevenueCatWebhookLogLevel.Warning, log.Level);
         Assert.Null(log.Data);
+    }
+
+    [Fact]
+    public async Task Listener_runs_after_the_event_is_committed_with_the_resolved_context()
+    {
+        var sut = CreateSut();
+        _listener.OnCall = () => Assert.Equal(1, _store.CommitCount);
+        using var cancellation = new CancellationTokenSource();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase), cancellation.Token);
+
+        var context = Assert.Single(_listener.Contexts);
+        Assert.Equal("e1", context.Event.Id);
+        Assert.Equal(UserId, context.SubscriberId);
+        Assert.True(context.IsPremiumEntitlement);
+        Assert.Equal(cancellation.Token, _listener.CancellationTokens.Single());
+    }
+
+    [Fact]
+    public async Task Listener_context_reports_an_unresolved_subscriber_and_a_missing_entitlement()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.Renewal, customize: e =>
+        {
+            e.AppUserId = "$RCAnonymousID:abc";
+            e.Aliases = null;
+            e.EntitlementIds = ["other"];
+        }));
+
+        var context = Assert.Single(_listener.Contexts);
+        Assert.Null(context.SubscriberId);
+        Assert.False(context.IsPremiumEntitlement);
+    }
+
+    [Theory]
+    [InlineData(RevenueCatEventType.Cancellation)]
+    [InlineData(RevenueCatEventType.SubscriberAlias)]
+    [InlineData("SOMETHING_NEW")]
+    public async Task Listener_runs_for_every_applied_event_type_except_test(string type)
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", type));
+
+        Assert.Single(_listener.Contexts);
+    }
+
+    [Fact]
+    public async Task Listener_is_not_called_for_test_duplicate_or_invalid_events()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("t1", RevenueCatEventType.Test));
+        await sut.Handle(Payload("e1", RevenueCatEventType.Renewal));
+        _listener.Contexts.Clear();
+        await sut.Handle(Payload("e1", RevenueCatEventType.Renewal));
+        await sut.Handle(new RevenueCatWebhookPayload());
+
+        Assert.Empty(_listener.Contexts);
+    }
+
+    [Fact]
+    public async Task Listener_failure_propagates_after_the_event_was_stored()
+    {
+        var sut = CreateSut();
+        _listener.OnCall = () => throw new InvalidOperationException("mail down");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase)));
+
+        Assert.Equal([("e1", RevenueCatEventType.InitialPurchase)], _store.Processed);
+    }
+
+    [Fact]
+    public async Task Listener_is_not_called_when_committing_fails()
+    {
+        var sut = CreateSut();
+        _store.FailNextCommit = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase)));
+
+        Assert.Empty(_listener.Contexts);
+    }
+
+    [Fact]
+    public async Task Each_listener_is_called()
+    {
+        var second = new RecordingListener();
+        var sut = new RevenueCatEventHandler(
+            _store,
+            Options.Create(new RevenueCatOptions { WebhookAuthHeader = "Bearer test", PremiumEntitlementId = PremiumEntitlementId }),
+            _observer,
+            [_listener, second],
+            _logger);
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        Assert.Single(_listener.Contexts);
+        Assert.Single(second.Contexts);
+    }
+
+    [Fact]
+    public async Task Cancellation_that_is_not_superseded_still_updates_the_audit_fields()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, 1000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, 2000));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.Equal(RevenueCatEventType.Cancellation, subscription.LastEventType);
+        Assert.Equal(Utc(2000), subscription.LastEventAt);
+        Assert.False(subscription.WillRenew);
+    }
+
+    [Fact]
+    public async Task Expiration_and_billing_issue_update_the_audit_fields()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, 1000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.BillingIssue, 2000));
+        Assert.Equal((RevenueCatEventType.BillingIssue, Utc(2000)), (_store.Get(UserId)!.LastEventType, _store.Get(UserId)!.LastEventAt));
+
+        await sut.Handle(Payload("e3", RevenueCatEventType.Expiration, 3000));
+        Assert.Equal((RevenueCatEventType.Expiration, Utc(3000)), (_store.Get(UserId)!.LastEventType, _store.Get(UserId)!.LastEventAt));
+    }
+
+    [Fact]
+    public async Task Superseded_cancellation_changes_nothing_on_the_subscription()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "new"));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "old"));
+
+        var subscription = _store.Get(UserId)!;
+        Assert.True(subscription.WillRenew);
+        Assert.Equal(RevenueCatEventType.InitialPurchase, subscription.LastEventType);
+    }
+
+    [Fact]
+    public async Task Superseded_billing_issue_changes_nothing_on_the_subscription()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "new"));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.BillingIssue, originalTransactionId: "old"));
+
+        Assert.False(_store.Get(UserId)!.IsInGracePeriod);
+    }
+
+    [Fact]
+    public async Task Event_with_an_earlier_expiry_but_the_same_transaction_is_superseded()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1", expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "txn-1", expirationAtMs: 1000));
+
+        Assert.True(_store.Get(UserId)!.WillRenew);
+    }
+
+    [Fact]
+    public async Task Event_for_another_transaction_with_a_later_expiry_is_superseded()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1", expirationAtMs: 5000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "txn-2", expirationAtMs: 9000));
+
+        Assert.True(_store.Get(UserId)!.WillRenew);
+    }
+
+    [Fact]
+    public async Task Transfer_updates_audit_fields_and_persists_the_deactivated_subscriber()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, 1000));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, 2000, customize: e =>
+        {
+            e.TransferredFrom = [UserId];
+            e.TransferredTo = ["22"];
+        }));
+
+        Assert.Equal(Utc(2000), _store.Get(UserId)!.LastEventAt);
+        Assert.Equal(Utc(2000), _store.Get("22")!.LastEventAt);
+        Assert.Equal(RevenueCatEventType.Transfer, _store.Get("22")!.LastEventType);
+    }
+
+    [Fact]
+    public async Task Transfer_skips_an_unresolvable_old_subscriber_and_continues_with_the_next()
+    {
+        var sut = CreateSut();
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
+
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        {
+            e.TransferredFrom = ["$RCAnonymousID:gone", UserId];
+            e.TransferredTo = [];
+        }));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
+    }
+
+    [Fact]
+    public async Task Transfer_skips_an_unresolvable_target_and_continues_with_the_next()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: e => e.TransferredTo = ["$RCAnonymousID:skipped", "22"]));
+
+        Assert.True(_store.Get("22")!.IsActive);
+    }
+
+    [Fact]
+    public async Task Subscriber_is_resolved_from_the_aliases_in_order()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e =>
+        {
+            e.AppUserId = "$RCAnonymousID:abc";
+            e.Aliases = ["$RCAnonymousID:def", "30", "31"];
+        }));
+
+        Assert.NotNull(_store.Get("30"));
+        Assert.Null(_store.Get("31"));
+    }
+
+    [Fact]
+    public async Task Entitlement_check_matches_only_the_configured_premium_entitlement()
+    {
+        var sut = CreateSut();
+
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = []));
+
+        Assert.False(_store.Get(UserId)!.IsActive);
     }
 
     [Fact]

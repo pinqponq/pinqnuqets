@@ -93,6 +93,14 @@ startup.
   handler step (named by `RevenueCatWebhookLogEvents`) next to the `ILogger` output, so a
   product can forward them to its own log pipeline. Register your own implementation before
   or after `AddPinqponqRevenueCat`; the default ignores them.
+- `IRevenueCatEventListener` — optional, any number. Runs a product-specific follow-up (a welcome
+  mail on the first purchase, say) after an event has been applied **and committed**, with a
+  `RevenueCatEventContext` holding the event, the resolved subscriber id (null if none) and
+  whether it carries the premium entitlement. Not called for duplicates, invalid payloads,
+  `TEST` events or a failed commit. An exception from a listener propagates out of `Handle`
+  (the event is already stored, and RevenueCat will redeliver it as a duplicate), so a listener
+  that must not fail the webhook catches its own errors. Register with
+  `services.AddScoped<IRevenueCatEventListener, MyListener>()`.
 - `RevenueCatWebhookPayload`, `RevenueCatEvent`, `RevenueCatEventType` — the webhook body.
 
 ## Event behavior

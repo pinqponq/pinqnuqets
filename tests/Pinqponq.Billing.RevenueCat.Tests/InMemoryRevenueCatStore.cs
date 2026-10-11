@@ -10,6 +10,8 @@ internal sealed class InMemoryRevenueCatStore : IRevenueCatSubscriptionStore
 
     public int CommitCount { get; private set; }
 
+    public bool FailNextCommit { get; set; }
+
     public IReadOnlyList<(string EventId, string EventType)> Processed => _processed;
 
     public RevenueCatSubscription? Get(string subscriberId) => _subscriptions.GetValueOrDefault(subscriberId);
@@ -40,6 +42,11 @@ internal sealed class InMemoryRevenueCatStore : IRevenueCatSubscriptionStore
 
     public Task Commit(CancellationToken cancellationToken = default)
     {
+        if (FailNextCommit)
+        {
+            throw new InvalidOperationException("commit failed");
+        }
+
         foreach (var (subscriberId, subscription) in _pending)
         {
             _subscriptions[subscriberId] = subscription;

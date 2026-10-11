@@ -11,6 +11,7 @@ public sealed class RevenueCatEventHandler(
     IRevenueCatSubscriptionStore store,
     IOptions<RevenueCatOptions> options,
     IRevenueCatWebhookObserver observer,
+    IEnumerable<IRevenueCatEventListener> listeners,
     ILogger<RevenueCatEventHandler> logger) : IRevenueCatEventHandler
 {
     private readonly RevenueCatOptions _options = options.Value;
@@ -99,7 +100,20 @@ public sealed class RevenueCatEventHandler(
 
         MarkProcessed(revenueCatEvent.Id, revenueCatEvent.Type);
         await store.Commit(cancellationToken);
+        await NotifyListeners(revenueCatEvent, cancellationToken);
         return true;
+    }
+
+    private async Task NotifyListeners(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
+    {
+        var context = new RevenueCatEventContext(
+            revenueCatEvent,
+            TryResolveSubscriberId(revenueCatEvent, out var subscriberId) ? subscriberId : null,
+            IsPremiumEntitlement(revenueCatEvent));
+        foreach (var listener in listeners)
+        {
+            await listener.OnEventProcessed(context, cancellationToken);
+        }
     }
 
     private async Task HandleActivation(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
