@@ -106,10 +106,9 @@ public sealed class RevenueCatEventHandler(
 
     private async Task NotifyListeners(RevenueCatEvent revenueCatEvent, CancellationToken cancellationToken)
     {
-        var context = new RevenueCatEventContext(
-            revenueCatEvent,
-            TryResolveSubscriberId(revenueCatEvent, out var subscriberId) ? subscriberId : null,
-            IsPremiumEntitlement(revenueCatEvent));
+        var isResolved = TryResolveSubscriberId(revenueCatEvent, out var subscriberId);
+        var isPremiumEntitlement = IsPremiumEntitlement(revenueCatEvent);
+        var context = new RevenueCatEventContext(revenueCatEvent, isResolved ? subscriberId : null, isPremiumEntitlement);
         foreach (var listener in listeners)
         {
             await listener.OnEventProcessed(context, cancellationToken);
@@ -342,7 +341,7 @@ public sealed class RevenueCatEventHandler(
         }
 
         logger.LogInformation(
-            "RevenueCat {EventType} event {EventId} superseded for subscriber {SubscriberId} — event txn={EventTransactionId} expiresAt={EventExpiresAt}, stored txn={StoredTransactionId} expiresAt={StoredExpiresAt}. Skipping.",
+            "RevenueCat {EventType} event {EventId} superseded for subscriber {SubscriberId} — event transaction={EventTransactionId} expiresAt={EventExpiresAt}, stored transaction={StoredTransactionId} expiresAt={StoredExpiresAt}. Skipping.",
             revenueCatEvent.Type, revenueCatEvent.Id, subscription.SubscriberId,
             revenueCatEvent.OriginalTransactionId, eventExpiresAt,
             subscription.OriginalTransactionId, subscription.ExpiresAt);

@@ -50,11 +50,11 @@ public static class RevenueCatScenarios
             var handler = host.GetRequiredService<IRevenueCatEventHandler>();
 
             var expiresAt = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeMilliseconds();
-            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, userId, "txn-1", expiresAt), context.CancellationToken);
+            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, userId, "transaction-1", expiresAt), context.CancellationToken);
             context.Step("INITIAL_PURCHASE handled");
             context.Require("Subscriber is active and renewing", store.All.Single() is { IsActive: true, WillRenew: true });
 
-            await handler.Handle(Payload("evt-2", RevenueCatEventType.Cancellation, userId, "txn-1", expiresAt), context.CancellationToken);
+            await handler.Handle(Payload("evt-2", RevenueCatEventType.Cancellation, userId, "transaction-1", expiresAt), context.CancellationToken);
             context.Step("CANCELLATION handled");
             context.Require("Still active until the period ends", store.All.Single() is { IsActive: true, WillRenew: false });
 
@@ -81,16 +81,16 @@ public static class RevenueCatScenarios
             var now = DateTimeOffset.UtcNow;
             var oldPeriodEnd = now.AddSeconds(-1).ToUnixTimeMilliseconds();
             var newPeriodEnd = now.AddDays(30).ToUnixTimeMilliseconds();
-            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, userId, "old-txn", oldPeriodEnd), context.CancellationToken);
-            await handler.Handle(Payload("evt-2", RevenueCatEventType.InitialPurchase, userId, "new-txn", newPeriodEnd), context.CancellationToken);
-            context.Step("Cancelled and bought again", "old-txn → new-txn");
+            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, userId, "old-transaction", oldPeriodEnd), context.CancellationToken);
+            await handler.Handle(Payload("evt-2", RevenueCatEventType.InitialPurchase, userId, "new-transaction", newPeriodEnd), context.CancellationToken);
+            context.Step("Cancelled and bought again", "old-transaction → new-transaction");
 
-            await handler.Handle(Payload("evt-3", RevenueCatEventType.Expiration, userId, "old-txn", oldPeriodEnd), context.CancellationToken);
-            context.Step("EXPIRATION for old-txn handled");
+            await handler.Handle(Payload("evt-3", RevenueCatEventType.Expiration, userId, "old-transaction", oldPeriodEnd), context.CancellationToken);
+            context.Step("EXPIRATION for old-transaction handled");
 
             var subscription = store.All.Single();
             context.Require("Premium is still active", subscription.IsActive);
-            context.Require("Stored transaction is the new one", subscription.OriginalTransactionId == "new-txn", subscription.OriginalTransactionId);
+            context.Require("Stored transaction is the new one", subscription.OriginalTransactionId == "new-transaction", subscription.OriginalTransactionId);
             context.Artifact("subscription", store.All, "table");
         });
 
@@ -110,13 +110,13 @@ public static class RevenueCatScenarios
             var handler = host.GetRequiredService<IRevenueCatEventHandler>();
             var expiresAt = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeMilliseconds();
 
-            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, "21", "txn-1", expiresAt), context.CancellationToken);
+            await handler.Handle(Payload("evt-1", RevenueCatEventType.InitialPurchase, "21", "transaction-1", expiresAt), context.CancellationToken);
             var updatedAt = store.All.Single().UpdatedAt;
 
-            var handled = await handler.Handle(Payload("evt-1", RevenueCatEventType.Expiration, "21", "txn-1", expiresAt), context.CancellationToken);
+            var handled = await handler.Handle(Payload("evt-1", RevenueCatEventType.Expiration, "21", "transaction-1", expiresAt), context.CancellationToken);
 
             context.Require("Duplicate is acknowledged", handled);
-            context.Require("Subscription is untouched", store.All.Single() is { IsActive: true } s && s.UpdatedAt == updatedAt);
+            context.Require("Subscription is untouched", store.All.Single() is { IsActive: true } subscription && subscription.UpdatedAt == updatedAt);
             context.Require("Event recorded once", store.ProcessedEventIds.Count == 1);
         });
 

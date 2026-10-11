@@ -39,7 +39,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         string id,
         string type,
         long eventTimestampMs = 1782201714434,
-        string originalTransactionId = "txn-1",
+        string originalTransactionId = "transaction-1",
         long expirationAtMs = 1784793702131,
         Action<RevenueCatEvent>? customize = null)
     {
@@ -154,7 +154,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         Assert.True(subscription.IsActive);
         Assert.True(subscription.WillRenew);
         Assert.False(subscription.IsInGracePeriod);
-        Assert.Equal("txn-1", subscription.OriginalTransactionId);
+        Assert.Equal("transaction-1", subscription.OriginalTransactionId);
         Assert.Equal(RevenueCatEventType.InitialPurchase, subscription.LastEventType);
         Assert.Equal(Utc(1782201714434), subscription.LastEventAt);
         Assert.Equal(Utc(1784793702131), subscription.ExpiresAt);
@@ -167,7 +167,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.ProductChange, customize: e => e.NewProductId = "pro_yearly"));
+        await sut.Handle(Payload("e2", RevenueCatEventType.ProductChange, customize: revenueCatEvent => revenueCatEvent.NewProductId = "pro_yearly"));
 
         Assert.Equal("pro_yearly", _store.Get(UserId)!.ProductId);
     }
@@ -189,7 +189,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = ["other"]));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.EntitlementIds = ["other"]));
 
         Assert.False(_store.Get(UserId)!.IsActive);
         Assert.Contains(_observer.Logs, log => log.EventName == RevenueCatWebhookLogEvents.EntitlementNotPremium);
@@ -200,7 +200,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = null));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.EntitlementIds = null));
 
         Assert.False(_store.Get(UserId)!.IsActive);
     }
@@ -255,10 +255,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        var handled = await sut.Handle(Payload("e1", type, customize: e =>
+        var handled = await sut.Handle(Payload("e1", type, customize: revenueCatEvent =>
         {
-            e.AppUserId = "$RCAnonymousID:abc";
-            e.Aliases = null;
+            revenueCatEvent.AppUserId = "$RCAnonymousID:abc";
+            revenueCatEvent.Aliases = null;
         }));
 
         Assert.True(handled);
@@ -287,7 +287,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.AppUserId = "$RCAnonymousID:abc"));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.AppUserId = "$RCAnonymousID:abc"));
 
         var subscription = _store.Get(UserId)!;
         Assert.Equal("$RCAnonymousID:abc", subscription.RevenueCatAppUserId);
@@ -298,10 +298,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        var handled = await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e =>
+        var handled = await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent =>
         {
-            e.AppUserId = "$RCAnonymousID:abc";
-            e.Aliases = ["$RCAnonymousID:def"];
+            revenueCatEvent.AppUserId = "$RCAnonymousID:abc";
+            revenueCatEvent.Aliases = ["$RCAnonymousID:def"];
         }));
 
         Assert.True(handled);
@@ -404,10 +404,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: revenueCatEvent =>
         {
-            e.TransferredFrom = [UserId, "$RCAnonymousID:gone", "999"];
-            e.TransferredTo = ["22", "$RCAnonymousID:skipped"];
+            revenueCatEvent.TransferredFrom = [UserId, "$RCAnonymousID:gone", "999"];
+            revenueCatEvent.TransferredTo = ["22", "$RCAnonymousID:skipped"];
         }));
 
         var old = _store.Get(UserId)!;
@@ -421,7 +421,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         Assert.True(moved.WillRenew);
         Assert.Equal("pro_monthly", moved.ProductId);
         Assert.Equal("PLAY_STORE", moved.Store);
-        Assert.Equal("txn-1", moved.OriginalTransactionId);
+        Assert.Equal("transaction-1", moved.OriginalTransactionId);
         Assert.Equal(Utc(1784793702131), moved.ExpiresAt);
 
         Assert.Equal(
@@ -446,7 +446,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        var handled = await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: e => e.AppUserId = null));
+        var handled = await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: revenueCatEvent => revenueCatEvent.AppUserId = null));
 
         Assert.True(handled);
         Assert.Null(_store.Get(UserId));
@@ -457,10 +457,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: e =>
+        await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: revenueCatEvent =>
         {
-            e.EntitlementIds = ["other"];
-            e.TransferredTo = ["22"];
+            revenueCatEvent.EntitlementIds = ["other"];
+            revenueCatEvent.TransferredTo = ["22"];
         }));
 
         Assert.False(_store.Get("22")!.IsActive);
@@ -472,19 +472,19 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, customize: revenueCatEvent =>
         {
-            e.ProductId = null;
-            e.Store = null;
-            e.ExpirationAtMs = null;
-            e.OriginalTransactionId = null;
+            revenueCatEvent.ProductId = null;
+            revenueCatEvent.Store = null;
+            revenueCatEvent.ExpirationAtMs = null;
+            revenueCatEvent.OriginalTransactionId = null;
         }));
 
         var subscription = _store.Get(UserId)!;
         Assert.Equal("pro_monthly", subscription.ProductId);
         Assert.Equal("PLAY_STORE", subscription.Store);
         Assert.Equal(Utc(1784793702131), subscription.ExpiresAt);
-        Assert.Equal("txn-1", subscription.OriginalTransactionId);
+        Assert.Equal("transaction-1", subscription.OriginalTransactionId);
     }
 
     [Fact]
@@ -493,10 +493,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, expirationAtMs: 1790000000000, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Renewal, expirationAtMs: 1790000000000, customize: revenueCatEvent =>
         {
-            e.ProductId = "pro_yearly";
-            e.Store = "APP_STORE";
+            revenueCatEvent.ProductId = "pro_yearly";
+            revenueCatEvent.Store = "APP_STORE";
         }));
 
         var subscription = _store.Get(UserId)!;
@@ -510,12 +510,12 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e =>
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent =>
         {
-            e.ProductId = null;
-            e.Store = null;
-            e.OriginalTransactionId = null;
-            e.EventTimestampMs = null;
+            revenueCatEvent.ProductId = null;
+            revenueCatEvent.Store = null;
+            revenueCatEvent.OriginalTransactionId = null;
+            revenueCatEvent.EventTimestampMs = null;
         }));
 
         var subscription = _store.Get(UserId)!;
@@ -532,20 +532,20 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: revenueCatEvent =>
         {
-            e.TransferredTo = [UserId];
-            e.ProductId = null;
-            e.Store = null;
-            e.ExpirationAtMs = null;
-            e.OriginalTransactionId = null;
+            revenueCatEvent.TransferredTo = [UserId];
+            revenueCatEvent.ProductId = null;
+            revenueCatEvent.Store = null;
+            revenueCatEvent.ExpirationAtMs = null;
+            revenueCatEvent.OriginalTransactionId = null;
         }));
 
         var subscription = _store.Get(UserId)!;
         Assert.Equal("pro_monthly", subscription.ProductId);
         Assert.Equal("PLAY_STORE", subscription.Store);
         Assert.Equal(Utc(1784793702131), subscription.ExpiresAt);
-        Assert.Equal("txn-1", subscription.OriginalTransactionId);
+        Assert.Equal("transaction-1", subscription.OriginalTransactionId);
     }
 
     [Fact]
@@ -554,18 +554,18 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, originalTransactionId: "txn-2", expirationAtMs: 1790000000000, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, originalTransactionId: "transaction-2", expirationAtMs: 1790000000000, customize: revenueCatEvent =>
         {
-            e.TransferredTo = [UserId];
-            e.ProductId = "pro_yearly";
-            e.Store = "APP_STORE";
+            revenueCatEvent.TransferredTo = [UserId];
+            revenueCatEvent.ProductId = "pro_yearly";
+            revenueCatEvent.Store = "APP_STORE";
         }));
 
         var subscription = _store.Get(UserId)!;
         Assert.Equal("pro_yearly", subscription.ProductId);
         Assert.Equal("APP_STORE", subscription.Store);
         Assert.Equal(Utc(1790000000000), subscription.ExpiresAt);
-        Assert.Equal("txn-2", subscription.OriginalTransactionId);
+        Assert.Equal("transaction-2", subscription.OriginalTransactionId);
     }
 
     [Fact]
@@ -574,10 +574,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: revenueCatEvent =>
         {
-            e.TransferredFrom = [];
-            e.TransferredTo = [];
+            revenueCatEvent.TransferredFrom = [];
+            revenueCatEvent.TransferredTo = [];
         }));
 
         Assert.True(_store.Get(UserId)!.IsActive);
@@ -613,9 +613,9 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     public async Task Event_without_a_transaction_id_is_not_treated_as_another_transaction(string? eventTransaction)
     {
         var sut = CreateSut();
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1"));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "transaction-1"));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: e => e.OriginalTransactionId = eventTransaction));
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: revenueCatEvent => revenueCatEvent.OriginalTransactionId = eventTransaction));
 
         Assert.False(_store.Get(UserId)!.IsActive);
     }
@@ -624,9 +624,9 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     public async Task Event_for_a_subscription_without_a_stored_transaction_is_not_superseded()
     {
         var sut = CreateSut();
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.OriginalTransactionId = null));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.OriginalTransactionId = null));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, originalTransactionId: "txn-9"));
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, originalTransactionId: "transaction-9"));
 
         Assert.False(_store.Get(UserId)!.IsActive);
     }
@@ -637,7 +637,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, expirationAtMs: 5000));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: e => e.ExpirationAtMs = null));
+        await sut.Handle(Payload("e2", RevenueCatEventType.Expiration, customize: revenueCatEvent => revenueCatEvent.ExpirationAtMs = null));
 
         Assert.False(_store.Get(UserId)!.IsActive);
     }
@@ -665,7 +665,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = ["a", "b"]));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.EntitlementIds = ["a", "b"]));
 
         var log = Assert.Single(_observer.Logs);
         Assert.Equal(RevenueCatWebhookLogLevel.Info, log.Level);
@@ -679,7 +679,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = null));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.EntitlementIds = null));
 
         Assert.Equal(string.Empty, Assert.Single(_observer.Logs).Data![RevenueCatWebhookLogKeys.Entitlements]);
     }
@@ -741,11 +741,11 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.Renewal, customize: e =>
+        await sut.Handle(Payload("e1", RevenueCatEventType.Renewal, customize: revenueCatEvent =>
         {
-            e.AppUserId = "$RCAnonymousID:abc";
-            e.Aliases = null;
-            e.EntitlementIds = ["other"];
+            revenueCatEvent.AppUserId = "$RCAnonymousID:abc";
+            revenueCatEvent.Aliases = null;
+            revenueCatEvent.EntitlementIds = ["other"];
         }));
 
         var context = Assert.Single(_listener.Contexts);
@@ -874,9 +874,9 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     public async Task Event_with_an_earlier_expiry_but_the_same_transaction_is_superseded()
     {
         var sut = CreateSut();
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1", expirationAtMs: 5000));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "transaction-1", expirationAtMs: 5000));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "txn-1", expirationAtMs: 1000));
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "transaction-1", expirationAtMs: 1000));
 
         Assert.True(_store.Get(UserId)!.WillRenew);
     }
@@ -885,9 +885,9 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     public async Task Event_for_another_transaction_with_a_later_expiry_is_superseded()
     {
         var sut = CreateSut();
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "txn-1", expirationAtMs: 5000));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, originalTransactionId: "transaction-1", expirationAtMs: 5000));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "txn-2", expirationAtMs: 9000));
+        await sut.Handle(Payload("e2", RevenueCatEventType.Cancellation, originalTransactionId: "transaction-2", expirationAtMs: 9000));
 
         Assert.True(_store.Get(UserId)!.WillRenew);
     }
@@ -898,10 +898,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, 1000));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, 2000, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, 2000, customize: revenueCatEvent =>
         {
-            e.TransferredFrom = [UserId];
-            e.TransferredTo = ["22"];
+            revenueCatEvent.TransferredFrom = [UserId];
+            revenueCatEvent.TransferredTo = ["22"];
         }));
 
         Assert.Equal(Utc(2000), _store.Get(UserId)!.LastEventAt);
@@ -915,10 +915,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
         var sut = CreateSut();
         await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase));
 
-        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: e =>
+        await sut.Handle(Payload("e2", RevenueCatEventType.Transfer, customize: revenueCatEvent =>
         {
-            e.TransferredFrom = ["$RCAnonymousID:gone", UserId];
-            e.TransferredTo = [];
+            revenueCatEvent.TransferredFrom = ["$RCAnonymousID:gone", UserId];
+            revenueCatEvent.TransferredTo = [];
         }));
 
         Assert.False(_store.Get(UserId)!.IsActive);
@@ -929,7 +929,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: e => e.TransferredTo = ["$RCAnonymousID:skipped", "22"]));
+        await sut.Handle(Payload("e1", RevenueCatEventType.Transfer, customize: revenueCatEvent => revenueCatEvent.TransferredTo = ["$RCAnonymousID:skipped", "22"]));
 
         Assert.True(_store.Get("22")!.IsActive);
     }
@@ -939,10 +939,10 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e =>
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent =>
         {
-            e.AppUserId = "$RCAnonymousID:abc";
-            e.Aliases = ["$RCAnonymousID:def", "30", "31"];
+            revenueCatEvent.AppUserId = "$RCAnonymousID:abc";
+            revenueCatEvent.Aliases = ["$RCAnonymousID:def", "30", "31"];
         }));
 
         Assert.NotNull(_store.Get("30"));
@@ -954,7 +954,7 @@ public sealed class RevenueCatEventHandlerTests : IDisposable
     {
         var sut = CreateSut();
 
-        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: e => e.EntitlementIds = []));
+        await sut.Handle(Payload("e1", RevenueCatEventType.InitialPurchase, customize: revenueCatEvent => revenueCatEvent.EntitlementIds = []));
 
         Assert.False(_store.Get(UserId)!.IsActive);
     }
