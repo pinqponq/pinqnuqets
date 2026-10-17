@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Auth.ApiKey` 1.0.0: the shared-secret header check for service-to-service endpoints.
+  `AddPinqponqApiKey(name, configure)` registers a named `ApiKeyOptions` (`HeaderName`, required and
+  validated on startup; `ApiKey`) and `[RequireApiKey(name)]` returns 401 for a missing, empty or wrong
+  header and when no key is configured. Keys are compared in constant time (SHA-256 digests with
+  `CryptographicOperations.FixedTimeEquals`). No default header name or key. Targets `net8.0`, `net9.0`
+  and `net10.0`.
 - `Pinqponq.Billing.RevenueCat` 1.0.0: RevenueCat webhook handling extracted from a product backend.
   `AddPinqponqRevenueCat<TStore>` registers `IRevenueCatEventHandler` (idempotency by event id, activation,
   cancellation, expiration, billing issue, `TRANSFER`, and a guard that ignores `CANCELLATION`/`EXPIRATION`/

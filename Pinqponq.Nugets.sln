@@ -76,6 +76,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Billing.RevenueCat", "src\Pinqponq.Billing.RevenueCat\Pinqponq.Billing.RevenueCat.csproj", "{3DE01367-39ED-4D0B-83F6-CF4821ABE94E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Billing.RevenueCat.Tests", "tests\Pinqponq.Billing.RevenueCat.Tests\Pinqponq.Billing.RevenueCat.Tests.csproj", "{AD52B129-EE23-454F-9102-7B225A9D7310}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Contracts", "src\Pinqponq.Contracts\Pinqponq.Contracts.csproj", "{F951703F-6031-4615-8164-DC80893DAD83}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Observability", "src\Pinqponq.Observability\Pinqponq.Observability.csproj", "{D13157B0-4425-4688-A949-0314B486123D}"
@@ -93,6 +94,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Database.Postgres.EntityFrameworkCore.Tests", "tests\Pinqponq.Database.Postgres.EntityFrameworkCore.Tests\Pinqponq.Database.Postgres.EntityFrameworkCore.Tests.csproj", "{8EDFA128-91A7-4529-88E1-2DC59A200A37}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Observability.Abstractions", "src\Pinqponq.Observability.Abstractions\Pinqponq.Observability.Abstractions.csproj", "{AEC2E533-DAE4-4246-8562-1F9CCD05142E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Auth.ApiKey", "src\Pinqponq.Auth.ApiKey\Pinqponq.Auth.ApiKey.csproj", "{A8571236-8136-4F5F-A991-5C09B0474F71}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Auth.ApiKey.Tests", "tests\Pinqponq.Auth.ApiKey.Tests\Pinqponq.Auth.ApiKey.Tests.csproj", "{E478AE19-B6D8-4D10-89CD-0A09CB80E234}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -620,6 +625,30 @@ Global
 		{AEC2E533-DAE4-4246-8562-1F9CCD05142E}.Release|x64.Build.0 = Release|Any CPU
 		{AEC2E533-DAE4-4246-8562-1F9CCD05142E}.Release|x86.ActiveCfg = Release|Any CPU
 		{AEC2E533-DAE4-4246-8562-1F9CCD05142E}.Release|x86.Build.0 = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|x64.Build.0 = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8571236-8136-4F5F-A991-5C09B0474F71}.Release|x86.Build.0 = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|x64.Build.0 = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Debug|x86.Build.0 = Debug|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|x64.ActiveCfg = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|x64.Build.0 = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|x86.ActiveCfg = Release|Any CPU
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -668,5 +697,7 @@ Global
 		{1D313EB5-DC12-4EF2-8B01-EC7955EB4C70} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{8EDFA128-91A7-4529-88E1-2DC59A200A37} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{AEC2E533-DAE4-4246-8562-1F9CCD05142E} = {34D61E78-8C73-5320-8E9D-66571DD05681}
+		{A8571236-8136-4F5F-A991-5C09B0474F71} = {34D61E78-8C73-5320-8E9D-66571DD05681}
+		{E478AE19-B6D8-4D10-89CD-0A09CB80E234} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 	EndGlobalSection
 EndGlobal
