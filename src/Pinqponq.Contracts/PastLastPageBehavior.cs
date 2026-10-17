@@ -5,7 +5,10 @@ namespace Pinqponq.Contracts;
 /// </summary>
 public enum PastLastPageBehavior
 {
-    /// <summary>Returns the last page. The response's <c>page</c> field holds the last page number, not the requested one.</summary>
+    /// <summary>
+    /// Returns the last page. The response's <c>page</c> field holds the last page number, not the requested one.
+    /// When there are no rows, there is no last page, so the response is an empty page with the requested number.
+    /// </summary>
     ReturnLastPage,
 
     /// <summary>

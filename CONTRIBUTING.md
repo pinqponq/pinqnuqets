@@ -41,7 +41,7 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 These packages hold only code that every Pinqponq ASP.NET Core API needs in the same form. A product-specific thing never goes into them. The same rule is in `CLAUDE.md`, which automated task runners (and other AI agents) read first.
 
 - Test every type, option, default, constant and message: would a product other than the one this code came from need exactly this? If the answer depends on one product, it stays in that product.
-- Product-specific means: a header, query key, route, response code, message or default taken from one product's client or contract, or an option that exists for one product only.
+- Product-specific means: a header, query key, route, response code, message or default taken from one product's client or contract; an option that exists for one product only; a feature that only products with one kind of client (for example a mobile app) need.
 - If you are not sure a part is shared, leave it in the product. You may instead move it into its own opt-in package as a setting that is off by default, with a default that was not copied from a product.
 - Technology-specific packages (PostgreSQL, MongoDB, EF Core, Vault) are welcome, as long as nothing in them names a product.
 - Say in the pull request, for each package, what the package kept, what was left in the product, and why.

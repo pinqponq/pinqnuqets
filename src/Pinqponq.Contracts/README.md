@@ -64,7 +64,7 @@ public ActionResult<PagedResponseModel<List<OrderDto>>> List([FromQuery] PagedRe
 | Property | Default | Notes |
 |---|---|---|
 | `MaxPageSize` | `100` | A larger page size is lowered to it; `size` in the response shows the value used. |
-| `PastLastPage` | `ReturnLastPage` | What a request for the page after the last page returns. `ReturnLastPage` returns the last page; the response's `page` field holds the last page number, not the requested one. `ReturnEmptyPage` returns an empty page; the `page` field keeps the requested number, `hasNextPage` is false, and `firstRowOnPage` and `lastRowOnPage` are 0. |
+| `PastLastPage` | `ReturnLastPage` | What a request for the page after the last page returns. `ReturnLastPage` returns the last page; the response's `page` field holds the last page number, not the requested one. When there are no rows, there is no last page, so the response is an empty page with the requested number. `ReturnEmptyPage` returns an empty page; the `page` field keeps the requested number, `hasNextPage` is false, and `firstRowOnPage` and `lastRowOnPage` are 0. |
 
 ```csharp
 private static readonly PaginationOptions LogPaging = new()
