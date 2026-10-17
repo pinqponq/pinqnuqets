@@ -66,6 +66,38 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nupkg
-          path: ./artifacts/nupkg/*.nupkg
+          path: |
+            ./artifacts/nupkg/*.nupkg
+            ./artifacts/nupkg/*.snupkg
           if-no-files-found: error
           retention-days: 14
+
+  publish:
+    # Runs only after a merge to master. A package version that is already on nuget.org is
+    # skipped, so only packages whose <Version> was raised are published.
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: nuget
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v7
+        with:
+          name: nupkg
+          path: ./artifacts/nupkg
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push "./artifacts/nupkg/*.nupkg"
+          --source https://api.nuget.org/v3/index.json
+          --api-key "$NUGET_API_KEY"
+          --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

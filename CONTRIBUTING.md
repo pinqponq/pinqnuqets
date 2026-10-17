@@ -35,6 +35,7 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 - Do not commit secrets, credentials, or personal NuGet source configs.
 - Update `CHANGELOG.md` under `[Unreleased]` when behavior or public API changes.
 - Every package is versioned on its own: when you change a package, raise the `<Version>` in that package's `.csproj` (Semantic Versioning). There is no shared version.
+- Publishing is automatic. After a merge to `master`, the CI `publish` job pushes to nuget.org every package whose `<Version>` is not yet there. Do not upload packages by hand. If you changed a package and forgot to raise its `<Version>`, nothing is published for it.
 
 ## Code of conduct
 
