@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Pinqponq.Billing.RevenueCat/Pinqponq.Billing.RevenueCat.csproj" />
+    <ProjectReference Include="../Pinqponq.TestSupport/Pinqponq.TestSupport.csproj" />
+  </ItemGroup>
+
+</Project>

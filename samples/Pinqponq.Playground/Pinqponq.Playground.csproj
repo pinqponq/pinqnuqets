@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\src\Pinqponq.Auth.Sso.Abstractions\Pinqponq.Auth.Sso.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Auth.Sso.Google\Pinqponq.Auth.Sso.Google.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Auth.Totp\Pinqponq.Auth.Totp.csproj" />
+    <ProjectReference Include="..\..\src\Pinqponq.Billing.RevenueCat\Pinqponq.Billing.RevenueCat.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Cache\Pinqponq.Cache.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Database.Mongo\Pinqponq.Database.Mongo.csproj" />
     <ProjectReference Include="..\..\src\Pinqponq.Database.Mssql\Pinqponq.Database.Mssql.csproj" />

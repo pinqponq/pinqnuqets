@@ -1,6 +1,6 @@
 # Pinqponq.Playground — package and log test console
 
-An ASP.NET Core application that exercises the repo's 14 `Pinqponq.*` packages from a
+An ASP.NET Core application that exercises the repo's 15 `Pinqponq.*` packages from a
 browser, against **real** dependencies. Every run shows two things at once: what the
 package does, and **which structured log records it produces** while doing it.
 
