@@ -80,8 +80,8 @@ find) pages the same way as `ToPagedResponse`:
 ```csharp
 PageWindow.ValidateRequest(paging.Page, paging.Size);
 var orders = dbContext.Orders.OrderByDescending(order => order.CreatedAt);
-var window = PageWindow.Resolve(paging.Page, paging.Size, await orders.LongCountAsync(ct), options);
-var pageRows = await orders.Skip(window.Skip).Take(window.Size).ToListAsync(ct);
+var window = PageWindow.Resolve(paging.Page, paging.Size, await orders.LongCountAsync(cancellationToken), options);
+var pageRows = await orders.Skip(window.Skip).Take(window.Size).ToListAsync(cancellationToken);
 return window.ToResponse(pageRows, page => page.Select(ToDto).ToList());
 ```
 

@@ -140,11 +140,9 @@ public sealed class PageWindowTests
     [Theory]
     [InlineData(0)]
     [InlineData(-10)]
-    public void Non_positive_maximum_is_rejected(int maxPageSize)
+    public void Non_positive_maximum_is_rejected_when_the_options_are_built(int maxPageSize)
     {
-        var invalidOptions = new PaginationOptions { MaxPageSize = maxPageSize };
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => PageWindow.Resolve(page: 1, size: 10, rowCount: 23, invalidOptions));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PaginationOptions { MaxPageSize = maxPageSize });
     }
 
     [Fact]

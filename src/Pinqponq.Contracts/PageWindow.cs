@@ -49,22 +49,19 @@ public readonly struct PageWindow
     /// Resolves the window of <paramref name="page"/> over <paramref name="rowCount"/> rows.
     /// </summary>
     /// <exception cref="ArgumentException">See <see cref="ValidateRequest"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="rowCount"/> is negative or <see cref="PaginationOptions.MaxPageSize"/> is not positive.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="rowCount"/> is negative.</exception>
     /// <exception cref="OverflowException"><paramref name="rowCount"/> does not fit the response's <c>int</c> row count.</exception>
     public static PageWindow Resolve(int page, int size, long rowCount, PaginationOptions? options = null)
     {
         ValidateRequest(page, size);
         ArgumentOutOfRangeException.ThrowIfNegative(rowCount);
         var paginationOptions = options ?? PaginationOptions.Default;
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(paginationOptions.MaxPageSize, nameof(options));
 
         var pageSize = Math.Min(size, paginationOptions.MaxPageSize);
         var totalRowCount = checked((int)rowCount);
         var pageCount = (int)(((long)totalRowCount + pageSize - 1) / pageSize);
-        var returnsLastPageInstead = page > pageCount
-            && pageCount > 0
-            && paginationOptions.PastLastPage == PastLastPageBehavior.ReturnLastPage;
-        var returnedPage = returnsLastPageInstead ? pageCount : page;
+        var isLastPageCap = pageCount > 0 && paginationOptions.PastLastPage == PastLastPageBehavior.ReturnLastPage;
+        var returnedPage = isLastPageCap ? Math.Min(page, pageCount) : page;
         var skip = (int)Math.Min((long)(returnedPage - 1) * pageSize, totalRowCount);
 
         return new PageWindow(returnedPage, pageSize, totalRowCount, pageCount, skip);

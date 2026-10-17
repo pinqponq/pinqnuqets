@@ -70,7 +70,7 @@ using Pinqponq.Database.Mongo.Pagination;
 
 var response = await logs.Find(filter)
     .SortByDescending(log => log.Date)
-    .ToPagedResponseAsync(paging.Page, paging.Size, page => page.Select(ToDto).ToList(), LogPaging, ct);
+    .ToPagedResponseAsync(paging.Page, paging.Size, page => page.Select(ToDto).ToList(), LogPaging, cancellationToken);
 ```
 
 The package references Pinqponq.Contracts for these types, which brings the ASP.NET Core

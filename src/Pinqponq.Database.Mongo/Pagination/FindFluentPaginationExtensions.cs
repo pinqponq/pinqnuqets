@@ -11,7 +11,8 @@ public static class FindFluentPaginationExtensions
 {
     /// <summary>
     /// Counts the documents matching <paramref name="find"/> and reads only the requested page.
-    /// Sort the find before calling it and do not set its skip or limit.
+    /// Sort the find before calling it and do not set its skip or limit. The call sets them on
+    /// <paramref name="find"/>, so do not reuse it afterwards.
     /// </summary>
     /// <exception cref="ArgumentException">See <see cref="PageWindow.ValidateRequest"/>.</exception>
     public static async Task<PagedResponseModel<TData>> ToPagedResponseAsync<TDocument, TProjection, TData>(

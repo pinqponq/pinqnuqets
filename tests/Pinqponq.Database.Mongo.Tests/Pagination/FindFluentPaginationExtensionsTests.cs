@@ -68,10 +68,45 @@ public sealed class FindFluentPaginationExtensionsTests
     }
 
     [Fact]
-    public async Task Missing_find_or_data_factory_is_rejected()
+    public async Task Missing_find_is_rejected()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => ((IFindFluent<int, int>)null!).ToPagedResponseAsync(1, 10, documents => documents));
-        await Assert.ThrowsAsync<ArgumentNullException>(() => new InMemoryFindFluent([1]).ToPagedResponseAsync<int, int, List<int>>(1, 10, null!));
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => ((IFindFluent<int, int>)null!).ToPagedResponseAsync(1, 10, documents => documents));
+
+        Assert.Equal("find", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task Missing_data_factory_is_rejected_before_counting()
+    {
+        var find = new InMemoryFindFluent([1]);
+
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => find.ToPagedResponseAsync<int, int, List<int>>(1, 10, null!));
+
+        Assert.Equal("dataFactory", exception.ParamName);
+        Assert.Equal(0, find.CountCallCount);
+    }
+
+    [Fact]
+    public async Task Continuations_do_not_return_to_the_caller_context()
+    {
+        var find = new InMemoryFindFluent(Enumerable.Range(1, 23).ToList()) { CompletesAsynchronously = true };
+        var callerContext = new RecordingSynchronizationContext();
+        var originalContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(callerContext);
+        Task<PagedResponseModel<List<int>>> pagingTask;
+        try
+        {
+            pagingTask = find.ToPagedResponseAsync(page: 1, size: 10, documents => documents);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(originalContext);
+        }
+
+        var response = await pagingTask;
+
+        Assert.Equal(10, response.Data.Count);
+        Assert.Equal(0, callerContext.PostCount);
     }
 
     private sealed class InMemoryFindFluent(List<int> documents) : FindFluentBase<int, int>
@@ -84,6 +119,8 @@ public sealed class FindFluentPaginationExtensionsTests
 
         public List<CancellationToken> ReceivedCancellationTokens { get; } = [];
 
+        public bool CompletesAsynchronously { get; init; }
+
         public override FilterDefinition<int> Filter { get; set; } = FilterDefinition<int>.Empty;
 
         public override FindOptions<int, int> Options { get; } = new();
@@ -92,7 +129,7 @@ public sealed class FindFluentPaginationExtensionsTests
         {
             CountCallCount++;
             ReceivedCancellationTokens.Add(cancellationToken);
-            return Task.FromResult((long)documents.Count);
+            return CompleteWith((long)documents.Count);
         }
 
         public override IFindFluent<int, int> Skip(int? skip)
@@ -114,17 +151,40 @@ public sealed class FindFluentPaginationExtensionsTests
                 .Skip(AppliedSkip ?? 0)
                 .Take(AppliedLimit ?? documents.Count)
                 .ToList();
-            return Task.FromResult<IAsyncCursor<int>>(new SingleBatchCursor(pageDocuments));
+            return CompleteWith<IAsyncCursor<int>>(new SingleBatchCursor(pageDocuments));
         }
 
         [Obsolete("Abstract in FindFluentBase; the extension uses CountDocumentsAsync.")]
         public override Task<long> CountAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        private async Task<TResult> CompleteWith<TResult>(TResult result)
+        {
+            if (CompletesAsynchronously)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(10)).ConfigureAwait(false);
+            }
+
+            return result;
+        }
 
         public override IFindFluent<int, TResult> As<TResult>(IBsonSerializer<TResult> resultSerializer) => throw new NotSupportedException();
 
         public override IFindFluent<int, TNewProjection> Project<TNewProjection>(ProjectionDefinition<int, TNewProjection> projection) => throw new NotSupportedException();
 
         public override IFindFluent<int, int> Sort(SortDefinition<int> sort) => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingSynchronizationContext : SynchronizationContext
+    {
+        private int _postCount;
+
+        public int PostCount => Volatile.Read(ref _postCount);
+
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            Interlocked.Increment(ref _postCount);
+            ThreadPool.QueueUserWorkItem(_ => callback(state));
+        }
     }
 
     private sealed class SingleBatchCursor(List<int> batch) : IAsyncCursor<int>

@@ -144,10 +144,21 @@ public sealed class PaginationExtensionsTests
     }
 
     [Fact]
-    public void Missing_query_or_data_factory_is_rejected()
+    public void Missing_query_is_rejected()
     {
-        Assert.Throws<ArgumentNullException>(() => ((IQueryable<int>)null!).ToPagedResponse(1, 10, rows => rows));
-        Assert.Throws<ArgumentNullException>(() => TwentyThreeRows.AsQueryable().ToPagedResponse<int, List<int>>(1, 10, null!));
+        var exception = Assert.Throws<ArgumentNullException>(() => ((IQueryable<int>)null!).ToPagedResponse(1, 10, rows => rows));
+
+        Assert.Equal("query", exception.ParamName);
+    }
+
+    [Fact]
+    public void Missing_data_factory_is_rejected_before_the_query_runs()
+    {
+        var query = new ThrowingQueryProvider().CreateQuery<int>(Expression.Constant(TwentyThreeRows.AsQueryable()));
+
+        var exception = Assert.Throws<ArgumentNullException>(() => query.ToPagedResponse<int, List<int>>(1, 10, null!));
+
+        Assert.Equal("dataFactory", exception.ParamName);
     }
 
     [Theory]
@@ -163,10 +174,35 @@ public sealed class PaginationExtensionsTests
     }
 
     [Fact]
-    public void Missing_source_or_data_factory_is_rejected()
+    public void Missing_source_is_rejected_before_ordering()
     {
-        Assert.Throws<ArgumentNullException>(() => ((int[])null!).ToPagedResponse(1, 10, rows => rows));
-        Assert.Throws<ArgumentNullException>(() => TwentyThreeRows.ToPagedResponse<int, List<int>>(1, 10, null!));
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            ((int[])null!).ToPagedResponse(1, 10, rows => rows, orderBy: _ => throw new InvalidOperationException("The source must not be ordered.")));
+
+        Assert.Equal("source", exception.ParamName);
+    }
+
+    [Fact]
+    public void Missing_data_factory_is_rejected_before_the_source_is_read()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() => new UnreadableRows().ToPagedResponse<int, List<int>>(1, 10, null!));
+
+        Assert.Equal("dataFactory", exception.ParamName);
+    }
+
+    [Fact]
+    public void Invalid_request_is_rejected_before_the_source_is_read()
+    {
+        var exception = Assert.Throws<ArgumentException>(() => new UnreadableRows().ToPagedResponse(0, 10, rows => rows));
+
+        Assert.Equal(CommonErrorCodes.ApiPageNumberInvalid, exception.Message);
+    }
+
+    private sealed class UnreadableRows : IEnumerable<int>
+    {
+        public IEnumerator<int> GetEnumerator() => throw new InvalidOperationException("The source must not be read.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     private sealed class ThrowingQueryProvider : IQueryProvider
