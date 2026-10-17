@@ -1,0 +1,8 @@
+{
+  "database_error": "حدث خطأ في قاعدة البيانات.",
+  "database_foreign_key_violation": "هذا السجل مرتبط ببيانات أخرى ولا يمكن معالجته.",
+  "database_value_too_long": "إحدى القيم المُدخلة طويلة جدًا.",
+  "database_unique_violation": "هذا السجل موجود بالفعل.",
+  "database_not_null_violation": "أحد الحقول المطلوبة مفقود.",
+  "database_invalid_format": "إحدى القيم المُدخلة بتنسيق غير صالح."
+}

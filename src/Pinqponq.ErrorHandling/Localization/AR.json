@@ -1,0 +1,6 @@
+{
+  "general_error": "حدث خطأ غير متوقع.",
+  "api_body_required": "محتوى الطلب مطلوب.",
+  "api_page_size_invalid": "يجب أن يكون حجم الصفحة أكبر من 0.",
+  "api_page_number_invalid": "يجب أن يكون رقم الصفحة أكبر من 0."
+}

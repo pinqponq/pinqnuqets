@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsTestProject>true</IsTestProject>
+    <!-- The shared framework below already carries DI and logging; see tests/Directory.Build.targets. -->
+    <PinqponqUsesAspNetCore>true</PinqponqUsesAspNetCore>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../src/Pinqponq.ErrorHandling.Postgres/Pinqponq.ErrorHandling.Postgres.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -13,4 +13,8 @@
     <ProjectReference Include="../../src/Pinqponq.ErrorHandling/Pinqponq.ErrorHandling.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\**\*" />
+  </ItemGroup>
+
 </Project>

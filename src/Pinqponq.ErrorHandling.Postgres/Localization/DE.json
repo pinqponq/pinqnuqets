@@ -1,0 +1,8 @@
+{
+  "database_error": "Ein Datenbankfehler ist aufgetreten.",
+  "database_foreign_key_violation": "Der Datensatz wird von anderen Daten referenziert und kann nicht verarbeitet werden.",
+  "database_value_too_long": "Einer der angegebenen Werte ist zu lang.",
+  "database_unique_violation": "Dieser Datensatz existiert bereits.",
+  "database_not_null_violation": "Ein Pflichtfeld fehlt.",
+  "database_invalid_format": "Einer der angegebenen Werte hat ein ungültiges Format."
+}

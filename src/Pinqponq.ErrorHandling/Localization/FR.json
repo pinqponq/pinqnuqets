@@ -1,0 +1,6 @@
+{
+  "general_error": "Une erreur inattendue s'est produite.",
+  "api_body_required": "Le corps de la requête est requis.",
+  "api_page_size_invalid": "La taille de la page doit être supérieure à 0.",
+  "api_page_number_invalid": "Le numéro de la page doit être supérieur à 0."
+}

@@ -11,6 +11,7 @@ public sealed class ErrorHandlingOptions
     /// <summary>
     /// Whether to surface the exception message in the response body. Defaults to false
     /// so internal details are not leaked; a generic message is returned instead.
+    /// Ignored when error localization is enabled.
     /// </summary>
     public bool IncludeExceptionMessage { get; set; }
 

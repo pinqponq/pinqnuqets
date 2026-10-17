@@ -1,0 +1,8 @@
+{
+  "database_error": "Ocorreu um erro de banco de dados.",
+  "database_foreign_key_violation": "O registro é referenciado por outros dados e não pode ser processado.",
+  "database_value_too_long": "Um dos valores fornecidos é muito longo.",
+  "database_unique_violation": "Este registro já existe.",
+  "database_not_null_violation": "Um campo obrigatório está faltando.",
+  "database_invalid_format": "Um dos valores fornecidos tem um formato inválido."
+}

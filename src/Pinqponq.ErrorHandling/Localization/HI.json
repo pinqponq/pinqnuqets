@@ -1,0 +1,6 @@
+{
+  "general_error": "एक अनपेक्षित त्रुटि हुई।",
+  "api_body_required": "अनुरोध का मुख्य भाग आवश्यक है।",
+  "api_page_size_invalid": "पेज का आकार 0 से बड़ा होना चाहिए।",
+  "api_page_number_invalid": "पेज संख्या 0 से बड़ी होनी चाहिए।"
+}
