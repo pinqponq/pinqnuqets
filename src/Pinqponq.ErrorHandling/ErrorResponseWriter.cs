@@ -28,11 +28,6 @@ internal static class ErrorResponseWriter
 
     public static async Task Write(HttpContext context, ErrorHandlingOptions options, int statusCode, string responseCode, string message)
     {
-        if (context.Response.HasStarted)
-        {
-            return;
-        }
-
         var body = new ErrorResponse
         {
             Status = false,
