@@ -23,7 +23,7 @@ is the monorepo overview — the fastest way to try everything is the **Playgrou
 ## Playground — try packages and their logs in the browser
 
 [`samples/Pinqponq.Playground`](samples/Pinqponq.Playground) is a browser test console
-that runs all 14 packages against **real** dependencies. Every run shows:
+that runs all 15 packages against **real** dependencies. Every run shows:
 
 1. What the package did (steps, outputs, assertions)
 2. The **structured log records** it produced (`traceId` / `correlationId` field names,
@@ -63,6 +63,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Contracts** | Response envelope (deveng-networking-kmp compatible), paging models, common error codes, request error feature | [README](src/Pinqponq.Contracts/README.md) |
 | **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |
 | **Pinqponq.Configuration.Vault** | HashiCorp Vault configuration provider: one KV v2 record shaped like `appsettings.json`, Vault CLI token lookup | [README](src/Pinqponq.Configuration.Vault/README.md) |
+| **Pinqponq.Billing.RevenueCat** | RevenueCat webhook handling: payload model, Authorization header check, event dispatch; storage via `IRevenueCatSubscriptionStore` | [README](src/Pinqponq.Billing.RevenueCat/README.md) |
 
 Each package exposes an `AddPinqponqXxx(...)` DI extension (where applicable) and an options class. Install from nuget.org once published, or reference the project under `src/`.
 
