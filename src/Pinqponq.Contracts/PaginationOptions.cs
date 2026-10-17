@@ -1,8 +1,8 @@
 namespace Pinqponq.Contracts;
 
 /// <summary>
-/// Per-service paging limits. <see cref="Default"/> caps the page size at 100 and answers a page
-/// number past the last page with the last page.
+/// Per-service paging limits. <see cref="Default"/> limits the page size to 100. When the requested
+/// page is after the last page, <see cref="Default"/> returns the last page.
 /// </summary>
 public sealed record PaginationOptions
 {
@@ -25,6 +25,6 @@ public sealed record PaginationOptions
         }
     }
 
-    /// <summary>What a page number past the last page returns.</summary>
+    /// <summary>What a request for the page after the last page returns.</summary>
     public PastLastPageBehavior PastLastPage { get; init; } = PastLastPageBehavior.ReturnLastPage;
 }

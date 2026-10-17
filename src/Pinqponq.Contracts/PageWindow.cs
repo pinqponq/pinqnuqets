@@ -1,9 +1,9 @@
 namespace Pinqponq.Contracts;
 
 /// <summary>
-/// The rows a requested page covers, resolved from the page number, the page size and the total
-/// row count. Page a database query with <see cref="Skip"/> and <see cref="Size"/>, then wrap the
-/// rows it returns with <see cref="ToResponse{TEntity, TData}"/>.
+/// Describes which rows belong to one requested page. It is computed from the page number, the page
+/// size and the total number of rows. To use it: read the page from your database with
+/// <see cref="Skip"/> and <see cref="Size"/>, then pass the rows to <see cref="ToResponse{TEntity, TData}"/>.
 /// </summary>
 public readonly struct PageWindow
 {

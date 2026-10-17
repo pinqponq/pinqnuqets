@@ -62,7 +62,7 @@ public sealed class AuditRepository(IMongoDatabase database)
 
 `ToPagedResponseAsync` counts the documents a find matches and reads only the requested page
 into a `PagedResponseModel<T>` of Pinqponq.Contracts, with the same rules as its
-`ToPagedResponse` (page size cap, page past the end, `ArgumentException` for a page number or
+`ToPagedResponse` (page size cap, page after the last page, `ArgumentException` for a page number or
 size under 1). Sort the find first and leave its skip and limit unset.
 
 ```csharp

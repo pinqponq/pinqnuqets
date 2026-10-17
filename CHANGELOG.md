@@ -16,9 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Pinqponq.ErrorHandling hands a failed request's event and detail to Pinqponq.Observability without
   either package depending on the other.
 - `Pinqponq.Contracts` paging, the shared offset pagination of every Pinqponq API (pinqponq/org#218):
-  `ToPagedResponse` also pages an `IQueryable<T>` (one count, one page read), `PageWindow` pages any
-  async query the same way, and `PaginationOptions` sets the page size cap (default 100) and what a
-  page past the end returns (`ReturnLastPage`, the default, or `ReturnEmptyPage`).
+  `ToPagedResponse` also pages an `IQueryable<T>` (one count, one page read), `PageWindow` lets you
+  page any async query by the same rules as `ToPagedResponse`, and `PaginationOptions` sets the page
+  size cap (default 100) and what the page after the last page returns (`ReturnLastPage`, the
+  default, or `ReturnEmptyPage`).
 - `Pinqponq.Observability` 1.0.0: Pinqloq logging for ASP.NET Core — `RequestLoggingMiddleware`
   (one record per request with redacted bodies and route-based event names), `ILogService` /
   `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming). Collection
