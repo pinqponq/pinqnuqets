@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Pinqponq.Database.Mssql` 1.0.3: `Microsoft.Data.SqlClient` 7.1.1 pulled
+  `System.Security.Cryptography.Pkcs` 8.0.1 (`net8.0`) and 9.0.18 (`net9.0`, `net10.0`), which
+  carry GHSA-2fmv-rv2c-59x7 (moderate) and GHSA-846f-f764-76mx (high); restore failed with
+  `NU1902`/`NU1903`. The package now floors it at 8.0.2 on `net8.0` and 9.0.21 on `net9.0` and
+  `net10.0`, so consumers resolve the patched version through it. No code changes.
 - Restore failed with `NU1903` on every branch: `Testcontainers` 4.13.0 pulled `SSH.NET`
   2025.1.0, which carries two high severity advisories (GHSA-mggc-4xg6-vcxf,
   GHSA-q939-rpr3-3284). `Testcontainers` 4.15.0 ships `SSH.NET` 2026.0.0. Only the test
