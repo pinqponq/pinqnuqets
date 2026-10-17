@@ -66,8 +66,10 @@ public sealed class LogServiceTests
         Assert.Equal("/api/explicit", _pinqloqLogger.Entries[1].Path);
         Assert.All(_pinqloqLogger.Entries, entry =>
         {
-            Assert.False(entry.Metadata!.ContainsKey("path"));
-            Assert.False(entry.Detail!.ContainsKey("path"));
+            Assert.NotNull(entry.Metadata);
+            Assert.NotNull(entry.Detail);
+            Assert.False(entry.Metadata.ContainsKey("path"));
+            Assert.False(entry.Detail.ContainsKey("path"));
         });
         Assert.Equal(PinqloqLogLevel.Debug, _pinqloqLogger.Entries[1].LogLevel);
     }
@@ -89,7 +91,8 @@ public sealed class LogServiceTests
 
         var entry = Assert.Single(_pinqloqLogger.Entries);
         Assert.Equal(PinqloqLogLevel.Error, entry.LogLevel);
-        Assert.Equal("System.InvalidOperationException", entry.Detail!["exceptionType"]);
+        Assert.NotNull(entry.Detail);
+        Assert.Equal("System.InvalidOperationException", entry.Detail["exceptionType"]);
         Assert.Equal("outer", entry.Detail["exceptionMessage"]);
         Assert.Contains(nameof(Exception_adds_type_message_stack_trace_and_inner_exception), entry.Detail["stackTrace"]);
         Assert.Equal("System.TimeoutException", entry.Detail["innerExceptionType"]);
@@ -103,7 +106,8 @@ public sealed class LogServiceTests
         CreateLogService().Warn("Retrying", new TimeoutException("slow"));
 
         var entry = Assert.Single(_pinqloqLogger.Entries);
-        Assert.Equal(["exceptionType", "exceptionMessage"], entry.Detail!.Keys.ToArray());
+        Assert.NotNull(entry.Detail);
+        Assert.Equal(["exceptionType", "exceptionMessage"], entry.Detail.Keys.ToArray());
         Assert.Equal(PinqloqLogLevel.Warning, entry.LogLevel);
     }
 
@@ -114,7 +118,9 @@ public sealed class LogServiceTests
 
         CreateLogService().Error("Deep failure", exception);
 
-        Assert.Equal(new string('x', 4000), Assert.Single(_pinqloqLogger.Entries).Detail!["stackTrace"]);
+        var trimmedDetail = Assert.Single(_pinqloqLogger.Entries).Detail;
+        Assert.NotNull(trimmedDetail);
+        Assert.Equal(new string('x', 4000), trimmedDetail["stackTrace"]);
     }
 
     [Fact]
@@ -124,7 +130,9 @@ public sealed class LogServiceTests
 
         CreateLogService().Error("Deep failure", exception);
 
-        Assert.Equal(4000, Assert.Single(_pinqloqLogger.Entries).Detail!["stackTrace"].Length);
+        var trimmedDetail = Assert.Single(_pinqloqLogger.Entries).Detail;
+        Assert.NotNull(trimmedDetail);
+        Assert.Equal(4000, trimmedDetail["stackTrace"].Length);
     }
 
     [Fact]

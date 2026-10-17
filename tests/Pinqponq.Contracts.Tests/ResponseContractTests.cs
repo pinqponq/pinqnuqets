@@ -46,8 +46,16 @@ public sealed class ResponseContractTests
 
         Assert.Equal(1, request.Page);
         Assert.Equal(10, request.Size);
-        Assert.Equal("PageNumber", typeof(PagedRequestModel).GetProperty(nameof(PagedRequestModel.Page))!.GetCustomAttribute<FromQueryAttribute>()!.Name);
-        Assert.Equal("PageSize", typeof(PagedRequestModel).GetProperty(nameof(PagedRequestModel.Size))!.GetCustomAttribute<FromQueryAttribute>()!.Name);
+        var pageProperty = typeof(PagedRequestModel).GetProperty(nameof(PagedRequestModel.Page));
+        Assert.NotNull(pageProperty);
+        var pageQuery = pageProperty.GetCustomAttribute<FromQueryAttribute>();
+        Assert.NotNull(pageQuery);
+        Assert.Equal("PageNumber", pageQuery.Name);
+        var sizeProperty = typeof(PagedRequestModel).GetProperty(nameof(PagedRequestModel.Size));
+        Assert.NotNull(sizeProperty);
+        var sizeQuery = sizeProperty.GetCustomAttribute<FromQueryAttribute>();
+        Assert.NotNull(sizeQuery);
+        Assert.Equal("PageSize", sizeQuery.Name);
     }
 
     [Fact]

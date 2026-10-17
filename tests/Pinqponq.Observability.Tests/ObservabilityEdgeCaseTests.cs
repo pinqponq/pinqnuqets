@@ -252,11 +252,13 @@ public sealed class ObservabilityEdgeCaseTests
 
         Assert.True(valid.Succeeded);
         Assert.True(largestAllowed.Succeeded);
-        Assert.Equal([$"Observability:MaxLoggedBodyBytes must be less than {Array.MaxLength}."], tooLarge.Failures!.ToArray());
+        Assert.NotNull(tooLarge.Failures);
+        Assert.Equal([$"Observability:MaxLoggedBodyBytes must be less than {Array.MaxLength}."], tooLarge.Failures.ToArray());
         Assert.True(invalid.Failed);
+        Assert.NotNull(invalid.Failures);
         Assert.Equal(
             ["Observability:HttpCollectionName is required.", "Observability:MaxLoggedBodyBytes must be greater than 0."],
-            invalid.Failures!.ToArray());
+            invalid.Failures.ToArray());
     }
 
     private sealed class NonSeekableStream(byte[] content) : MemoryStream(content)

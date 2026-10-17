@@ -95,14 +95,17 @@ public sealed class LogService : ILogService
         detail?.Remove(PathField);
 
         var resolvedPath = path ?? metadataPath;
+        var resolvedEventName = eventName ?? message;
+        var resolvedIdentifier = identifier ?? string.Empty;
+        var resolvedCollectionName = collectionName ?? _jobsCollectionName;
 
         var entry = new PinqloqLogEntry
         {
-            Event = eventName ?? message,
-            DeviceIdentifier = identifier ?? string.Empty,
+            Event = resolvedEventName,
+            DeviceIdentifier = resolvedIdentifier,
             LogLevel = level,
             LogSourceType = PinqloqLogSourceType.Backend,
-            CollectionName = collectionName ?? _jobsCollectionName,
+            CollectionName = resolvedCollectionName,
             Metadata = metadata,
             Detail = detail,
             Path = resolvedPath,

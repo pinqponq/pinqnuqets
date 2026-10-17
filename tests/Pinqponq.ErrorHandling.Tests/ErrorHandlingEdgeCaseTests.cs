@@ -123,7 +123,9 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         using var body = ErrorResponseHarness.ReadBody(httpContext);
         Assert.Equal("Request body is required.", body.RootElement.GetProperty("message").GetString());
         Assert.Equal("trace-7", body.RootElement.GetProperty("traceId").GetString());
-        Assert.Equal("EN", httpContext.Features.Get<IRequestErrorFeature>()!.Detail["language"]);
+        var errorFeature = httpContext.Features.Get<IRequestErrorFeature>();
+        Assert.NotNull(errorFeature);
+        Assert.Equal("EN", errorFeature.Detail["language"]);
     }
 
     [Theory]
