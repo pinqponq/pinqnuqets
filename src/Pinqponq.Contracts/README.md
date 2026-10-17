@@ -50,9 +50,42 @@ public ActionResult<PagedResponseModel<List<OrderDto>>> List([FromQuery] PagedRe
 - `PagedRequestModel` binds `?PageNumber=` (default 1) and `?PageSize=` (default 10).
 - `PagedResponseModel<T>` extends `BaseResponseModel` with `page`, `size`, `rowCount`,
   `pageCount`, `hasNextPage`, `firstRowOnPage`, `lastRowOnPage` and `data`.
-- `ToPagedResponse` pages an in-memory sequence. A page number past the last page returns the
-  last page; a page number or page size under 1 throws `ArgumentException`. Page a database
-  query in the query itself instead of materializing it first.
+- `ToPagedResponse` on an `IEnumerable<T>` pages an in-memory sequence; on an `IQueryable<T>`
+  it counts the query and reads only the requested page. A page number or page size under 1
+  throws `ArgumentException` with `api_page_number_invalid` / `api_page_size_invalid` as the
+  message.
+
+### Limits and the page past the end
+
+`PaginationOptions` (optional last argument) sets the service's limits:
+
+| Property | Default | Notes |
+|---|---|---|
+| `MaxPageSize` | `100` | A larger page size is lowered to it; `size` in the response shows the value used. |
+| `PastLastPage` | `ReturnLastPage` | `ReturnLastPage` answers with the last page and its number (rindle-backend's contract). `ReturnEmptyPage` answers with an empty `data`, the requested `page`, `hasNextPage: false` and row positions 0. |
+
+```csharp
+private static readonly PaginationOptions LogPaging = new()
+{
+    MaxPageSize = 200,
+    PastLastPage = PastLastPageBehavior.ReturnEmptyPage,
+};
+```
+
+### Paging an async query
+
+`PageWindow` resolves the rows a page covers, so any async query (EF Core, Dapper, a MongoDB
+find) pages the same way as `ToPagedResponse`:
+
+```csharp
+PageWindow.ValidateRequest(paging.Page, paging.Size);
+var orders = dbContext.Orders.OrderByDescending(order => order.CreatedAt);
+var window = PageWindow.Resolve(paging.Page, paging.Size, await orders.LongCountAsync(ct), options);
+var pageRows = await orders.Skip(window.Skip).Take(window.Size).ToListAsync(ct);
+return window.ToResponse(pageRows, page => page.Select(ToDto).ToList());
+```
+
+Pinqponq.Database.Mongo wraps this for a MongoDB find (`ToPagedResponseAsync`).
 
 ## Common error codes
 

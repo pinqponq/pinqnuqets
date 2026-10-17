@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Pinqponq.Contracts;
 using Xunit;
 
@@ -74,6 +75,81 @@ public sealed class PaginationExtensionsTests
         Assert.Equal([23, 22, 21], response.Data);
     }
 
+    [Fact]
+    public void Page_past_the_end_returns_an_empty_page_when_the_service_asks_for_it()
+    {
+        var emptyPageOptions = new PaginationOptions { PastLastPage = PastLastPageBehavior.ReturnEmptyPage };
+
+        var response = TwentyThreeRows.ToPagedResponse(page: 9, size: 10, rows => rows, options: emptyPageOptions);
+
+        Assert.Equal(9, response.Page);
+        Assert.Equal(23, response.RowCount);
+        Assert.Equal(3, response.PageCount);
+        Assert.False(response.HasNextPage);
+        Assert.Equal(0, response.FirstRowOnPage);
+        Assert.Equal(0, response.LastRowOnPage);
+        Assert.Empty(response.Data);
+    }
+
+    [Fact]
+    public void Page_size_above_the_maximum_is_lowered_to_it()
+    {
+        var response = Enumerable.Range(1, 150).ToPagedResponse(page: 1, size: 500, rows => rows);
+
+        Assert.Equal(PaginationOptions.DEFAULT_MAX_PAGE_SIZE, response.Size);
+        Assert.Equal(2, response.PageCount);
+        Assert.Equal(100, response.Data.Count);
+    }
+
+    [Fact]
+    public void Query_is_counted_and_only_the_requested_page_is_read()
+    {
+        var query = TwentyThreeRows.AsQueryable().OrderByDescending(row => row);
+
+        var response = query.ToPagedResponse(page: 2, size: 10, rows => rows);
+
+        Assert.Equal(23, response.RowCount);
+        Assert.Equal(3, response.PageCount);
+        Assert.True(response.HasNextPage);
+        Assert.Equal(11, response.FirstRowOnPage);
+        Assert.Equal(20, response.LastRowOnPage);
+        Assert.Equal(Enumerable.Range(4, 10).Reverse(), response.Data);
+    }
+
+    [Fact]
+    public void Query_page_past_the_end_follows_the_options()
+    {
+        var query = TwentyThreeRows.AsQueryable();
+        var emptyPageOptions = new PaginationOptions { PastLastPage = PastLastPageBehavior.ReturnEmptyPage };
+
+        var lastPage = query.ToPagedResponse(page: 5, size: 10, rows => rows);
+        var emptyPage = query.ToPagedResponse(page: 5, size: 10, rows => rows, emptyPageOptions);
+
+        Assert.Equal(3, lastPage.Page);
+        Assert.Equal([21, 22, 23], lastPage.Data);
+        Assert.Equal(5, emptyPage.Page);
+        Assert.Empty(emptyPage.Data);
+    }
+
+    [Theory]
+    [InlineData(0, 10, CommonErrorCodes.ApiPageNumberInvalid)]
+    [InlineData(1, 0, CommonErrorCodes.ApiPageSizeInvalid)]
+    public void Invalid_query_request_is_rejected_before_the_query_runs(int page, int size, string expectedResponseCode)
+    {
+        var query = new ThrowingQueryProvider().CreateQuery<int>(Expression.Constant(TwentyThreeRows.AsQueryable()));
+
+        var exception = Assert.Throws<ArgumentException>(() => query.ToPagedResponse(page, size, rows => rows));
+
+        Assert.Equal(expectedResponseCode, exception.Message);
+    }
+
+    [Fact]
+    public void Missing_query_or_data_factory_is_rejected()
+    {
+        Assert.Throws<ArgumentNullException>(() => ((IQueryable<int>)null!).ToPagedResponse(1, 10, rows => rows));
+        Assert.Throws<ArgumentNullException>(() => TwentyThreeRows.AsQueryable().ToPagedResponse<int, List<int>>(1, 10, null!));
+    }
+
     [Theory]
     [InlineData(0, 10, CommonErrorCodes.ApiPageNumberInvalid)]
     [InlineData(-1, 10, CommonErrorCodes.ApiPageNumberInvalid)]
@@ -91,5 +167,29 @@ public sealed class PaginationExtensionsTests
     {
         Assert.Throws<ArgumentNullException>(() => ((int[])null!).ToPagedResponse(1, 10, rows => rows));
         Assert.Throws<ArgumentNullException>(() => TwentyThreeRows.ToPagedResponse<int, List<int>>(1, 10, null!));
+    }
+
+    private sealed class ThrowingQueryProvider : IQueryProvider
+    {
+        public IQueryable CreateQuery(Expression expression) => throw new NotSupportedException();
+
+        public IQueryable<TElement> CreateQuery<TElement>(Expression expression) => new ThrowingQuery<TElement>(this, expression);
+
+        public object Execute(Expression expression) => throw new InvalidOperationException("The query must not run.");
+
+        public TResult Execute<TResult>(Expression expression) => throw new InvalidOperationException("The query must not run.");
+    }
+
+    private sealed class ThrowingQuery<TElement>(IQueryProvider provider, Expression expression) : IQueryable<TElement>
+    {
+        public Type ElementType => typeof(TElement);
+
+        public Expression Expression => expression;
+
+        public IQueryProvider Provider => provider;
+
+        public IEnumerator<TElement> GetEnumerator() => throw new InvalidOperationException("The query must not run.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

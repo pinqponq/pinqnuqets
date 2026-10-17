@@ -6,10 +6,10 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <PackageId>Pinqponq.Database.Mongo</PackageId>
     <Title>Pinqponq Database MongoDB</Title>
-    <Description>MongoDB (MongoDB.Driver) connection setup and health-check layer. Does not include repositories or entities.</Description>
+    <Description>MongoDB (MongoDB.Driver) connection setup, health-check layer and paging of a find into the shared Pinqponq.Contracts paged response. Does not include repositories or entities.</Description>
     <PackageTags>$(PackageTags);mongodb;mongo;database;nosql;connection;health-check</PackageTags>
   </PropertyGroup>
 
@@ -20,6 +20,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Pinqponq.Contracts/Pinqponq.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

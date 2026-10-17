@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CommonErrorCodes`, and `IRequestErrorFeature`, the `HttpContext.Features` entry through which
   Pinqponq.ErrorHandling hands a failed request's event and detail to Pinqponq.Observability without
   either package depending on the other.
+- `Pinqponq.Contracts` paging, the shared offset pagination of every Pinqponq API (pinqponq/org#218):
+  `ToPagedResponse` also pages an `IQueryable<T>` (one count, one page read), `PageWindow` pages any
+  async query the same way, and `PaginationOptions` sets the page size cap (default 100) and what a
+  page past the end returns (`ReturnLastPage`, the default, or `ReturnEmptyPage`).
 - `Pinqponq.Observability` 1.0.0: Pinqloq logging for ASP.NET Core — `RequestLoggingMiddleware`
   (one record per request with redacted bodies and route-based event names), `ILogService` /
   `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming). Collection
@@ -53,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Existing behavior is unchanged unless these are turned on.
 
 - Packages are versioned individually from now on: each carries its own `<Version>` in its project file and the shared `Version` in `Directory.Build.props` is gone. Every package starts at the version it has on nuget.org (1.0.1, and `Pinqponq.Identity` 1.0.2). Up to and including 1.0.2 all packages shared one version.
+- `Pinqponq.Database.Mongo` 1.1.0: `ToPagedResponseAsync` pages a find into Pinqponq.Contracts'
+  `PagedResponseModel<T>` (pinqponq/org#218). The package now references Pinqponq.Contracts and,
+  through it, the ASP.NET Core shared framework.
 - `Pinqponq.Database.Mssql` 1.0.2: `Microsoft.Data.SqlClient` 5.2.2 → 7.1.1. This is a major
   step of the driver, and consumers resolve to it through the package: read the
   `Microsoft.Data.SqlClient` 6.0 and 7.0 release notes before upgrading.
