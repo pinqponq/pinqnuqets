@@ -123,7 +123,7 @@ public sealed class MaintenanceAndCancellationTests
             })
             .Build();
         var services = new ServiceCollection();
-        services.AddPinqponqErrorLocalization(localizationOptions => localizationOptions.LanguageHeader = "Accept-Language");
+        services.AddPinqponqErrorLocalization(localizationOptions => localizationOptions.LanguageHeader = "Language");
         services.AddPinqponqMaintenanceMode(configuration.GetSection("MaintenanceMode"));
         services.AddPinqponqExceptionResolver<NullExceptionResolver>();
         services.AddPinqponqExceptionResolver<NullExceptionResolver>();
@@ -132,7 +132,7 @@ public sealed class MaintenanceAndCancellationTests
         var localizationOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ErrorLocalizationOptions>>().Value;
         var maintenanceMode = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<MaintenanceModeOptions>>().CurrentValue;
         Assert.True(localizationOptions.Enabled);
-        Assert.Equal("Accept-Language", localizationOptions.LanguageHeader);
+        Assert.Equal("Language", localizationOptions.LanguageHeader);
         Assert.True(maintenanceMode.Enabled);
         Assert.Equal("Later", maintenanceMode.Message);
         Assert.Single(serviceProvider.GetServices<IExceptionResolver>());

@@ -146,35 +146,36 @@ public sealed class ObservabilityEdgeCaseTests
     public async Task Every_sensitive_key_is_redacted()
     {
         using var host = await StartAsync(endpoints => endpoints.MapPost("/keys", () => Results.NoContent()));
-        var body = """{"Authorization":"a","cookie":"b","Set-Cookie":"c","X-Internal-Key":"d","apikey":"e","X-Api-Key":"f","mySecret":"g","idToken":"h","userPassword":"i","plain":"j"}""";
+        var body = """{"Authorization":"a","cookie":"b","Set-Cookie":"c","apikey":"e","X-Api-Key":"f","mySecret":"g","idToken":"h","userPassword":"i","plain":"j","X-Internal-Key":"k"}""";
 
         await host.GetTestClient().PostAsync("/keys", new StringContent(body, Encoding.UTF8, "application/json"));
 
         var inputJson = Assert.IsType<Dictionary<string, object?>>(Assert.Single(_logService.Calls).Fields["InputJson"]);
-        Assert.All(inputJson.Where(field => field.Key != "plain"), field => Assert.Equal("***REDACTED***", field.Value));
+        Assert.All(inputJson.Where(field => field.Key is not ("plain" or "X-Internal-Key")), field => Assert.Equal("***REDACTED***", field.Value));
         Assert.Equal("j", inputJson["plain"]);
+        Assert.Equal("k", inputJson["X-Internal-Key"]);
     }
 
     [Fact]
-    public async Task Device_uid_rejection_is_a_json_response_with_its_own_record()
+    public async Task Configured_keys_are_redacted_in_bodies_forms_and_queries()
     {
         using var host = await StartAsync(
-            endpoints => endpoints.MapGet("/api/feed", () => "feed"),
-            observabilityOptions => observabilityOptions.RequireDeviceUid = true);
+            endpoints => endpoints.MapPost("/keys", () => Results.NoContent()),
+            observabilityOptions => observabilityOptions.RedactedKeys = ["X-Internal-Key"]);
         var client = host.GetTestClient();
-        using var dashedHeaderRequest = new HttpRequestMessage(HttpMethod.Get, "/api/feed");
-        dashedHeaderRequest.Headers.Add("Device-Uid", "uid-1");
 
-        var rejected = await client.GetAsync("/api/feed");
-        var accepted = await client.SendAsync(dashedHeaderRequest);
+        await client.PostAsync("/keys?x-internal-key=q&plain=p", new StringContent("""{"x-internal-key":"k","plain":"j"}""", Encoding.UTF8, "application/json"));
+        await client.PostAsync("/keys", new FormUrlEncodedContent(new Dictionary<string, string> { ["X-INTERNAL-KEY"] = "f", ["plain"] = "j" }));
 
-        Assert.Equal("application/json", rejected.Content.Headers.ContentType?.MediaType);
-        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
-        var rejection = _logService.Calls[0];
-        Assert.Equal("Request rejected because DeviceUid header is missing.", rejection.Message);
-        Assert.Equal(["traceId", "method", "path", "responseCode"], rejection.Fields.Keys.ToArray());
-        Assert.Equal("GET", rejection.Fields["method"]);
-        Assert.False(string.IsNullOrWhiteSpace(rejection.Fields["traceId"]?.ToString()));
+        var inputJson = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[0].Fields["InputJson"]);
+        Assert.Equal("***REDACTED***", inputJson["x-internal-key"]);
+        Assert.Equal("j", inputJson["plain"]);
+        var query = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[0].Fields["query"]);
+        Assert.Equal("***REDACTED***", query["x-internal-key"]);
+        Assert.Equal("p", query["plain"]);
+        var form = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[1].Fields["InputJson"]);
+        Assert.Equal("***REDACTED***", form["X-INTERNAL-KEY"]);
+        Assert.Equal("j", form["plain"]);
     }
 
     [Fact]

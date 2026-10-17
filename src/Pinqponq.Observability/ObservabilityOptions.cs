@@ -11,13 +11,6 @@ public sealed class ObservabilityOptions
     /// <summary>Request and response bodies longer than this are trimmed in the log. Defaults to 5 MiB.</summary>
     public int MaxLoggedBodyBytes { get; set; } = 5 * 1024 * 1024;
 
-    /// <summary>
-    /// Whether a request without a device uid (<c>DeviceUid</c> header or query value) is
-    /// rejected with 400 <c>DEVICE_UID_REQUIRED</c>. Defaults to false; turn it on only for
-    /// services that serve the mobile app alone.
-    /// </summary>
-    public bool RequireDeviceUid { get; set; }
-
     /// <summary>Required. Pinqloq collection of the per-request records.</summary>
     public string HttpCollectionName { get; set; } = string.Empty;
 
@@ -27,15 +20,25 @@ public sealed class ObservabilityOptions
     /// <summary>Required. Pinqloq collection of the records relayed by the client-log endpoint.</summary>
     public string ClientCollectionName { get; set; } = string.Empty;
 
-    /// <summary>Request header carrying the caller's device identifier. Defaults to <c>Identifier</c>.</summary>
-    public string DeviceIdentifierHeader { get; set; } = "Identifier";
+    /// <summary>
+    /// Request header whose value becomes the record's device identifier. Defaults to
+    /// <see langword="null"/>: no header is read and records carry no device identifier.
+    /// </summary>
+    public string? DeviceIdentifierHeader { get; set; }
+
+    /// <summary>
+    /// Body, form and query keys redacted on top of the built-in ones (<c>Authorization</c>,
+    /// <c>Cookie</c>, <c>Set-Cookie</c>, <c>ApiKey</c>, <c>X-Api-Key</c> and keys containing
+    /// <c>secret</c>, <c>token</c> or <c>password</c>). Compared case-insensitively.
+    /// </summary>
+    public IList<string> RedactedKeys { get; set; } = [];
+
+    /// <summary>
+    /// <c>HttpContext.Items</c> entries added to the request record: item key → record field.
+    /// An item that is missing or empty adds nothing.
+    /// </summary>
+    public IDictionary<string, string> LoggedContextItems { get; set; } = new Dictionary<string, string>();
 
     /// <summary>Requests whose path contains one of these segments are not logged.</summary>
     public IList<string> ExcludedPathSegments { get; set; } = ["/health", "/openapi", "/scalar", "/swagger", ClientLogEndpoint.PathSegment];
-
-    /// <summary>
-    /// Requests whose path contains one of these segments skip the device uid check, e.g.
-    /// third-party webhooks that cannot send the header.
-    /// </summary>
-    public IList<string> DeviceUidExemptPathSegments { get; set; } = [];
 }

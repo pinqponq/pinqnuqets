@@ -45,7 +45,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         var localizationOptions = new ErrorLocalizationOptions();
 
         Assert.False(localizationOptions.Enabled);
-        Assert.Equal("Language", localizationOptions.LanguageHeader);
+        Assert.Equal("Accept-Language", localizationOptions.LanguageHeader);
         Assert.Equal("EN", localizationOptions.DefaultLanguage);
         Assert.Equal(CommonErrorCodes.GeneralError, localizationOptions.FallbackResponseCode);
         Assert.Equal("An unexpected error occurred.", localizationOptions.DefaultMessage);
@@ -124,7 +124,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
             context =>
             {
                 context.TraceIdentifier = "trace-7";
-                context.Request.Headers["Language"] = "  ";
+                context.Request.Headers["Accept-Language"] = "  ";
                 context.Request.Headers["X-Correlation-ID"] = " ";
             });
 

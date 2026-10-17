@@ -33,7 +33,7 @@ public sealed class PostgresErrorHandlingTests
             NullLoggerFactory.Instance,
             NullLogger<ExceptionHandlingMiddleware>.Instance);
         var httpContext = new DefaultHttpContext();
-        httpContext.Request.Headers["Language"] = language;
+        httpContext.Request.Headers["Accept-Language"] = language;
         httpContext.Response.Body = new MemoryStream();
 
         await middleware.InvokeAsync(httpContext);

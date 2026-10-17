@@ -21,10 +21,12 @@ internal sealed class HttpBodyReader
     private const int StreamBufferSize = 8192;
 
     private readonly int _maxLoggedBodyBytes;
+    private readonly LogValueRedactor _logValueRedactor;
 
-    public HttpBodyReader(int maxLoggedBodyBytes)
+    public HttpBodyReader(int maxLoggedBodyBytes, LogValueRedactor logValueRedactor)
     {
         _maxLoggedBodyBytes = maxLoggedBodyBytes;
+        _logValueRedactor = logValueRedactor;
     }
 
     public async Task<object?> ReadRequestBody(HttpRequest request, PinqloqRedactionPlan redactionPlan)
@@ -72,7 +74,7 @@ internal sealed class HttpBodyReader
             return null;
         }
 
-        var formattedBody = LogValueRedactor.FormatBody(request.ContentType, requestBodyText, redactionPlan);
+        var formattedBody = _logValueRedactor.FormatBody(request.ContentType, requestBodyText, redactionPlan);
         if (!isTruncated)
         {
             return formattedBody;
@@ -101,7 +103,7 @@ internal sealed class HttpBodyReader
             return null;
         }
 
-        return LogValueRedactor.FormatBody(response.ContentType, responseBodyText, redactionPlan);
+        return _logValueRedactor.FormatBody(response.ContentType, responseBodyText, redactionPlan);
     }
 
     private static bool HasRequestBody(HttpRequest request)

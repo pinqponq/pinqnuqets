@@ -96,13 +96,13 @@ builder.Services.AddPinqponqErrorLocalization();
 ```
 
 With localization on, the **exception message is the response code**: it is looked up in the
-message catalog and the message is returned in the language of the `Language` request header
-(`TR`, `de`, … — case-insensitive). A code the catalog does not know becomes `general_error`. The
+message catalog and the message is returned in the language of the `LanguageHeader` request header
+(`Accept-Language` by default; `tr`, `de-DE`, … — case-insensitive). A code the catalog does not know becomes `general_error`. The
 status code still comes from the mapping above (or an `IExceptionResolver`).
 
 | `ErrorLocalizationOptions` | Default | Notes |
 |---|---|---|
-| `LanguageHeader` | `Language` | Header carrying the language code. |
+| `LanguageHeader` | `Accept-Language` | Header carrying the language; its first tag is used, and `pt-BR` falls back to `PT` when there is no `PT-BR` catalog. |
 | `DefaultLanguage` | `EN` | Used when the header is missing or the catalog has no message in that language. |
 | `FallbackResponseCode` | `general_error` | Code for an unknown code. |
 | `DefaultMessage` | `An unexpected error occurred.` | Used when the catalog has no message at all. |

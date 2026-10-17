@@ -6,7 +6,7 @@
   redacted query and request/response bodies, and an event name built from the route.
 - **`ILogService`** — application and background job logs to both `ILogger` and Pinqloq, with
   exception fields and stack trace trimming.
-- **Client-log relay** — an endpoint that forwards logs sent by mobile/web clients to Pinqloq.
+- **Client-log relay** — an endpoint that forwards logs sent by clients to Pinqloq.
 
 ## Install
 
@@ -49,10 +49,10 @@ app.MapPinqponqClientLogs("/api/myapp/client-logs");
 | `JobsCollectionName` | — | **Required.** Collection of `ILogService` records that name no collection; also Pinqloq's `ApiLogsCollectionName`. |
 | `ClientCollectionName` | — | **Required.** Collection of the relayed client logs. |
 | `MaxLoggedBodyBytes` | 5 MiB | Longer bodies are trimmed and marked `[truncated: …]`. |
-| `RequireDeviceUid` | `false` | Rejects a request without a `DeviceUid` header/query value with 400 `DEVICE_UID_REQUIRED`. |
-| `DeviceIdentifierHeader` | `Identifier` | Header whose value becomes the record's device identifier. |
+| `DeviceIdentifierHeader` | none | Header whose value becomes the record's device identifier; unset, records carry none. |
+| `RedactedKeys` | none | Keys redacted on top of the built-in ones (see Redaction). |
+| `LoggedContextItems` | none | `HttpContext.Items` key → record field, added to the request record when set. |
 | `ExcludedPathSegments` | `/health`, `/openapi`, `/scalar`, `/swagger`, `/client-logs` | Paths containing one of these are not logged. |
-| `DeviceUidExemptPathSegments` | none | Paths that skip the device uid check (e.g. third-party webhooks). |
 
 Missing collection names fail the application at startup, and so does a missing
 `Pinqloq:SecretKey` (the Pinqloq client validates it). Binding a list from configuration adds to
@@ -67,10 +67,9 @@ its defaults.
   its detail is added under `exception` (via `Pinqponq.Contracts.IRequestErrorFeature`).
 - **Level:** 2xx/3xx Information, 4xx Warning, 5xx Error.
 - **Fields:** `traceId`, `RequestMethod`, `path`, `ResponseCode` (HTTP status), `elapsedMs`,
-  `query`, `InputJson`, `OutputJson`, `projectId`/`projectKey`/`keyId` when set in
-  `HttpContext.Items`.
-- **Redaction:** keys such as `Authorization`, `Password`, `AccessToken`, `RefreshToken`,
-  `ApiKey` and anything containing `secret`, `token` or `password` become `***REDACTED***`;
+  `query`, `InputJson`, `OutputJson`, and the `LoggedContextItems` fields.
+- **Redaction:** `Authorization`, `Cookie`, `Set-Cookie`, `ApiKey`, `X-Api-Key`, the
+  `RedactedKeys` and anything containing `secret`, `token` or `password` become `***REDACTED***`;
   URL values become `****`; Pinqloq's attribute-based redaction plan is applied too. Multipart,
   non-text and OpenAPI bodies are omitted.
 - **Correlation id:** Pinqloq's correlation header when the caller sent one, otherwise the
@@ -98,7 +97,7 @@ an `ILogger` warning.
 `MapPinqponqClientLogs(route)` maps `POST route` (default `/api/client-logs`; keep `/client-logs` in a
 custom route, so request logging does not log the relay itself) with a `ClientLogRequest` body (`event`,
 `logLevel`, `metadata`, `detail`, `date`) and answers 204. The record goes to
-`ClientCollectionName` as a device log with the `DeviceIdentifierHeader` value.
+`ClientCollectionName` as a device log with the `DeviceIdentifierHeader` value, if one is set.
 
 ## Repository
 

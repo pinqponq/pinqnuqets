@@ -216,7 +216,7 @@ public sealed class ExceptionHandlingMiddleware
 
     private string ResolveLanguage(HttpContext context)
     {
-        var language = context.Request.Headers[_localizationOptions.LanguageHeader].ToString();
+        var language = ErrorMessageCatalog.FirstLanguageTag(context.Request.Headers[_localizationOptions.LanguageHeader].ToString());
         return string.IsNullOrWhiteSpace(language)
             ? ErrorMessageCatalog.NormalizeLanguage(_localizationOptions.DefaultLanguage)
             : ErrorMessageCatalog.NormalizeLanguage(language);

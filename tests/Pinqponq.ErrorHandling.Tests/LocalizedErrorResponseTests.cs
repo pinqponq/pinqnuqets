@@ -24,7 +24,7 @@ public sealed class LocalizedErrorResponseTests : IDisposable
 
         var httpContext = await harness.InvokeAsync(
             _ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired),
-            context => context.Request.Headers["Language"] = "tr");
+            context => context.Request.Headers["Accept-Language"] = "tr");
 
         using var body = ErrorResponseHarness.ReadBody(httpContext);
         Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
@@ -52,10 +52,47 @@ public sealed class LocalizedErrorResponseTests : IDisposable
 
         var httpContext = await harness.InvokeAsync(
             _ => throw new InvalidOperationException(CommonErrorCodes.ApiPageSizeInvalid),
-            context => context.Request.Headers["Language"] = "XX");
+            context => context.Request.Headers["Accept-Language"] = "XX");
 
         using var body = ErrorResponseHarness.ReadBody(httpContext);
         Assert.Equal("Page size must be greater than 0.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Theory]
+    [InlineData("tr-TR,tr;q=0.9,en;q=0.8", "İstek gövdesi gerekli.")]
+    [InlineData(" de-AT ; q=1", "Der Anfragetext ist erforderlich.")]
+    [InlineData("xx-TR", "Request body is required.")]
+    public async Task First_accept_language_tag_is_used_and_falls_back_to_its_primary_language(string acceptLanguage, string expectedMessage)
+    {
+        var harness = CreateLocalizedHarness();
+
+        var httpContext = await harness.InvokeAsync(
+            _ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired),
+            context => context.Request.Headers["Accept-Language"] = acceptLanguage);
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(expectedMessage, body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Catalog_for_the_full_language_tag_wins_over_its_primary_language()
+    {
+        Directory.CreateDirectory(_catalogDirectory);
+        await File.WriteAllTextAsync(Path.Combine(_catalogDirectory, "PT-BR.json"), """{ "api_body_required": "Corpo obrigatório (BR)." }""");
+        var harness = CreateLocalizedHarness();
+        harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
+
+        var brazilian = await harness.InvokeAsync(
+            _ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired),
+            context => context.Request.Headers["Accept-Language"] = "pt-BR");
+        var portuguese = await harness.InvokeAsync(
+            _ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired),
+            context => context.Request.Headers["Accept-Language"] = "pt-PT");
+
+        using var brazilianBody = ErrorResponseHarness.ReadBody(brazilian);
+        using var portugueseBody = ErrorResponseHarness.ReadBody(portuguese);
+        Assert.Equal("Corpo obrigatório (BR).", brazilianBody.RootElement.GetProperty("message").GetString());
+        Assert.Equal("O corpo da solicitação é obrigatório.", portugueseBody.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -131,7 +168,7 @@ public sealed class LocalizedErrorResponseTests : IDisposable
 
         var httpContext = await harness.InvokeAsync(
             _ => throw new KeyNotFoundException("order_not_found"),
-            context => context.Request.Headers["Language"] = "TR");
+            context => context.Request.Headers["Accept-Language"] = "TR");
 
         using var body = ErrorResponseHarness.ReadBody(httpContext);
         Assert.Equal("Sipariş bulunamadı.", body.RootElement.GetProperty("message").GetString());

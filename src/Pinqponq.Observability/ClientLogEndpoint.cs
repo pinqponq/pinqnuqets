@@ -26,7 +26,7 @@ internal static class ClientLogEndpoint
         var entry = new PinqloqLogEntry
         {
             Event = request.Event,
-            DeviceIdentifier = httpContext.Request.Headers[observabilityOptions.Value.DeviceIdentifierHeader].ToString(),
+            DeviceIdentifier = DeviceIdentifier.Read(httpContext, observabilityOptions.Value.DeviceIdentifierHeader),
             LogLevel = ParseLogLevel(request.LogLevel),
             LogSourceType = PinqloqLogSourceType.Device,
             CollectionName = observabilityOptions.Value.ClientCollectionName,

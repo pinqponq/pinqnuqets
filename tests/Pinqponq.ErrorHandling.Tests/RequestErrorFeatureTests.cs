@@ -22,7 +22,7 @@ public sealed class RequestErrorFeatureTests
                 context.TraceIdentifier = "trace-1";
                 context.Request.Method = HttpMethods.Post;
                 context.Request.QueryString = new QueryString("?page=2");
-                context.Request.Headers["Language"] = "de";
+                context.Request.Headers["Accept-Language"] = "de";
             });
 
         var errorFeature = httpContext.Features.Get<IRequestErrorFeature>();

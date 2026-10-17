@@ -10,19 +10,16 @@ namespace Pinqponq.Observability;
 /// <summary>
 /// Writes one Pinqloq record per request: method, path, status, duration, redacted query and
 /// request/response bodies, and the error detail Pinqponq.ErrorHandling put on
-/// <see cref="IRequestErrorFeature"/>. Optionally rejects requests without a device uid.
+/// <see cref="IRequestErrorFeature"/>.
 /// </summary>
 public sealed class RequestLoggingMiddleware
 {
-    private const string ProjectIdKey = "ProjectId";
-    private const string ProjectKeyKey = "ProjectKey";
-    private const string KeyIdKey = "KeyId";
-
     private readonly RequestDelegate _requestDelegate;
     private readonly string _httpCollectionName;
-    private readonly string _deviceIdentifierHeader;
+    private readonly string? _deviceIdentifierHeader;
     private readonly string[] _excludedPathSegments;
-    private readonly DeviceUidRequirement _deviceUidRequirement;
+    private readonly KeyValuePair<string, string>[] _loggedContextItems;
+    private readonly LogValueRedactor _logValueRedactor;
     private readonly HttpBodyReader _bodyReader;
 
     /// <summary>Creates the middleware.</summary>
@@ -34,10 +31,9 @@ public sealed class RequestLoggingMiddleware
         _httpCollectionName = observabilityOptions.Value.HttpCollectionName;
         _deviceIdentifierHeader = observabilityOptions.Value.DeviceIdentifierHeader;
         _excludedPathSegments = observabilityOptions.Value.ExcludedPathSegments.ToArray();
-        _deviceUidRequirement = new DeviceUidRequirement(
-            observabilityOptions.Value.RequireDeviceUid,
-            observabilityOptions.Value.DeviceUidExemptPathSegments);
-        _bodyReader = new HttpBodyReader(observabilityOptions.Value.MaxLoggedBodyBytes);
+        _loggedContextItems = observabilityOptions.Value.LoggedContextItems.ToArray();
+        _logValueRedactor = new LogValueRedactor(observabilityOptions.Value.RedactedKeys);
+        _bodyReader = new HttpBodyReader(observabilityOptions.Value.MaxLoggedBodyBytes, _logValueRedactor);
     }
 
     /// <summary>Middleware entry point.</summary>
@@ -52,14 +48,8 @@ public sealed class RequestLoggingMiddleware
             return;
         }
 
-        var identifier = httpContext.Request.Headers[_deviceIdentifierHeader].ToString();
+        var identifier = DeviceIdentifier.Read(httpContext, _deviceIdentifierHeader);
         var correlationId = ResolveCorrelationId(httpContext);
-
-        if (_deviceUidRequirement.IsViolatedBy(httpContext, requestPath))
-        {
-            await DeviceUidRequirement.Reject(httpContext, logService, identifier, correlationId);
-            return;
-        }
 
         var redactionPlan = PinqloqRedaction.Resolve(httpContext);
 
@@ -226,7 +216,7 @@ public sealed class RequestLoggingMiddleware
 
         if (request.Query.Count > 0)
         {
-            exchangeLog["query"] = LogValueRedactor.SanitizeQuery(request.Query, redactionPlan);
+            exchangeLog["query"] = _logValueRedactor.SanitizeQuery(request.Query, redactionPlan);
         }
 
         if (requestBody is not null)
@@ -239,22 +229,13 @@ public sealed class RequestLoggingMiddleware
             exchangeLog["OutputJson"] = responseBody;
         }
 
-        var projectId = GetContextItem(httpContext, ProjectIdKey);
-        if (!string.IsNullOrEmpty(projectId))
+        foreach (var (contextItemKey, recordField) in _loggedContextItems)
         {
-            exchangeLog["projectId"] = projectId;
-        }
-
-        var projectKey = GetContextItem(httpContext, ProjectKeyKey);
-        if (!string.IsNullOrEmpty(projectKey))
-        {
-            exchangeLog["projectKey"] = projectKey;
-        }
-
-        var keyId = GetContextItem(httpContext, KeyIdKey);
-        if (!string.IsNullOrEmpty(keyId))
-        {
-            exchangeLog["keyId"] = keyId;
+            var contextItemValue = GetContextItem(httpContext, contextItemKey);
+            if (!string.IsNullOrEmpty(contextItemValue))
+            {
+                exchangeLog[recordField] = contextItemValue;
+            }
         }
 
         var errorDetail = httpContext.Features.Get<IRequestErrorFeature>()?.Detail;

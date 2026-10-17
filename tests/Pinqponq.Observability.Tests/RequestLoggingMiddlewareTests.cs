@@ -63,10 +63,11 @@ public sealed class RequestLoggingMiddlewareTests
     [Fact]
     public async Task Successful_request_is_one_information_record_named_after_its_route()
     {
-        using var host = await StartAsync(endpoints =>
-            endpoints.MapGet("/api/orders/{id}", (int id) => Results.Json(new { id, imageUrl = "https://cdn.example/x.png", accessToken = "secret" })));
+        using var host = await StartAsync(
+            endpoints => endpoints.MapGet("/api/orders/{id}", (int id) => Results.Json(new { id, imageUrl = "https://cdn.example/x.png", accessToken = "secret" })),
+            observabilityOptions => observabilityOptions.DeviceIdentifierHeader = "X-Device-Id");
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/orders/5");
-        request.Headers.Add("Identifier", "device-1");
+        request.Headers.Add("X-Device-Id", "device-1");
         request.Headers.Add(PinqloqRequestLoggingMiddleware.CorrelationIdHeaderName, "corr-1");
 
         var response = await host.GetTestClient().SendAsync(request);
@@ -183,48 +184,15 @@ public sealed class RequestLoggingMiddlewareTests
     }
 
     [Fact]
-    public async Task Request_without_device_uid_is_rejected_when_required()
+    public async Task Device_identifier_is_empty_when_no_header_is_configured()
     {
-        using var host = await StartAsync(
-            endpoints => endpoints.MapGet("/api/orders", () => "ok"),
-            observabilityOptions => observabilityOptions.RequireDeviceUid = true);
+        using var host = await StartAsync(endpoints => endpoints.MapGet("/ping", () => "pong"));
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/ping");
+        request.Headers.Add("Identifier", "device-1");
 
-        var response = await host.GetTestClient().GetAsync("/api/orders");
+        await host.GetTestClient().SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(
-            """{"status":false,"statusCode":400,"message":"DeviceUid header is required.","responseCode":"DEVICE_UID_REQUIRED"}""",
-            await response.Content.ReadAsStringAsync());
-        var call = Assert.Single(_logService.Calls);
-        Assert.Equal("Warn", call.Level);
-        Assert.Equal(ObservabilityEvents.RequestRejectedDeviceUidMissing, call.EventName);
-        Assert.Null(call.CollectionName);
-        Assert.Equal("DEVICE_UID_REQUIRED", call.Fields["responseCode"]);
-        Assert.Equal("/api/orders", call.Fields["path"]);
-    }
-
-    [Fact]
-    public async Task Device_uid_from_a_header_or_query_or_an_exempt_path_passes_the_check()
-    {
-        using var host = await StartAsync(
-            endpoints => endpoints.MapGet("/{**rest}", () => "ok"),
-            observabilityOptions =>
-            {
-                observabilityOptions.RequireDeviceUid = true;
-                observabilityOptions.DeviceUidExemptPathSegments = ["/webhooks/"];
-            });
-        var client = host.GetTestClient();
-        using var headerRequest = new HttpRequestMessage(HttpMethod.Get, "/api/orders");
-        headerRequest.Headers.Add("X-Device-Uid", "uid-1");
-
-        var headerResponse = await client.SendAsync(headerRequest);
-        var queryResponse = await client.GetAsync("/api/orders?device_uid=uid-1");
-        var exemptResponse = await client.GetAsync("/webhooks/billing");
-
-        Assert.Equal(HttpStatusCode.OK, headerResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, exemptResponse.StatusCode);
-        Assert.All(_logService.Calls, call => Assert.Equal("Info", call.Level));
+        Assert.Equal(string.Empty, Assert.Single(_logService.Calls).Identifier);
     }
 
     [Fact]
@@ -311,21 +279,30 @@ public sealed class RequestLoggingMiddlewareTests
     }
 
     [Fact]
-    public async Task Project_items_set_by_the_endpoint_are_added()
+    public async Task Configured_context_items_set_by_the_endpoint_are_added()
     {
-        using var host = await StartAsync(endpoints => endpoints.MapGet("/api/keys", (HttpContext httpContext) =>
-        {
-            httpContext.Items["ProjectId"] = "project-1";
-            httpContext.Items["ProjectKey"] = "key-1";
-            httpContext.Items["KeyId"] = 7;
-            return Results.NoContent();
-        }));
+        using var host = await StartAsync(
+            endpoints => endpoints.MapGet("/api/keys", (HttpContext httpContext) =>
+            {
+                httpContext.Items["TenantId"] = "tenant-1";
+                httpContext.Items["KeyId"] = 7;
+                httpContext.Items["Empty"] = string.Empty;
+                httpContext.Items["NotConfigured"] = "x";
+                return Results.NoContent();
+            }),
+            observabilityOptions => observabilityOptions.LoggedContextItems = new Dictionary<string, string>
+            {
+                ["TenantId"] = "tenantId",
+                ["KeyId"] = "keyId",
+                ["Empty"] = "empty",
+                ["Missing"] = "missing"
+            });
 
         await host.GetTestClient().GetAsync("/api/keys");
 
         var call = Assert.Single(_logService.Calls);
-        Assert.Equal("project-1", call.Fields["projectId"]);
-        Assert.Equal("key-1", call.Fields["projectKey"]);
+        Assert.Equal(["traceId", "RequestMethod", "path", "ResponseCode", "elapsedMs", "tenantId", "keyId"], call.Fields.Keys.ToArray());
+        Assert.Equal("tenant-1", call.Fields["tenantId"]);
         Assert.Equal("7", call.Fields["keyId"]);
     }
 

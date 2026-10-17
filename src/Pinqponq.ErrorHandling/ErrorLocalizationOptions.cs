@@ -13,8 +13,11 @@ public sealed class ErrorLocalizationOptions
     /// <summary>Set by <c>AddPinqponqErrorLocalization</c>.</summary>
     public bool Enabled { get; set; }
 
-    /// <summary>Request header carrying the language code (e.g. <c>TR</c>). Defaults to <c>Language</c>.</summary>
-    public string LanguageHeader { get; set; } = "Language";
+    /// <summary>
+    /// Request header carrying the language. Defaults to <c>Accept-Language</c>. Its first tag is used
+    /// (<c>tr-TR,tr;q=0.9</c> → <c>TR-TR</c>); without a catalog for the full tag, its primary language (<c>TR</c>) is tried.
+    /// </summary>
+    public string LanguageHeader { get; set; } = "Accept-Language";
 
     /// <summary>Language used when the header is missing or has no message for the code. Defaults to <c>EN</c>.</summary>
     public string DefaultLanguage { get; set; } = "EN";

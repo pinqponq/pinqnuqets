@@ -15,6 +15,9 @@ internal sealed class ErrorMessageCatalog
     private const string CatalogFileExtension = ".json";
     private const string CatalogFileSearchPattern = "*.json";
     private const string EmbeddedCatalogSegment = ".Localization.";
+    private const char LanguageSubtagSeparator = '-';
+    private const char LanguageListSeparator = ',';
+    private const char LanguageWeightSeparator = ';';
 
     private readonly ErrorLocalizationOptions _localizationOptions;
     private readonly ILogger<ErrorMessageCatalog> _logger;
@@ -43,12 +46,23 @@ internal sealed class ErrorMessageCatalog
             return message;
         }
 
+        var subtagSeparatorIndex = language.IndexOf(LanguageSubtagSeparator);
+        if (subtagSeparatorIndex > 0
+            && messagesByLanguage.TryGetValue(language[..subtagSeparatorIndex], out var primaryLanguageMessage))
+        {
+            return primaryLanguageMessage;
+        }
+
         return messagesByLanguage.TryGetValue(NormalizeLanguage(_localizationOptions.DefaultLanguage), out var defaultMessage)
             ? defaultMessage
             : null;
     }
 
     public static string NormalizeLanguage(string language) => language.ToUpperInvariant();
+
+    // An Accept-Language value lists several tags with weights ("tr-TR,tr;q=0.9,en;q=0.8"); the first one is used.
+    public static string FirstLanguageTag(string headerValue) =>
+        headerValue.Split(LanguageListSeparator)[0].Split(LanguageWeightSeparator)[0].Trim();
 
     private Dictionary<string, Dictionary<string, string>> LoadMessages()
     {

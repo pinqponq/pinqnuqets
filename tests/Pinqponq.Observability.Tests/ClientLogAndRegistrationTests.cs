@@ -70,7 +70,7 @@ public sealed class ClientLogAndRegistrationTests
     public async Task Client_log_is_relayed_to_the_client_collection()
     {
         var pinqloqLogger = new CapturingPinqloqLogger();
-        using var host = await StartAsync(ValidSettings, pinqloqLogger);
+        using var host = await StartAsync(ValidSettings, pinqloqLogger, observabilityOptions => observabilityOptions.DeviceIdentifierHeader = "X-Device-Id");
         var date = new DateTime(2026, 10, 11, 9, 30, 0, DateTimeKind.Utc);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/client-logs")
         {
@@ -83,7 +83,7 @@ public sealed class ClientLogAndRegistrationTests
                 date,
             }),
         };
-        request.Headers.Add("Identifier", "device-1");
+        request.Headers.Add("X-Device-Id", "device-1");
         request.Headers.Add(PinqloqRequestLoggingMiddleware.CorrelationIdHeaderName, "corr-1");
 
         var response = await host.GetTestClient().SendAsync(request);
@@ -133,12 +133,14 @@ public sealed class ClientLogAndRegistrationTests
     {
         using var host = await StartAsync(
             ValidSettings,
-            configure: observabilityOptions => observabilityOptions.DeviceUidExemptPathSegments.Add("/webhooks/billing"));
+            configure: observabilityOptions => observabilityOptions.RedactedKeys.Add("X-Internal-Key"));
 
         var observabilityOptions = host.Services.GetRequiredService<IOptions<ObservabilityOptions>>().Value;
         var pinqloqOptions = host.Services.GetRequiredService<IOptions<PinqloqOptions>>().Value;
         Assert.Equal("app_http", observabilityOptions.HttpCollectionName);
-        Assert.Equal(["/webhooks/billing"], observabilityOptions.DeviceUidExemptPathSegments);
+        Assert.Equal(["X-Internal-Key"], observabilityOptions.RedactedKeys);
+        Assert.Null(observabilityOptions.DeviceIdentifierHeader);
+        Assert.Empty(observabilityOptions.LoggedContextItems);
         Assert.Equal("app_jobs", pinqloqOptions.ApiLogsCollectionName);
         Assert.Equal("pinqloq-secret", pinqloqOptions.SecretKey);
         Assert.Equal(Environment.MachineName, pinqloqOptions.DeviceIdentifier);

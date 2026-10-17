@@ -10,7 +10,7 @@ namespace Pinqponq.Observability;
 /// Turns logged bodies and query strings into log values: JSON and form bodies are parsed, sensitive
 /// keys become <c>***REDACTED***</c>, URL values become <c>****</c> and OpenAPI documents are omitted.
 /// </summary>
-internal static class LogValueRedactor
+internal sealed class LogValueRedactor
 {
     private const string RedactedValue = "***REDACTED***";
     private const string RedactedUrl = "****";
@@ -23,17 +23,23 @@ internal static class LogValueRedactor
     private const string TokenKeyToken = "token";
     private const string PasswordKeyToken = "password";
 
-    private static readonly HashSet<string> SensitiveKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] BuiltInSensitiveKeys =
+    [
         "Authorization",
         "Cookie",
         "Set-Cookie",
-        "X-Internal-Key",
         "ApiKey",
         "X-Api-Key"
-    };
+    ];
 
-    public static object? FormatBody(string? contentType, string bodyText, PinqloqRedactionPlan redactionPlan)
+    private readonly HashSet<string> _sensitiveKeys;
+
+    public LogValueRedactor(IEnumerable<string> redactedKeys)
+    {
+        _sensitiveKeys = new HashSet<string>(BuiltInSensitiveKeys.Concat(redactedKeys), StringComparer.OrdinalIgnoreCase);
+    }
+
+    public object? FormatBody(string? contentType, string bodyText, PinqloqRedactionPlan redactionPlan)
     {
         if (TryParseJsonBody(bodyText, redactionPlan, out var jsonBody))
         {
@@ -50,14 +56,14 @@ internal static class LogValueRedactor
         return bodyText;
     }
 
-    public static Dictionary<string, object?> SanitizeQuery(IQueryCollection query, PinqloqRedactionPlan redactionPlan)
+    public Dictionary<string, object?> SanitizeQuery(IQueryCollection query, PinqloqRedactionPlan redactionPlan)
     {
         return query.ToDictionary(
             queryParameter => queryParameter.Key,
             queryParameter => SanitizeValue(queryParameter.Key, queryParameter.Value.ToString(), redactionPlan));
     }
 
-    private static bool TryParseJsonBody(string bodyText, PinqloqRedactionPlan redactionPlan, out object? jsonBody)
+    private bool TryParseJsonBody(string bodyText, PinqloqRedactionPlan redactionPlan, out object? jsonBody)
     {
         jsonBody = null;
         var trimmedBody = bodyText.TrimStart();
@@ -88,7 +94,7 @@ internal static class LogValueRedactor
         }
     }
 
-    private static object? SanitizeJsonElement(JsonElement element, PinqloqRedactionPlan redactionPlan)
+    private object? SanitizeJsonElement(JsonElement element, PinqloqRedactionPlan redactionPlan)
     {
         return element.ValueKind switch
         {
@@ -128,7 +134,7 @@ internal static class LogValueRedactor
                || stringToCheck.StartsWith(Uri.UriSchemeHttps + Uri.SchemeDelimiter, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static object? SanitizeValue(string fieldKey, string? queryParameterValue, PinqloqRedactionPlan redactionPlan)
+    private object? SanitizeValue(string fieldKey, string? queryParameterValue, PinqloqRedactionPlan redactionPlan)
     {
         if (IsSensitiveKey(fieldKey, redactionPlan))
         {
@@ -143,9 +149,9 @@ internal static class LogValueRedactor
         return queryParameterValue;
     }
 
-    private static bool IsSensitiveKey(string fieldKey, PinqloqRedactionPlan redactionPlan)
+    private bool IsSensitiveKey(string fieldKey, PinqloqRedactionPlan redactionPlan)
     {
-        if (SensitiveKeys.Contains(fieldKey))
+        if (_sensitiveKeys.Contains(fieldKey))
         {
             return true;
         }

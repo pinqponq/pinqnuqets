@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (one record per request with redacted bodies and route-based event names), `ILogService` /
   `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming) and the
   client-log relay endpoint `MapPinqponqClientLogs`. Collection names are required and validated at
-  startup. Moved from rindle-backend (`Rindle.Common.Observability`), where it ran in production.
+  startup; the device identifier header, extra redacted keys and logged `HttpContext.Items` entries
+  are settings with empty defaults.
 - `Pinqponq.Observability.Abstractions` 1.0.0: `ILogService` alone, without dependencies, for domain
   and application layers; Pinqponq.Observability references it and registers the implementation.
 - `Pinqponq.ErrorHandling.Postgres` 1.0.0: maps Npgsql `PostgresException` (also wrapped in an EF Core
@@ -46,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Pinqponq.ErrorHandling` 1.1.0: optional localized error responses (`AddPinqponqErrorLocalization`:
   the response code is looked up in a message catalog — embedded `general_error`/`api_*` messages
   in 12 languages plus the application's `Localization/*.json` — and the message is returned in the
-  `Language` header's language), maintenance mode (`AddPinqponqMaintenanceMode`, 503
+  request's language, `Accept-Language` by default), maintenance mode (`AddPinqponqMaintenanceMode`, 503
   `system_maintenance`, follows configuration reloads), pluggable `IExceptionResolver`s,
   `IncludeTraceId` and `TreatAnyCancellationAsClientClosed` options, and every handled failure is
   described on `IRequestErrorFeature`. Existing behavior is unchanged unless these are turned on;
