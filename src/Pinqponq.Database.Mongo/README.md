@@ -4,7 +4,8 @@ A minimal MongoDB connection layer for .NET: registers a shared `IMongoClient`
 and the default `IMongoDatabase` resolved from configuration, plus a
 ready-made `ping` health check. Like the other `Pinqponq.Database.*`
 packages, it stops at connectivity — no repository base classes, no document
-mapping conventions, no query helpers.
+mapping conventions, no query helpers beyond paging a find into the shared
+Pinqponq.Contracts paged response.
 
 ## Install
 
@@ -56,6 +57,24 @@ public sealed class AuditRepository(IMongoDatabase database)
         database.GetCollection<BsonDocument>("audit-log").InsertOneAsync(entry, cancellationToken: ct);
 }
 ```
+
+## Paging a find
+
+`ToPagedResponseAsync` counts the documents a find matches and reads only the requested page
+into a `PagedResponseModel<T>` of Pinqponq.Contracts, with the same rules as its
+`ToPagedResponse` (page size cap, page past the end, `ArgumentException` for a page number or
+size under 1). Sort the find first and leave its skip and limit unset.
+
+```csharp
+using Pinqponq.Database.Mongo.Pagination;
+
+var response = await logs.Find(filter)
+    .SortByDescending(log => log.Date)
+    .ToPagedResponseAsync(paging.Page, paging.Size, page => page.Select(ToDto).ToList(), LogPaging, cancellationToken);
+```
+
+The package references Pinqponq.Contracts for these types, which brings the ASP.NET Core
+shared framework (`Microsoft.AspNetCore.App`) with it.
 
 ## Configuration
 
