@@ -11,7 +11,7 @@ Thanks for your interest in contributing. This repository packages shared .NET i
 
 1. Fork and clone the repository.
 2. Create a feature branch from `main` (or `master`).
-3. Make focused changes; keep project-specific business logic out of these packages.
+3. Make focused changes; keep project-specific business logic out of these packages (see "Scope of the packages" below).
 4. Build and test:
 
 ```bash
@@ -36,6 +36,15 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 - Update `CHANGELOG.md` under `[Unreleased]` when behavior or public API changes.
 - Every package is versioned on its own: when you change a package, raise the `<Version>` in that package's `.csproj` (Semantic Versioning). There is no shared version.
 - Publishing is automatic. After a merge to `master`, the CI `publish` job pushes to nuget.org every package whose `<Version>` is not yet there. Do not upload packages by hand. If you changed a package and forgot to raise its `<Version>`, nothing is published for it.
+
+## Scope of the packages
+
+These packages hold only what any Pinqponq ASP.NET Core API wants for itself.
+
+- For every type, option, default, constant and message ask: would a project other than the first one need exactly this?
+- Product-specific headers, query keys, routes, response codes, messages, defaults and one-product options belong in that product. A doubtful part stays in the product, or becomes a setting with a neutral default in an opt-in package.
+- Technology-specific packages (PostgreSQL, MongoDB, EF Core, Vault) are welcome as long as nothing in them names a product.
+- Say in the pull request, per package, what stayed in, what stayed in the product, and why.
 
 ## Code of conduct
 
