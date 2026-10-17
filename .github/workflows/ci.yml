@@ -79,7 +79,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: nuget
+    permissions:
+      id-token: write # lets the job ask GitHub for the OIDC token that nuget.org trusts
 
     steps:
       - name: Download packages
@@ -93,6 +94,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # Trusted Publishing: nuget.org exchanges GitHub's OIDC token for an API key that is valid
+      # for one hour. No long-lived key is stored in this repository.
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to nuget.org
         run: >
           dotnet nuget push "./artifacts/nupkg/*.nupkg"
@@ -100,4 +109,4 @@ jobs:
           --api-key "$NUGET_API_KEY"
           --skip-duplicate
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
