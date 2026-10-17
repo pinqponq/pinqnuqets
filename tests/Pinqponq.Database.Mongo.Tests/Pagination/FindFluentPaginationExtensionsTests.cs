@@ -31,9 +31,9 @@ public sealed class FindFluentPaginationExtensionsTests
     public async Task Page_past_the_end_and_page_size_follow_the_options()
     {
         var find = new InMemoryFindFluent(Enumerable.Range(1, 23).ToList());
-        var pinqloqOptions = new PaginationOptions { MaxPageSize = 5, PastLastPage = PastLastPageBehavior.ReturnEmptyPage };
+        var emptyPageOptions = new PaginationOptions { MaxPageSize = 5, PastLastPage = PastLastPageBehavior.ReturnEmptyPage };
 
-        var response = await find.ToPagedResponseAsync(page: 9, size: 200, documents => documents, pinqloqOptions);
+        var response = await find.ToPagedResponseAsync(page: 9, size: 200, documents => documents, emptyPageOptions);
 
         Assert.Equal(23, find.AppliedSkip);
         Assert.Equal(5, find.AppliedLimit);

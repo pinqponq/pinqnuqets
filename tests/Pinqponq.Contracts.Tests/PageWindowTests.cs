@@ -22,9 +22,9 @@ public sealed class PageWindowTests
     [Fact]
     public void Service_maximum_replaces_the_default_maximum()
     {
-        var pinqloqOptions = new PaginationOptions { MaxPageSize = 200 };
+        var servicePagingOptions = new PaginationOptions { MaxPageSize = 200 };
 
-        var window = PageWindow.Resolve(page: 1, size: 500, rowCount: 1_000, pinqloqOptions);
+        var window = PageWindow.Resolve(page: 1, size: 500, rowCount: 1_000, servicePagingOptions);
 
         Assert.Equal(200, window.Size);
         Assert.Equal(5, window.PageCount);
