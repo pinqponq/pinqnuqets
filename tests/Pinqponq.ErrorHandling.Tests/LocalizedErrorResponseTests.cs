@@ -116,7 +116,40 @@ public sealed class LocalizedErrorResponseTests : IDisposable
         Assert.Equal("Nothing here.", mappedBody.RootElement.GetProperty("message").GetString());
         using var unknownMappedBody = ErrorResponseHarness.ReadBody(unknownMapped);
         Assert.Equal(StatusCodes.Status400BadRequest, unknownMapped.Response.StatusCode);
-        Assert.Equal(CommonErrorCodes.GeneralError, unknownMappedBody.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("bad_request", unknownMappedBody.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("An unexpected error occurred.", unknownMappedBody.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Unknown_mapped_code_gets_the_fallback_message_in_the_requested_language()
+    {
+        var harness = new ErrorResponseHarness();
+        harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.CatalogDirectory = null;
+
+        var httpContext = await harness.InvokeAsync(
+            _ => throw new KeyNotFoundException("missing"),
+            context => context.Request.Headers["Accept-Language"] = "tr");
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("not_found", body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Beklenmeyen bir hata oluştu.", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Default_message_is_used_when_neither_the_code_nor_the_fallback_has_a_message()
+    {
+        var harness = new ErrorResponseHarness();
+        harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.CatalogDirectory = null;
+        harness.LocalizationOptions.FallbackResponseCode = "order_error";
+        harness.LocalizationOptions.DefaultMessage = "Something went wrong.";
+
+        var httpContext = await harness.InvokeAsync(_ => throw new KeyNotFoundException("missing"));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal("not_found", body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Something went wrong.", body.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]

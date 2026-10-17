@@ -40,9 +40,8 @@ public sealed class PostgresExceptionResolver : IExceptionResolver
         };
 
         var responseCode = MapResponseCode(postgresException.SqlState);
-        var statusCode = responseCode == PostgresErrorResponseCodes.DatabaseError
-            ? _unmappedStatusCode
-            : StatusCodes.Status400BadRequest;
+        var isMappedSqlState = responseCode != PostgresErrorResponseCodes.DatabaseError;
+        var statusCode = isMappedSqlState ? StatusCodes.Status400BadRequest : _unmappedStatusCode;
         return new ExceptionResolution(statusCode, responseCode)
         {
             FallbackResponseCode = PostgresErrorResponseCodes.DatabaseError,

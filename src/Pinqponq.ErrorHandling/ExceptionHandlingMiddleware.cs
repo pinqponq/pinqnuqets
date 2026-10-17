@@ -157,16 +157,35 @@ public sealed class ExceptionHandlingMiddleware
             return new ResolvedError(statusCode, mappedResponseCode, message, Language: null, reportedException, resolution?.LogDetail);
         }
 
-        var requestedResponseCode = resolution is not null
-            ? resolution.ResponseCode
-            : _localizationOptions.ExceptionMessageIsResponseCode ? exception.Message : mappedResponseCode;
         var fallbackResponseCode = resolution?.FallbackResponseCode ?? _localizationOptions.FallbackResponseCode;
-        var responseCode = _errorMessageCatalog.Contains(requestedResponseCode)
-            ? requestedResponseCode
-            : fallbackResponseCode;
+        var responseCode = SelectLocalizedResponseCode(exception, resolution, mappedResponseCode, fallbackResponseCode);
         var language = ResolveLanguage(context);
-        var localizedMessage = _errorMessageCatalog.FindMessage(responseCode, language) ?? _localizationOptions.DefaultMessage;
+        var localizedMessage = _errorMessageCatalog.FindMessage(responseCode, language)
+            ?? _errorMessageCatalog.FindMessage(fallbackResponseCode, language)
+            ?? _localizationOptions.DefaultMessage;
         return new ResolvedError(statusCode, responseCode, localizedMessage, language, reportedException, resolution?.LogDetail);
+    }
+
+    // A resolver's code and a message used as the code must be known to the catalog, otherwise the
+    // fallback code is answered; the mapped code is always kept and, when the catalog lacks it, gets
+    // the fallback code's message.
+    private string SelectLocalizedResponseCode(
+        Exception exception,
+        ExceptionResolution? resolution,
+        string mappedResponseCode,
+        string fallbackResponseCode)
+    {
+        if (resolution is not null)
+        {
+            return _errorMessageCatalog.Contains(resolution.ResponseCode) ? resolution.ResponseCode : fallbackResponseCode;
+        }
+
+        if (_localizationOptions.ExceptionMessageIsResponseCode)
+        {
+            return _errorMessageCatalog.Contains(exception.Message) ? exception.Message : fallbackResponseCode;
+        }
+
+        return mappedResponseCode;
     }
 
     private ExceptionResolution? ResolveWithExceptionResolvers(Exception exception)
