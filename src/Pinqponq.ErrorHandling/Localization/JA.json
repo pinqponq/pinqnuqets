@@ -1,0 +1,6 @@
+{
+  "general_error": "予期しないエラーが発生しました。",
+  "api_body_required": "リクエスト本文が必要です。",
+  "api_page_size_invalid": "ページサイズは0より大きくする必要があります。",
+  "api_page_number_invalid": "ページ番号は0より大きくする必要があります。"
+}

@@ -1,0 +1,6 @@
+{
+  "general_error": "예기치 않은 오류가 발생했습니다.",
+  "api_body_required": "요청 본문이 필요합니다.",
+  "api_page_size_invalid": "페이지 크기는 0보다 커야 합니다.",
+  "api_page_number_invalid": "페이지 번호는 0보다 커야 합니다."
+}

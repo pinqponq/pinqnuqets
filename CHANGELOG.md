@@ -15,7 +15,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BILLING_ISSUE` events of a superseded subscription period) and `IRevenueCatWebhookAuthenticator`
   (constant-time Authorization header check). The product supplies storage through
   `IRevenueCatSubscriptionStore`; an optional `IRevenueCatWebhookObserver` forwards structured step records
-  to its own log pipeline and `IRevenueCatEventListener`s run follow-ups (a welcome mail, say) after an event is committed. Targets `net8.0`, `net9.0` and `net10.0`.
+  to its own log pipeline, and `IRevenueCatEventListener`s run follow-ups (a welcome mail, say) after an
+  event is committed. Targets `net8.0`, `net9.0` and `net10.0`.
+- `Pinqponq.Contracts` 1.0.0: the response envelope `BaseResponseModel` (`status`, `statusCode`,
+  `message`, `responseCode` — compatible with deveng-networking-kmp's `ErrorResponse`, documented in
+  the package README), `PagedRequestModel` / `PagedResponseModel<T>` with `ToPagedResponse`,
+  `CommonErrorCodes`, and `IRequestErrorFeature`, the `HttpContext.Features` entry through which
+  Pinqponq.ErrorHandling hands a failed request's event and detail to Pinqponq.Observability without
+  either package depending on the other.
+- `Pinqponq.Contracts` paging, the shared offset pagination of every Pinqponq API (pinqponq/org#218):
+  `ToPagedResponse` also pages an `IQueryable<T>` (one count, one page read), `PageWindow` pages any
+  async query the same way, and `PaginationOptions` sets the page size cap (default 100) and what a
+  page past the end returns (`ReturnLastPage`, the default, or `ReturnEmptyPage`).
+- `Pinqponq.Observability` 1.0.0: Pinqloq logging for ASP.NET Core — `RequestLoggingMiddleware`
+  (one record per request with redacted bodies and route-based event names), `ILogService` /
+  `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming). Collection
+  names are required and validated at
+  startup; the device identifier header, extra redacted keys and logged `HttpContext.Items` entries
+  are settings with empty defaults.
+- `Pinqponq.Observability.Abstractions` 1.0.0: `ILogService` alone, without dependencies, for domain
+  and application layers; Pinqponq.Observability references it and registers the implementation.
+- `Pinqponq.ErrorHandling.Postgres` 1.0.0: maps Npgsql `PostgresException` (also wrapped in an EF Core
+  `DbUpdateException`) to `database_*` codes — constraint and value errors 400, the rest 500
+  `database_error` — with the SQLSTATE detail in the log event and the codes'
+  messages in 12 languages.
+- `Pinqponq.Database.Postgres.EntityFrameworkCore` 1.0.0: `AddPinqponqPostgresDbContext<TDbContext>`
+  registers an EF Core context on PostgreSQL with one `NpgsqlDataSource` per context and a hook to
+  configure it (e.g. dynamic JSON). Kept apart from `Pinqponq.Database.Postgres` so services
+  without EF Core do not take the dependency.
+
 - `Pinqponq.Configuration.Vault` 1.0.0: a HashiCorp Vault configuration provider. `AddPinqponqVault`
   reads one KV version 2 record shaped like `appsettings.json` at startup and lays it over the
   configuration sources registered before it, so secrets leave the settings files while every
@@ -29,7 +57,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Pinqponq.ErrorHandling` 1.1.0: optional localized error responses (`AddPinqponqErrorLocalization`:
+  the response code is looked up in a message catalog — embedded `general_error`/`api_*` messages
+  in 12 languages plus the application's `Localization/*.json` — and the message is returned in the
+  request's language, `Accept-Language` by default), pluggable `IExceptionResolver`s, and every
+  handled failure — also a request the client closed (499) — is described on `IRequestErrorFeature`.
+  Existing behavior is unchanged unless these are turned on.
+
 - Packages are versioned individually from now on: each carries its own `<Version>` in its project file and the shared `Version` in `Directory.Build.props` is gone. Every package starts at the version it has on nuget.org (1.0.1, and `Pinqponq.Identity` 1.0.2). Up to and including 1.0.2 all packages shared one version.
+- `Pinqponq.Database.Mongo` 1.1.0: `ToPagedResponseAsync` pages a find into Pinqponq.Contracts'
+  `PagedResponseModel<T>` (pinqponq/org#218). The package now references Pinqponq.Contracts and,
+  through it, the ASP.NET Core shared framework.
 - `Pinqponq.Database.Mssql` 1.0.2: `Microsoft.Data.SqlClient` 5.2.2 → 7.1.1. This is a major
   step of the driver, and consumers resolve to it through the package: read the
   `Microsoft.Data.SqlClient` 6.0 and 7.0 release notes before upgrading.
@@ -41,6 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Pinqponq.Database.Mssql` 1.0.3: `Microsoft.Data.SqlClient` 7.1.1 pulled
+  `System.Security.Cryptography.Pkcs` 8.0.1 (`net8.0`) and 9.0.18 (`net9.0`, `net10.0`), which
+  carry GHSA-2fmv-rv2c-59x7 (moderate) and GHSA-846f-f764-76mx (high); restore failed with
+  `NU1902`/`NU1903`. The package now floors it at 8.0.2 on `net8.0` and 9.0.21 on `net9.0` and
+  `net10.0`, so consumers resolve the patched version through it. No code changes.
 - Restore failed with `NU1903` on every branch: `Testcontainers` 4.13.0 pulled `SSH.NET`
   2025.1.0, which carries two high severity advisories (GHSA-mggc-4xg6-vcxf,
   GHSA-q939-rpr3-3284). `Testcontainers` 4.15.0 ships `SSH.NET` 2026.0.0. Only the test

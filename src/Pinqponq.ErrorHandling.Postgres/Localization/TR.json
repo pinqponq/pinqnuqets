@@ -1,0 +1,8 @@
+{
+  "database_error": "Bir veritabanı hatası oluştu.",
+  "database_foreign_key_violation": "Kayıt başka verilerle ilişkili olduğu için işlenemiyor.",
+  "database_value_too_long": "Girilen değerlerden biri çok uzun.",
+  "database_unique_violation": "Bu kayıt zaten mevcut.",
+  "database_not_null_violation": "Zorunlu bir alan eksik.",
+  "database_invalid_format": "Girilen değerlerden birinin biçimi geçersiz."
+}

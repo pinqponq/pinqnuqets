@@ -3,6 +3,7 @@ namespace Pinqponq.ErrorHandling;
 /// <summary>
 /// Standard error response contract. Serialized camelCase, e.g.
 /// <c>{ "status": false, "statusCode": 400, "message": "...", "responseCode": "bad_request", "traceId": "..." }</c>.
+/// The first four fields match <c>Pinqponq.Contracts.BaseResponseModel</c>.
 /// </summary>
 public sealed class ErrorResponse
 {
