@@ -15,7 +15,9 @@ public static class ServiceCollectionExtensions
         string name,
         Action<ApiKeyOptions> configure)
     {
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(configure);
 
         services.AddOptions<ApiKeyOptions>(name)
             .Configure(configure)

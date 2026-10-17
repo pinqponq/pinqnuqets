@@ -84,4 +84,14 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Throws<ArgumentNullException>(() => services.AddPinqponqApiKey(null!, options => { }));
         Assert.Throws<ArgumentNullException>(() => services.AddPinqponqApiKey("internal", null!));
     }
+
+    [Fact]
+    public void Null_configure_registers_nothing()
+    {
+        var services = new ServiceCollection();
+
+        Assert.Throws<ArgumentNullException>(() => services.AddPinqponqApiKey("internal", null!));
+
+        Assert.Empty(services);
+    }
 }

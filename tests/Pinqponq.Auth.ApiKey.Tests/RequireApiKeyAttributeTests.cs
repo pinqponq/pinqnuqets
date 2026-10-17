@@ -101,6 +101,15 @@ public sealed class RequireApiKeyAttributeTests
         Assert.Null(await harness.Send("notification", new Dictionary<string, string> { ["X-Shared-Key"] = "notification-s3cret" }));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Blank_name_is_rejected(string name) =>
+        Assert.ThrowsAny<ArgumentException>(() => new RequireApiKeyAttribute(name));
+
+    [Fact]
+    public void Null_name_is_rejected() => Assert.Throws<ArgumentNullException>(() => new RequireApiKeyAttribute(null!));
+
     [Fact]
     public void Name_is_kept() => Assert.Equal(INTERNAL_NAME, new RequireApiKeyAttribute(INTERNAL_NAME).Name);
 }

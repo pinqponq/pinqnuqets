@@ -11,10 +11,16 @@ namespace Pinqponq.Auth.ApiKey;
 /// <see cref="Name"/> with <c>AddPinqponqApiKey</c>; otherwise the action returns 401.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-public sealed class RequireApiKeyAttribute(string name) : Attribute, IAsyncActionFilter
+public sealed class RequireApiKeyAttribute : Attribute, IAsyncActionFilter
 {
+    public RequireApiKeyAttribute(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
+    }
+
     /// <summary>The name the key settings were registered under.</summary>
-    public string Name { get; } = name;
+    public string Name { get; }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
