@@ -56,7 +56,7 @@ public ActionResult<PagedResponseModel<List<OrderDto>>> List([FromQuery] PagedRe
 
 ## Common error codes
 
-`CommonErrorCodes`: `general_error`, `system_maintenance`, `api_client_closed_request`,
+`CommonErrorCodes`: `general_error`, `api_client_closed_request`,
 `api_body_required`, `api_page_size_invalid`, `api_page_number_invalid`. Product-specific codes
 stay in the product. Pinqponq.ErrorHandling ships the localized messages of the codes it can
 return.

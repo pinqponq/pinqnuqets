@@ -13,13 +13,13 @@ namespace Pinqponq.ErrorHandling.Postgres.Tests;
 
 public sealed class PostgresErrorHandlingTests
 {
-    private static ServiceProvider BuildServiceProvider(Action<PostgresErrorHandlingOptions>? configurePostgres = null)
+    private static ServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddPinqponqErrorHandling();
         services.AddPinqponqErrorLocalization(localizationOptions => localizationOptions.CatalogDirectory = null);
-        services.AddPinqponqPostgresErrorHandling(configurePostgres);
+        services.AddPinqponqPostgresErrorHandling();
         return services.BuildServiceProvider();
     }
 
@@ -77,19 +77,6 @@ public sealed class PostgresErrorHandlingTests
         Assert.Equal(StatusCodes.Status500InternalServerError, httpContext.Response.StatusCode);
         Assert.Equal(PostgresErrorResponseCodes.DatabaseError, body.RootElement.GetProperty("responseCode").GetString());
         Assert.Equal("A database error occurred.", body.RootElement.GetProperty("message").GetString());
-    }
-
-    [Fact]
-    public async Task Registration_passes_the_configured_unmapped_status_to_the_resolver()
-    {
-        using var serviceProvider = BuildServiceProvider(postgresOptions => postgresOptions.UnmappedStatusCode = StatusCodes.Status400BadRequest);
-
-        var httpContext = await InvokeAsync(
-            serviceProvider,
-            PostgresExceptionResolverTests.CreatePostgresException(PostgresErrorCodes.DeadlockDetected),
-            "en");
-
-        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
     }
 
     [Fact]

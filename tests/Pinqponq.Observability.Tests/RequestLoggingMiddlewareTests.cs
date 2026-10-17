@@ -38,7 +38,6 @@ public sealed class RequestLoggingMiddlewareTests
                     {
                         observabilityOptions.HttpCollectionName = "app_http";
                         observabilityOptions.JobsCollectionName = "app_jobs";
-                        observabilityOptions.ClientCollectionName = "app_client";
                         configure?.Invoke(observabilityOptions);
                     });
                 });

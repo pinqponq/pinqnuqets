@@ -69,8 +69,6 @@ downstream of it.
 | `CorrelationIdHeader` | `"X-Correlation-ID"` | Inbound request header read to resolve a correlation id. |
 | `IncludeExceptionMessage` | `false` | When `false` (recommended for production), the response `message` is a generic, status-derived string (e.g. "The requested resource was not found."), never the raw `Exception.Message` — so internal details never leak to a client. Set to `true` only in trusted/diagnostic environments. |
 | `StatusMappingResolver` | `null` | Optional `Func<Exception, ExceptionStatusMapping?>` to override the built-in status/response-code mapping for specific exception types. Return `null` from the delegate to fall back to the built-in mapping for that exception. If the resolver itself throws, the error is logged and the built-in mapping is used. |
-| `IncludeTraceId` | `true` | When `false`, the body has no `traceId` field: exactly `status`, `statusCode`, `message`, `responseCode` (the `Pinqponq.Contracts.BaseResponseModel` shape). |
-| `TreatAnyCancellationAsClientClosed` | `false` | When `true`, every `OperationCanceledException` is answered 499 without a body (by default only a cancelled `RequestAborted` is; any other cancellation is 504 `timeout`). |
 
 Example with a custom mapping for a domain exception:
 
@@ -89,7 +87,7 @@ builder.Services.AddPinqponqErrorHandling(options =>
 ## Localized error responses
 
 ```csharp
-builder.Services.AddPinqponqErrorHandling(options => options.IncludeTraceId = false);
+builder.Services.AddPinqponqErrorHandling();
 builder.Services.AddPinqponqErrorLocalization();
 ```
 
@@ -97,37 +95,17 @@ With localization on, the response code from the status mapping above (or from a
 `IExceptionResolver`) is looked up in the message catalog and the message is returned in the
 language of the `LanguageHeader` request header (`Accept-Language` by default; `tr`, `de-DE`, … —
 case-insensitive). A mapped code the catalog does not know (`not_found`, …) is kept and gets the
-`FallbackResponseCode` (`general_error`) message. With `ExceptionMessageIsResponseCode` on, the
-exception's message is the code instead of the mapped one
-(`throw new InvalidOperationException("order_not_found")`); a message or resolver code the catalog
-does not know becomes `FallbackResponseCode`. The status always comes from the mapping or the resolver.
+`FallbackResponseCode` (`general_error`) message; a resolver code the catalog does not know becomes
+`FallbackResponseCode`. The status always comes from the mapping or the resolver.
 
 | `ErrorLocalizationOptions` | Default | Notes |
 |---|---|---|
 | `LanguageHeader` | `Accept-Language` | Header carrying the language; its first tag is used, and `pt-BR` falls back to `PT` when there is no `PT-BR` catalog. |
 | `DefaultLanguage` | `EN` | Used when the header is missing or the catalog has no message in that language. |
-| `ExceptionMessageIsResponseCode` | `false` | Look up the exception's message instead of the mapped response code. |
-| `FallbackResponseCode` | `general_error` | Code for an unknown message or resolver code; its message also serves an unknown mapped code. |
+| `FallbackResponseCode` | `general_error` | Code for an unknown resolver code; its message also serves an unknown mapped code. |
 | `DefaultMessage` | `An unexpected error occurred.` | Used when the catalog has no message at all. |
 | `CatalogDirectory` | `Localization` | The application's catalog, relative to `AppContext.BaseDirectory`: one `<LANGUAGE>.json` per language, each a `{ "code": "message" }` object. Its entries add codes and override the embedded ones. A file that cannot be read is logged and skipped. |
 | `CatalogAssemblies` | this package | Assemblies whose embedded `*.Localization.<LANGUAGE>.json` resources form the built-in catalog. This package ships `general_error`, `api_body_required`, `api_page_size_invalid` and `api_page_number_invalid` in AR, DE, EN, ES, FR, HI, ID, IT, JA, KO, PT and TR; Pinqponq.ErrorHandling.Postgres adds the `database_*` codes. |
-
-## Maintenance mode
-
-```csharp
-builder.Services.AddPinqponqMaintenanceMode(builder.Configuration.GetSection("MaintenanceMode"));
-
-app.UsePinqponqErrorHandling();
-app.UsePinqponqMaintenanceMode();
-```
-
-```json
-{ "MaintenanceMode": { "Enabled": true, "Message": "Back at 10:00" } }
-```
-
-While `Enabled` is true every request is answered 503 `system_maintenance` with `Message`
-(default `System is under maintenance`) before the rest of the pipeline runs. The section is read
-per request, so a configuration reload switches it on or off without a restart.
 
 ## Exception resolvers
 
@@ -142,11 +120,10 @@ With localization on, a resolver code the catalog does not know becomes the reso
 
 ## Request error feature
 
-Every answered failure — a handled exception, maintenance mode, a closed client request — is
+Every answered failure — a handled exception or a request the client closed — is
 described on `HttpContext.Features` as `Pinqponq.Contracts.IRequestErrorFeature`:
 
-- `EventName`: `exception_<ExceptionType>`, `request_blocked_maintenance_mode` or
-  `request_cancelled_by_client` (constants in `ErrorHandlingEvents`);
+- `EventName`: `exception_<ExceptionType>` or `request_cancelled_by_client` (constants in `ErrorHandlingEvents`);
 - `Detail`: `traceId`, `method`, `statusCode`, `errorCode`, `errorMessage`, `language` (with
   localization on), `queryString` (when present), then the resolver's `LogDetail`.
 

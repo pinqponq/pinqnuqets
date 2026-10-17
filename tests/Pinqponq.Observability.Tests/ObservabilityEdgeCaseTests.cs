@@ -146,14 +146,14 @@ public sealed class ObservabilityEdgeCaseTests
     public async Task Every_sensitive_key_is_redacted()
     {
         using var host = await StartAsync(endpoints => endpoints.MapPost("/keys", () => Results.NoContent()));
-        var body = """{"Authorization":"a","cookie":"b","Set-Cookie":"c","apikey":"e","X-Api-Key":"f","mySecret":"g","idToken":"h","userPassword":"i","plain":"j","X-Internal-Key":"k"}""";
+        var body = """{"Authorization":"a","cookie":"b","Set-Cookie":"c","apikey":"e","X-Api-Key":"f","mySecret":"g","idToken":"h","userPassword":"i","plain":"j","X-Signature":"k"}""";
 
         await host.GetTestClient().PostAsync("/keys", new StringContent(body, Encoding.UTF8, "application/json"));
 
         var inputJson = Assert.IsType<Dictionary<string, object?>>(Assert.Single(_logService.Calls).Fields["InputJson"]);
-        Assert.All(inputJson.Where(field => field.Key is not ("plain" or "X-Internal-Key")), field => Assert.Equal("***REDACTED***", field.Value));
+        Assert.All(inputJson.Where(field => field.Key is not ("plain" or "X-Signature")), field => Assert.Equal("***REDACTED***", field.Value));
         Assert.Equal("j", inputJson["plain"]);
-        Assert.Equal("k", inputJson["X-Internal-Key"]);
+        Assert.Equal("k", inputJson["X-Signature"]);
     }
 
     [Fact]
@@ -161,20 +161,20 @@ public sealed class ObservabilityEdgeCaseTests
     {
         using var host = await StartAsync(
             endpoints => endpoints.MapPost("/keys", () => Results.NoContent()),
-            observabilityOptions => observabilityOptions.RedactedKeys = ["X-Internal-Key"]);
+            observabilityOptions => observabilityOptions.RedactedKeys = ["X-Signature"]);
         var client = host.GetTestClient();
 
-        await client.PostAsync("/keys?x-internal-key=q&plain=p", new StringContent("""{"x-internal-key":"k","plain":"j"}""", Encoding.UTF8, "application/json"));
-        await client.PostAsync("/keys", new FormUrlEncodedContent(new Dictionary<string, string> { ["X-INTERNAL-KEY"] = "f", ["plain"] = "j" }));
+        await client.PostAsync("/keys?x-signature=q&plain=p", new StringContent("""{"x-signature":"k","plain":"j"}""", Encoding.UTF8, "application/json"));
+        await client.PostAsync("/keys", new FormUrlEncodedContent(new Dictionary<string, string> { ["X-SIGNATURE"] = "f", ["plain"] = "j" }));
 
         var inputJson = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[0].Fields["InputJson"]);
-        Assert.Equal("***REDACTED***", inputJson["x-internal-key"]);
+        Assert.Equal("***REDACTED***", inputJson["x-signature"]);
         Assert.Equal("j", inputJson["plain"]);
         var query = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[0].Fields["query"]);
-        Assert.Equal("***REDACTED***", query["x-internal-key"]);
+        Assert.Equal("***REDACTED***", query["x-signature"]);
         Assert.Equal("p", query["plain"]);
         var form = Assert.IsType<Dictionary<string, object?>>(_logService.Calls[1].Fields["InputJson"]);
-        Assert.Equal("***REDACTED***", form["X-INTERNAL-KEY"]);
+        Assert.Equal("***REDACTED***", form["X-SIGNATURE"]);
         Assert.Equal("j", form["plain"]);
     }
 
@@ -224,7 +224,6 @@ public sealed class ObservabilityEdgeCaseTests
         Assert.Throws<ArgumentNullException>(() => ((IServiceCollection)null!).AddPinqponqObservability(configuration));
         Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddPinqponqObservability(null!));
         Assert.Throws<ArgumentNullException>(() => ((IApplicationBuilder)null!).UsePinqponqRequestLogging());
-        Assert.Throws<ArgumentNullException>(() => ((IEndpointRouteBuilder)null!).MapPinqponqClientLogs());
     }
 
     [Fact]
@@ -241,22 +240,15 @@ public sealed class ObservabilityEdgeCaseTests
     }
 
     [Fact]
-    public void Client_log_level_defaults_to_information()
-    {
-        Assert.Equal("Information", new ClientLogRequest { Event = "app_started" }.LogLevel);
-        Assert.Equal(Pinqloq.PinqloqLogLevel.Information, ClientLogEndpoint.ParseLogLevel(null));
-    }
-
-    [Fact]
     public void Validator_accepts_complete_options_and_lists_every_problem()
     {
         var validator = new ObservabilityOptionsValidator();
 
-        var valid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c" });
-        var invalid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = " ", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = -1 });
+        var valid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j" });
+        var invalid = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = " ", JobsCollectionName = "j", MaxLoggedBodyBytes = -1 });
 
-        var tooLarge = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = Array.MaxLength });
-        var largestAllowed = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", ClientCollectionName = "c", MaxLoggedBodyBytes = Array.MaxLength - 1 });
+        var tooLarge = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", MaxLoggedBodyBytes = Array.MaxLength });
+        var largestAllowed = validator.Validate(null, new ObservabilityOptions { HttpCollectionName = "h", JobsCollectionName = "j", MaxLoggedBodyBytes = Array.MaxLength - 1 });
 
         Assert.True(valid.Succeeded);
         Assert.True(largestAllowed.Succeeded);

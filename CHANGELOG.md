@@ -17,15 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   either package depending on the other.
 - `Pinqponq.Observability` 1.0.0: Pinqloq logging for ASP.NET Core — `RequestLoggingMiddleware`
   (one record per request with redacted bodies and route-based event names), `ILogService` /
-  `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming) and the
-  client-log relay endpoint `MapPinqponqClientLogs`. Collection names are required and validated at
+  `LogService` (ILogger + Pinqloq, exception fields, 4,000-character stack trace trimming). Collection
+  names are required and validated at
   startup; the device identifier header, extra redacted keys and logged `HttpContext.Items` entries
   are settings with empty defaults.
 - `Pinqponq.Observability.Abstractions` 1.0.0: `ILogService` alone, without dependencies, for domain
   and application layers; Pinqponq.Observability references it and registers the implementation.
 - `Pinqponq.ErrorHandling.Postgres` 1.0.0: maps Npgsql `PostgresException` (also wrapped in an EF Core
-  `DbUpdateException`) to `database_*` codes — constraint and value errors 400, the rest
-  `UnmappedStatusCode` (500 by default) — with the SQLSTATE detail in the log event and the codes'
+  `DbUpdateException`) to `database_*` codes — constraint and value errors 400, the rest 500
+  `database_error` — with the SQLSTATE detail in the log event and the codes'
   messages in 12 languages.
 - `Pinqponq.Database.Postgres.EntityFrameworkCore` 1.0.0: `AddPinqponqPostgresDbContext<TDbContext>`
   registers an EF Core context on PostgreSQL with one `NpgsqlDataSource` per context and a hook to
@@ -48,12 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Pinqponq.ErrorHandling` 1.1.0: optional localized error responses (`AddPinqponqErrorLocalization`:
   the response code is looked up in a message catalog — embedded `general_error`/`api_*` messages
   in 12 languages plus the application's `Localization/*.json` — and the message is returned in the
-  request's language, `Accept-Language` by default; the mapped response code is looked up, or with
-  `ExceptionMessageIsResponseCode` the exception's message), maintenance mode (`AddPinqponqMaintenanceMode`, 503
-  `system_maintenance`, follows configuration reloads), pluggable `IExceptionResolver`s,
-  `IncludeTraceId` and `TreatAnyCancellationAsClientClosed` options, and every handled failure is
-  described on `IRequestErrorFeature`. Existing behavior is unchanged unless these are turned on;
-  `ErrorResponse.traceId` is now left out of the body when it is null.
+  request's language, `Accept-Language` by default), pluggable `IExceptionResolver`s, and every
+  handled failure — also a request the client closed (499) — is described on `IRequestErrorFeature`.
+  Existing behavior is unchanged unless these are turned on.
 
 - Packages are versioned individually from now on: each carries its own `<Version>` in its project file and the shared `Version` in `Directory.Build.props` is gone. Every package starts at the version it has on nuget.org (1.0.1, and `Pinqponq.Identity` 1.0.2). Up to and including 1.0.2 all packages shared one version.
 - `Pinqponq.Database.Mssql` 1.0.2: `Microsoft.Data.SqlClient` 5.2.2 → 7.1.1. This is a major

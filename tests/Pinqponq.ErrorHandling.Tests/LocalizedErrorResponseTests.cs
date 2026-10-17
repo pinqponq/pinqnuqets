@@ -13,7 +13,7 @@ public sealed class LocalizedErrorResponseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
+        harness.ExceptionResolvers.Add(new MessageAsResponseCodeResolver());
         harness.LocalizationOptions.CatalogDirectory = null;
         return harness;
     }
@@ -167,16 +167,15 @@ public sealed class LocalizedErrorResponseTests : IDisposable
     }
 
     [Fact]
-    public async Task Body_without_trace_id_has_the_base_response_fields_in_order()
+    public async Task Body_has_the_base_response_fields_in_order_then_the_trace_id()
     {
         var harness = CreateLocalizedHarness();
-        harness.Options.IncludeTraceId = false;
 
         var httpContext = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));
 
         using var body = ErrorResponseHarness.ReadBody(httpContext);
         var fieldNames = body.RootElement.EnumerateObject().Select(field => field.Name).ToArray();
-        Assert.Equal(["status", "statusCode", "message", "responseCode"], fieldNames);
+        Assert.Equal(["status", "statusCode", "message", "responseCode", "traceId"], fieldNames);
         Assert.False(body.RootElement.GetProperty("status").GetBoolean());
         Assert.Equal(400, body.RootElement.GetProperty("statusCode").GetInt32());
     }

@@ -8,9 +8,6 @@ public static class CommonErrorCodes
     /// <summary>Fallback for an error the API has no specific code for.</summary>
     public const string GeneralError = "general_error";
 
-    /// <summary>The service is in maintenance mode.</summary>
-    public const string SystemMaintenance = "system_maintenance";
-
     /// <summary>The client closed the connection before the response was written.</summary>
     public const string ApiClientClosedRequest = "api_client_closed_request";
 

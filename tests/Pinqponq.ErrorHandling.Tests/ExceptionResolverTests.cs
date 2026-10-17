@@ -53,7 +53,6 @@ public sealed class ExceptionResolverTests
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
         harness.ExceptionResolvers.Add(new FixedExceptionResolver(new ExceptionResolution(StatusCodes.Status400BadRequest, CommonErrorCodes.ApiPageNumberInvalid)));
 
@@ -69,7 +68,6 @@ public sealed class ExceptionResolverTests
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
         harness.ExceptionResolvers.Add(new FixedExceptionResolver(new ExceptionResolution(StatusCodes.Status400BadRequest, "unknown_code")
         {

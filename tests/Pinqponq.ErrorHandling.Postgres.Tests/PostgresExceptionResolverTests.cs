@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Npgsql;
 using Xunit;
 
@@ -8,7 +7,7 @@ namespace Pinqponq.ErrorHandling.Postgres.Tests;
 
 public sealed class PostgresExceptionResolverTests
 {
-    private readonly PostgresExceptionResolver _resolver = new(Options.Create(new PostgresErrorHandlingOptions()));
+    private readonly PostgresExceptionResolver _resolver = new();
 
     internal static PostgresException CreatePostgresException(string sqlState) =>
         new(
@@ -37,24 +36,12 @@ public sealed class PostgresExceptionResolverTests
     }
 
     [Fact]
-    public void Unmapped_postgres_exception_is_a_server_error_by_default()
+    public void Unmapped_postgres_exception_is_a_server_error()
     {
         var resolution = _resolver.Resolve(CreatePostgresException(PostgresErrorCodes.DeadlockDetected));
 
         Assert.NotNull(resolution);
         Assert.Equal(StatusCodes.Status500InternalServerError, resolution.StatusCode);
-        Assert.Equal(PostgresErrorResponseCodes.DatabaseError, resolution.ResponseCode);
-    }
-
-    [Fact]
-    public void Unmapped_postgres_exception_uses_the_configured_status()
-    {
-        var resolver = new PostgresExceptionResolver(Options.Create(new PostgresErrorHandlingOptions { UnmappedStatusCode = StatusCodes.Status400BadRequest }));
-
-        var resolution = resolver.Resolve(CreatePostgresException(PostgresErrorCodes.UndefinedTable));
-
-        Assert.NotNull(resolution);
-        Assert.Equal(StatusCodes.Status400BadRequest, resolution.StatusCode);
         Assert.Equal(PostgresErrorResponseCodes.DatabaseError, resolution.ResponseCode);
     }
 

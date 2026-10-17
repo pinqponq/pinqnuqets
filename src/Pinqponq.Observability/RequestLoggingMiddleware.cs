@@ -154,7 +154,7 @@ public sealed class RequestLoggingMiddleware
     // so the template is ignored in that case and the real path is used instead (otherwise every request would map to the same event).
     private static string BuildRequestEventName(HttpContext httpContext, string requestPath)
     {
-        // A failure described by Pinqponq.ErrorHandling (exception_X, maintenance, cancel) names the
+        // A failure described by Pinqponq.ErrorHandling (exception_X, cancel) names the
         // single record of this request; otherwise the name is built from the route.
         var errorEventName = httpContext.Features.Get<IRequestErrorFeature>()?.EventName;
         if (!string.IsNullOrWhiteSpace(errorEventName))

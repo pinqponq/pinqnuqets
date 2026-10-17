@@ -33,14 +33,13 @@ internal static class ErrorResponseWriter
             return;
         }
 
-        var traceId = options.IncludeTraceId ? ResolveCorrelationId(context, options) : null;
         var body = new ErrorResponse
         {
             Status = false,
             StatusCode = statusCode,
             ResponseCode = responseCode,
             Message = message,
-            TraceId = traceId,
+            TraceId = ResolveCorrelationId(context, options),
         };
 
         context.Response.ContentType = MediaTypeNames.Application.Json;

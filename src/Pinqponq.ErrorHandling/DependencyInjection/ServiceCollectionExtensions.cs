@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -48,22 +47,6 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>
-    /// Binds <see cref="MaintenanceModeOptions"/> to <paramref name="maintenanceModeSection"/>
-    /// (e.g. <c>configuration.GetSection("MaintenanceMode")</c>); <see cref="MaintenanceModeMiddleware"/>
-    /// reads it per request.
-    /// </summary>
-    public static IServiceCollection AddPinqponqMaintenanceMode(
-        this IServiceCollection services,
-        IConfiguration maintenanceModeSection)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(maintenanceModeSection);
-
-        services.Configure<MaintenanceModeOptions>(maintenanceModeSection);
-        return services;
-    }
-
     /// <summary>Registers an <see cref="IExceptionResolver"/>; resolvers run in registration order.</summary>
     public static IServiceCollection AddPinqponqExceptionResolver<TExceptionResolver>(this IServiceCollection services)
         where TExceptionResolver : class, IExceptionResolver
@@ -72,16 +55,6 @@ public static class ServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IExceptionResolver, TExceptionResolver>());
         return services;
-    }
-
-    /// <summary>
-    /// Adds the <see cref="MaintenanceModeMiddleware"/>. Register it after <c>UsePinqponqErrorHandling</c>
-    /// (and after request logging), so the maintenance answer is logged like any other.
-    /// </summary>
-    public static IApplicationBuilder UsePinqponqMaintenanceMode(this IApplicationBuilder app)
-    {
-        ArgumentNullException.ThrowIfNull(app);
-        return app.UseMiddleware<MaintenanceModeMiddleware>();
     }
 
     /// <summary>Adds the <see cref="ExceptionHandlingMiddleware"/> to the pipeline.</summary>

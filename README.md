@@ -56,9 +56,9 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Database.Mssql** | SqlClient connection, retry, health-check (no repository/entity) | [README](src/Pinqponq.Database.Mssql/README.md) |
 | **Pinqponq.Messaging.RabbitMq** | Publish (confirms + mandatory) / consume, reconnect, DLX or MaxRedelivery | [README](src/Pinqponq.Messaging.RabbitMq/README.md) |
 | **Pinqponq.Database.Postgres.EntityFrameworkCore** | EF Core `DbContext` on PostgreSQL with one shared `NpgsqlDataSource` per context | [README](src/Pinqponq.Database.Postgres.EntityFrameworkCore/README.md) |
-| **Pinqponq.ErrorHandling** | Global exception middleware + standard error contract + localized messages, maintenance mode + Pinqloq-compatible structured logging | [README](src/Pinqponq.ErrorHandling/README.md) |
+| **Pinqponq.ErrorHandling** | Global exception middleware + standard error contract + localized messages + Pinqloq-compatible structured logging | [README](src/Pinqponq.ErrorHandling/README.md) |
 | **Pinqponq.ErrorHandling.Postgres** | PostgreSQL error mapping (`database_*` codes, SQLSTATE log detail) for Pinqponq.ErrorHandling | [README](src/Pinqponq.ErrorHandling.Postgres/README.md) |
-| **Pinqponq.Observability** | Pinqloq request logging, `ILogService` for app/job logs, client-log relay endpoint | [README](src/Pinqponq.Observability/README.md) |
+| **Pinqponq.Observability** | Pinqloq request logging, `ILogService` for app/job logs | [README](src/Pinqponq.Observability/README.md) |
 | **Pinqponq.Observability.Abstractions** | `ILogService` without dependencies, for domain/application layers | [README](src/Pinqponq.Observability.Abstractions/README.md) |
 | **Pinqponq.Contracts** | Response envelope (deveng-networking-kmp compatible), paging models, common error codes, request error feature | [README](src/Pinqponq.Contracts/README.md) |
 | **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |

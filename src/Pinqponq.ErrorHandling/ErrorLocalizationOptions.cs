@@ -19,21 +19,12 @@ public sealed class ErrorLocalizationOptions
     /// </summary>
     public string LanguageHeader { get; set; } = "Accept-Language";
 
-    /// <summary>
-    /// Whether an exception's message is the response code to look up (<c>throw new
-    /// InvalidOperationException("order_not_found")</c>). Defaults to false: the code from the status
-    /// mapping (<c>StatusMappingResolver</c> or the built-in table) is looked up and kept even when the
-    /// catalog does not know it. A message used as the code, like an <c>IExceptionResolver</c>'s code,
-    /// becomes <see cref="FallbackResponseCode"/> when the catalog does not know it.
-    /// </summary>
-    public bool ExceptionMessageIsResponseCode { get; set; }
-
     /// <summary>Language used when the header is missing or has no message for the code. Defaults to <c>EN</c>.</summary>
     public string DefaultLanguage { get; set; } = "EN";
 
     /// <summary>
-    /// Code returned for a message or resolver code the catalog does not know; its message also serves a
-    /// mapped code the catalog does not know. Defaults to <c>general_error</c>.
+    /// Code returned for an <c>IExceptionResolver</c> code the catalog does not know; its message also serves a
+    /// mapped code (<c>StatusMappingResolver</c> or the built-in table) the catalog does not know. Defaults to <c>general_error</c>.
     /// </summary>
     public string FallbackResponseCode { get; set; } = CommonErrorCodes.GeneralError;
 

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Pinqponq.ErrorHandling.Postgres;
@@ -8,20 +7,12 @@ namespace Pinqponq.ErrorHandling.Postgres;
 /// <summary>
 /// Answers a <see cref="PostgresException"/>, thrown directly or wrapped in a
 /// <see cref="DbUpdateException"/>: a mapped SQLSTATE with 400 and its <c>database_*</c> code, any
-/// other with <see cref="PostgresErrorHandlingOptions.UnmappedStatusCode"/> and <c>database_error</c>. The log event is
+/// other (connection loss, deadlock, missing table, …) with 500 and <c>database_error</c>. The log event is
 /// named after the <see cref="PostgresException"/> and carries its SQLSTATE, constraint,
 /// table and column.
 /// </summary>
 public sealed class PostgresExceptionResolver : IExceptionResolver
 {
-    private readonly int _unmappedStatusCode;
-
-    /// <summary>Creates the resolver.</summary>
-    public PostgresExceptionResolver(IOptions<PostgresErrorHandlingOptions> postgresErrorHandlingOptions)
-    {
-        _unmappedStatusCode = postgresErrorHandlingOptions.Value.UnmappedStatusCode;
-    }
-
     /// <inheritdoc />
     public ExceptionResolution? Resolve(Exception exception)
     {
@@ -41,7 +32,7 @@ public sealed class PostgresExceptionResolver : IExceptionResolver
 
         var responseCode = MapResponseCode(postgresException.SqlState);
         var isMappedSqlState = responseCode != PostgresErrorResponseCodes.DatabaseError;
-        var statusCode = isMappedSqlState ? StatusCodes.Status400BadRequest : _unmappedStatusCode;
+        var statusCode = isMappedSqlState ? StatusCodes.Status400BadRequest : StatusCodes.Status500InternalServerError;
         return new ExceptionResolution(statusCode, responseCode)
         {
             FallbackResponseCode = PostgresErrorResponseCodes.DatabaseError,

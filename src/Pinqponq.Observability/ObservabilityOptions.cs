@@ -17,9 +17,6 @@ public sealed class ObservabilityOptions
     /// <summary>Required. Pinqloq collection of <see cref="ILogService"/> records that name no collection (jobs, background work).</summary>
     public string JobsCollectionName { get; set; } = string.Empty;
 
-    /// <summary>Required. Pinqloq collection of the records relayed by the client-log endpoint.</summary>
-    public string ClientCollectionName { get; set; } = string.Empty;
-
     /// <summary>
     /// Request header whose value becomes the record's device identifier. Defaults to
     /// <see langword="null"/>: no header is read and records carry no device identifier.
@@ -40,5 +37,5 @@ public sealed class ObservabilityOptions
     public IDictionary<string, string> LoggedContextItems { get; set; } = new Dictionary<string, string>();
 
     /// <summary>Requests whose path contains one of these segments are not logged.</summary>
-    public IList<string> ExcludedPathSegments { get; set; } = ["/health", "/openapi", "/scalar", "/swagger", ClientLogEndpoint.PathSegment];
+    public IList<string> ExcludedPathSegments { get; set; } = ["/health", "/openapi", "/scalar", "/swagger"];
 }

@@ -64,7 +64,7 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context).ConfigureAwait(false);
         }
-        catch (OperationCanceledException exception) when (IsClientClosedRequest(context))
+        catch (OperationCanceledException exception) when (context.RequestAborted.IsCancellationRequested)
         {
             HandleClientClosedRequest(context, exception);
         }
@@ -73,9 +73,6 @@ public sealed class ExceptionHandlingMiddleware
             await Handle(context, exception).ConfigureAwait(false);
         }
     }
-
-    private bool IsClientClosedRequest(HttpContext context) =>
-        _options.TreatAnyCancellationAsClientClosed || context.RequestAborted.IsCancellationRequested;
 
     private void HandleClientClosedRequest(HttpContext context, OperationCanceledException exception)
     {
@@ -158,7 +155,7 @@ public sealed class ExceptionHandlingMiddleware
         }
 
         var fallbackResponseCode = resolution?.FallbackResponseCode ?? _localizationOptions.FallbackResponseCode;
-        var responseCode = SelectLocalizedResponseCode(exception, resolution, mappedResponseCode, fallbackResponseCode);
+        var responseCode = SelectLocalizedResponseCode(resolution, mappedResponseCode, fallbackResponseCode);
         var language = ResolveLanguage(context);
         var localizedMessage = _errorMessageCatalog.FindMessage(responseCode, language)
             ?? _errorMessageCatalog.FindMessage(fallbackResponseCode, language)
@@ -166,26 +163,19 @@ public sealed class ExceptionHandlingMiddleware
         return new ResolvedError(statusCode, responseCode, localizedMessage, language, reportedException, resolution?.LogDetail);
     }
 
-    // A resolver's code and a message used as the code must be known to the catalog, otherwise the
-    // fallback code is answered; the mapped code is always kept and, when the catalog lacks it, gets
-    // the fallback code's message.
+    // A resolver's code must be known to the catalog, otherwise the fallback code is answered; the
+    // mapped code is always kept and, when the catalog lacks it, gets the fallback code's message.
     private string SelectLocalizedResponseCode(
-        Exception exception,
         ExceptionResolution? resolution,
         string mappedResponseCode,
         string fallbackResponseCode)
     {
-        if (resolution is not null)
+        if (resolution is null)
         {
-            return _errorMessageCatalog.Contains(resolution.ResponseCode) ? resolution.ResponseCode : fallbackResponseCode;
+            return mappedResponseCode;
         }
 
-        if (_localizationOptions.ExceptionMessageIsResponseCode)
-        {
-            return _errorMessageCatalog.Contains(exception.Message) ? exception.Message : fallbackResponseCode;
-        }
-
-        return mappedResponseCode;
+        return _errorMessageCatalog.Contains(resolution.ResponseCode) ? resolution.ResponseCode : fallbackResponseCode;
     }
 
     private ExceptionResolution? ResolveWithExceptionResolvers(Exception exception)

@@ -9,7 +9,7 @@
     <Version>1.0.0</Version>
     <PackageId>Pinqponq.Observability</PackageId>
     <Title>Pinqponq Observability</Title>
-    <Description>Pinqloq logging for ASP.NET Core: one structured record per request (redacted request/response bodies, route-based event names, error detail from Pinqponq.ErrorHandling), an ILogService for application and job logs with stack trace trimming, and a client-log relay endpoint.</Description>
+    <Description>Pinqloq logging for ASP.NET Core: one structured record per request (redacted request/response bodies, route-based event names, error detail from Pinqponq.ErrorHandling), and an ILogService for application and job logs with stack trace trimming.</Description>
     <PackageTags>$(PackageTags);observability;logging;pinqloq;request-logging;middleware;aspnetcore</PackageTags>
   </PropertyGroup>
 

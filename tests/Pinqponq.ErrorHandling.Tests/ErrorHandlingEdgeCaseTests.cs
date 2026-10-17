@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,11 +20,8 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
 
         Assert.Throws<ArgumentNullException>(() => missingServices.AddPinqponqErrorHandling());
         Assert.Throws<ArgumentNullException>(() => missingServices.AddPinqponqErrorLocalization());
-        Assert.Throws<ArgumentNullException>(() => missingServices.AddPinqponqMaintenanceMode(new ConfigurationBuilder().Build()));
-        Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddPinqponqMaintenanceMode(null!));
         Assert.Throws<ArgumentNullException>(() => missingServices.AddPinqponqExceptionResolver<NullExceptionResolver>());
         Assert.Throws<ArgumentNullException>(() => ((IApplicationBuilder)null!).UsePinqponqErrorHandling());
-        Assert.Throws<ArgumentNullException>(() => ((IApplicationBuilder)null!).UsePinqponqMaintenanceMode());
         Assert.Throws<ArgumentNullException>(() => ErrorHandlingEvents.BuildExceptionEventName(null!));
     }
 
@@ -45,7 +41,6 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         var localizationOptions = new ErrorLocalizationOptions();
 
         Assert.False(localizationOptions.Enabled);
-        Assert.False(localizationOptions.ExceptionMessageIsResponseCode);
         Assert.Equal("Accept-Language", localizationOptions.LanguageHeader);
         Assert.Equal("EN", localizationOptions.DefaultLanguage);
         Assert.Equal(CommonErrorCodes.GeneralError, localizationOptions.FallbackResponseCode);
@@ -57,17 +52,12 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
     public async Task Each_outcome_is_logged_with_its_own_message()
     {
         var cancelledHarness = new ErrorResponseHarness();
-        cancelledHarness.Options.TreatAnyCancellationAsClientClosed = true;
-        var maintenanceHarness = new ErrorResponseHarness();
-        maintenanceHarness.MaintenanceMode.Enabled = true;
         var failedHarness = new ErrorResponseHarness();
 
-        await cancelledHarness.InvokeAsync(_ => throw new OperationCanceledException());
-        await maintenanceHarness.InvokeAsync(_ => Task.CompletedTask);
+        await cancelledHarness.InvokeAsync(_ => throw new OperationCanceledException(), AbortRequest);
         await failedHarness.InvokeAsync(_ => throw new KeyNotFoundException());
 
         Assert.StartsWith("Request cancelled by the client.", Assert.Single(cancelledHarness.Logger.Records).Message);
-        Assert.StartsWith("Request blocked by maintenance mode.", Assert.Single(maintenanceHarness.MaintenanceLogger.Records).Message);
         Assert.StartsWith("Request failed. not_found 404", Assert.Single(failedHarness.Logger.Records).Message);
     }
 
@@ -118,7 +108,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
+        harness.ExceptionResolvers.Add(new MessageAsResponseCodeResolver());
         harness.LocalizationOptions.CatalogDirectory = null;
 
         var httpContext = await harness.InvokeAsync(
@@ -154,7 +144,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
+        harness.ExceptionResolvers.Add(new MessageAsResponseCodeResolver());
         harness.LocalizationOptions.CatalogDirectory = null;
         harness.LocalizationOptions.CatalogAssemblies.Add(typeof(ErrorHandlingEdgeCaseTests).Assembly);
 
@@ -173,7 +163,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(_catalogDirectory, "EN.json"), "null");
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
-        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
+        harness.ExceptionResolvers.Add(new MessageAsResponseCodeResolver());
         harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
 
         var httpContext = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));
@@ -182,6 +172,8 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         Assert.Equal(CommonErrorCodes.ApiBodyRequired, body.RootElement.GetProperty("responseCode").GetString());
         Assert.Empty(harness.LoggerFactory.Records);
     }
+
+    private static void AbortRequest(HttpContext context) => context.RequestAborted = new CancellationToken(canceled: true);
 
     public void Dispose()
     {

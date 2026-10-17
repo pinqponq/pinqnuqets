@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 
 namespace Pinqponq.ErrorHandling.Tests;
 
@@ -10,25 +9,16 @@ internal sealed class ErrorResponseHarness
 
     public ErrorLocalizationOptions LocalizationOptions { get; } = new();
 
-    public MaintenanceModeOptions MaintenanceMode { get; } = new();
-
     public List<IExceptionResolver> ExceptionResolvers { get; } = [];
 
     public CapturingLoggerFactory LoggerFactory { get; } = new();
 
     public CapturingLogger<ExceptionHandlingMiddleware> Logger { get; } = new();
 
-    public CapturingLogger<MaintenanceModeMiddleware> MaintenanceLogger { get; } = new();
-
     public ExceptionHandlingMiddleware CreateMiddleware(RequestDelegate next)
     {
-        var maintenanceModeMiddleware = new MaintenanceModeMiddleware(
-            next,
-            Microsoft.Extensions.Options.Options.Create(Options),
-            new FixedOptionsMonitor<MaintenanceModeOptions>(MaintenanceMode),
-            MaintenanceLogger);
         return new ExceptionHandlingMiddleware(
-            maintenanceModeMiddleware.InvokeAsync,
+            next,
             Microsoft.Extensions.Options.Options.Create(Options),
             Microsoft.Extensions.Options.Options.Create(LocalizationOptions),
             ExceptionResolvers,
@@ -59,14 +49,5 @@ internal sealed class ErrorResponseHarness
         httpContext.Response.Body.Position = 0;
         using var reader = new StreamReader(httpContext.Response.Body, leaveOpen: true);
         return reader.ReadToEnd();
-    }
-
-    private sealed class FixedOptionsMonitor<TOptions>(TOptions currentValue) : IOptionsMonitor<TOptions>
-    {
-        public TOptions CurrentValue { get; } = currentValue;
-
-        public TOptions Get(string? name) => CurrentValue;
-
-        public IDisposable? OnChange(Action<TOptions, string?> listener) => null;
     }
 }

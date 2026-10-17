@@ -9,7 +9,7 @@
     <Version>1.0.0</Version>
     <PackageId>Pinqponq.ErrorHandling.Postgres</PackageId>
     <Title>Pinqponq Error Handling Postgres</Title>
-    <Description>PostgreSQL error mapping for Pinqponq.ErrorHandling: turns Npgsql PostgresException (also wrapped in an EF Core DbUpdateException) into 400 responses with database_* codes and localized messages.</Description>
+    <Description>PostgreSQL error mapping for Pinqponq.ErrorHandling: turns Npgsql PostgresException (also wrapped in an EF Core DbUpdateException) into database_* error responses (400 for constraint and value errors, 500 otherwise) and localized messages.</Description>
     <PackageTags>$(PackageTags);error-handling;postgres;postgresql;npgsql;entity-framework-core;sqlstate</PackageTags>
   </PropertyGroup>
 

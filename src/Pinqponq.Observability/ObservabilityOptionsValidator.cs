@@ -18,11 +18,6 @@ internal sealed class ObservabilityOptionsValidator : IValidateOptions<Observabi
             failures.Add($"{ObservabilityOptions.SectionName}:{nameof(ObservabilityOptions.JobsCollectionName)} is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(options.ClientCollectionName))
-        {
-            failures.Add($"{ObservabilityOptions.SectionName}:{nameof(ObservabilityOptions.ClientCollectionName)} is required.");
-        }
-
         if (options.MaxLoggedBodyBytes <= 0)
         {
             failures.Add($"{ObservabilityOptions.SectionName}:{nameof(ObservabilityOptions.MaxLoggedBodyBytes)} must be greater than 0.");

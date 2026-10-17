@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Pinqponq.ErrorHandling;
 
 /// <summary>
@@ -21,10 +19,6 @@ public sealed class ErrorResponse
     /// <summary>Stable machine-readable code (e.g. <c>not_found</c>).</summary>
     public string? ResponseCode { get; init; }
 
-    /// <summary>
-    /// Correlation/trace id for locating the request in logs. Left out of the body when
-    /// <see cref="ErrorHandlingOptions.IncludeTraceId"/> is false.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    /// <summary>Correlation/trace id for locating the request in logs.</summary>
     public string? TraceId { get; init; }
 }

@@ -9,20 +9,11 @@ namespace Pinqponq.ErrorHandling.Postgres.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="PostgresExceptionResolver"/> (configured by <paramref name="configure"/>)
-    /// and adds the <c>database_*</c> messages to the error localization catalog.
+    /// Registers <see cref="PostgresExceptionResolver"/> and adds the <c>database_*</c> messages to the error localization catalog.
     /// </summary>
-    public static IServiceCollection AddPinqponqPostgresErrorHandling(
-        this IServiceCollection services,
-        Action<PostgresErrorHandlingOptions>? configure = null)
+    public static IServiceCollection AddPinqponqPostgresErrorHandling(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-
-        var optionsBuilder = services.AddOptions<PostgresErrorHandlingOptions>();
-        if (configure is not null)
-        {
-            optionsBuilder.Configure(configure);
-        }
 
         services.AddPinqponqExceptionResolver<PostgresExceptionResolver>();
         services.Configure<ErrorLocalizationOptions>(localizationOptions =>

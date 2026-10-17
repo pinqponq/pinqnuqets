@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -65,19 +64,5 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
         return app.UseMiddleware<RequestLoggingMiddleware>();
-    }
-
-    /// <summary>
-    /// Maps <c>POST <paramref name="route"/></c> (default <c>/api/client-logs</c>), which relays a
-    /// <see cref="ClientLogRequest"/> to Pinqloq's <see cref="ObservabilityOptions.ClientCollectionName"/>
-    /// and answers 204. Keep <c>/client-logs</c> in the route so request logging skips the relay itself.
-    /// </summary>
-    public static IEndpointRouteBuilder MapPinqponqClientLogs(
-        this IEndpointRouteBuilder endpoints,
-        string route = ClientLogEndpoint.DefaultRoute)
-    {
-        ArgumentNullException.ThrowIfNull(endpoints);
-        endpoints.MapPost(route, ClientLogEndpoint.Relay);
-        return endpoints;
     }
 }

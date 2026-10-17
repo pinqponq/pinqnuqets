@@ -35,8 +35,7 @@ app.UsePinqponqErrorHandling();
 | anything else | | `database_error` |
 
 The mapped SQLSTATEs are answered 400; anything else (connection loss, deadlock, missing table, …)
-with `UnmappedStatusCode`, 500 by default:
-`AddPinqponqPostgresErrorHandling(options => options.UnmappedStatusCode = StatusCodes.Status400BadRequest)`.
+with 500.
 The constants are in `PostgresErrorResponseCodes`.
 
 ## Logging
