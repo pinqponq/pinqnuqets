@@ -3,7 +3,7 @@ using Pinqloq;
 namespace Pinqponq.Observability;
 
 /// <summary>
-/// Body of the client-log relay endpoint: one log record sent by a mobile or web client.
+/// Body of the client-log relay endpoint: one log record sent by a client application.
 /// </summary>
 public sealed class ClientLogRequest
 {

@@ -21,19 +21,17 @@ internal static class ClientLogEndpoint
         IPinqloqLogger pinqloqLogger,
         IOptions<ObservabilityOptions> observabilityOptions)
     {
-        var correlationIdHeader = httpContext.Request.Headers[PinqloqRequestLoggingMiddleware.CorrelationIdHeaderName].ToString();
-        var correlationId = string.IsNullOrWhiteSpace(correlationIdHeader) ? httpContext.TraceIdentifier : correlationIdHeader;
         var entry = new PinqloqLogEntry
         {
             Event = request.Event,
-            DeviceIdentifier = DeviceIdentifier.Read(httpContext, observabilityOptions.Value.DeviceIdentifierHeader),
+            DeviceIdentifier = RequestIdentifiers.ReadDeviceIdentifier(httpContext, observabilityOptions.Value.DeviceIdentifierHeader),
             LogLevel = ParseLogLevel(request.LogLevel),
             LogSourceType = PinqloqLogSourceType.Device,
             CollectionName = observabilityOptions.Value.ClientCollectionName,
             Metadata = request.Metadata,
             Detail = request.Detail,
             Date = request.Date,
-            CorrelationId = correlationId,
+            CorrelationId = RequestIdentifiers.ResolveCorrelationId(httpContext),
         };
 
         pinqloqLogger.Enqueue(entry);

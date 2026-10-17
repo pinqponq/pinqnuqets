@@ -157,10 +157,9 @@ public sealed class ExceptionHandlingMiddleware
             return new ResolvedError(statusCode, mappedResponseCode, message, Language: null, reportedException, resolution?.LogDetail);
         }
 
-        // Localized mode follows the convention of throwing with the response code as the
-        // message (throw new InvalidOperationException("user_not_found")); only an
-        // IExceptionResolver names the code explicitly.
-        var requestedResponseCode = resolution is null ? exception.Message : resolution.ResponseCode;
+        var requestedResponseCode = resolution is not null
+            ? resolution.ResponseCode
+            : _localizationOptions.ExceptionMessageIsResponseCode ? exception.Message : mappedResponseCode;
         var fallbackResponseCode = resolution?.FallbackResponseCode ?? _localizationOptions.FallbackResponseCode;
         var responseCode = _errorMessageCatalog.Contains(requestedResponseCode)
             ? requestedResponseCode

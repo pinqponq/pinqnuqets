@@ -13,6 +13,7 @@ public sealed class LocalizedErrorResponseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
         return harness;
     }
@@ -93,6 +94,29 @@ public sealed class LocalizedErrorResponseTests : IDisposable
         using var portugueseBody = ErrorResponseHarness.ReadBody(portuguese);
         Assert.Equal("Corpo obrigatório (BR).", brazilianBody.RootElement.GetProperty("message").GetString());
         Assert.Equal("O corpo da solicitação é obrigatório.", portugueseBody.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task By_default_the_mapped_response_code_is_looked_up_not_the_exception_message()
+    {
+        Directory.CreateDirectory(_catalogDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(_catalogDirectory, "EN.json"),
+            """{ "not_found": "Nothing here.", "order_not_found": "Order not found." }""");
+        var harness = new ErrorResponseHarness();
+        harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
+
+        var mapped = await harness.InvokeAsync(_ => throw new KeyNotFoundException("order_not_found"));
+        var unknownMapped = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));
+
+        using var mappedBody = ErrorResponseHarness.ReadBody(mapped);
+        Assert.Equal(StatusCodes.Status404NotFound, mapped.Response.StatusCode);
+        Assert.Equal("not_found", mappedBody.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Nothing here.", mappedBody.RootElement.GetProperty("message").GetString());
+        using var unknownMappedBody = ErrorResponseHarness.ReadBody(unknownMapped);
+        Assert.Equal(StatusCodes.Status400BadRequest, unknownMapped.Response.StatusCode);
+        Assert.Equal(CommonErrorCodes.GeneralError, unknownMappedBody.RootElement.GetProperty("responseCode").GetString());
     }
 
     [Fact]

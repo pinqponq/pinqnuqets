@@ -91,19 +91,21 @@ builder.Services.AddPinqponqErrorHandling(options =>
 ```csharp
 builder.Services.AddPinqponqErrorHandling(options => options.IncludeTraceId = false);
 builder.Services.AddPinqponqErrorLocalization();
-
-// throw new InvalidOperationException("order_not_found");
 ```
 
-With localization on, the **exception message is the response code**: it is looked up in the
-message catalog and the message is returned in the language of the `LanguageHeader` request header
-(`Accept-Language` by default; `tr`, `de-DE`, … — case-insensitive). A code the catalog does not know becomes `general_error`. The
-status code still comes from the mapping above (or an `IExceptionResolver`).
+With localization on, the response code from the status mapping above (or from an
+`IExceptionResolver`) is looked up in the message catalog and the message is returned in the
+language of the `LanguageHeader` request header (`Accept-Language` by default; `tr`, `de-DE`, … —
+case-insensitive). A code the catalog does not know becomes `FallbackResponseCode`
+(`general_error`), also a resolver's code. With `ExceptionMessageIsResponseCode` on, the
+exception's message is the code to look up instead of the mapped one
+(`throw new InvalidOperationException("order_not_found")`); the status still comes from the mapping.
 
 | `ErrorLocalizationOptions` | Default | Notes |
 |---|---|---|
 | `LanguageHeader` | `Accept-Language` | Header carrying the language; its first tag is used, and `pt-BR` falls back to `PT` when there is no `PT-BR` catalog. |
 | `DefaultLanguage` | `EN` | Used when the header is missing or the catalog has no message in that language. |
+| `ExceptionMessageIsResponseCode` | `false` | Look up the exception's message instead of the mapped response code. |
 | `FallbackResponseCode` | `general_error` | Code for an unknown code. |
 | `DefaultMessage` | `An unexpected error occurred.` | Used when the catalog has no message at all. |
 | `CatalogDirectory` | `Localization` | The application's catalog, relative to `AppContext.BaseDirectory`: one `<LANGUAGE>.json` per language, each a `{ "code": "message" }` object. Its entries add codes and override the embedded ones. A file that cannot be read is logged and skipped. |
@@ -131,8 +133,8 @@ per request, so a configuration reload switches it on or off without a restart.
 An `IExceptionResolver` handles the exceptions of one technology before `StatusMappingResolver`
 and the built-in table. Register it with `AddPinqponqExceptionResolver<T>()`; the first resolver
 that returns an `ExceptionResolution` wins, and a resolver that throws is logged and skipped.
-An `ExceptionResolution` names the status and response code (used as is, also with localization
-on), an optional `FallbackResponseCode`, the `ReportedException` that names the log event (e.g.
+An `ExceptionResolution` names the status and response code (with localization on, a code the
+catalog does not know becomes the resolution's `FallbackResponseCode`, or the options' one), an optional `FallbackResponseCode`, the `ReportedException` that names the log event (e.g.
 the driver exception inside an ORM exception) and extra `LogDetail` fields.
 [Pinqponq.ErrorHandling.Postgres](../Pinqponq.ErrorHandling.Postgres/README.md) is one.
 

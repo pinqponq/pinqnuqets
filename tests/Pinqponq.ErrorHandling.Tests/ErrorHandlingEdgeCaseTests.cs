@@ -45,6 +45,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         var localizationOptions = new ErrorLocalizationOptions();
 
         Assert.False(localizationOptions.Enabled);
+        Assert.False(localizationOptions.ExceptionMessageIsResponseCode);
         Assert.Equal("Accept-Language", localizationOptions.LanguageHeader);
         Assert.Equal("EN", localizationOptions.DefaultLanguage);
         Assert.Equal(CommonErrorCodes.GeneralError, localizationOptions.FallbackResponseCode);
@@ -117,6 +118,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
 
         var httpContext = await harness.InvokeAsync(
@@ -152,6 +154,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
         harness.LocalizationOptions.CatalogAssemblies.Add(typeof(ErrorHandlingEdgeCaseTests).Assembly);
 
@@ -170,6 +173,7 @@ public sealed class ErrorHandlingEdgeCaseTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(_catalogDirectory, "EN.json"), "null");
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = _catalogDirectory;
 
         var httpContext = await harness.InvokeAsync(_ => throw new InvalidOperationException(CommonErrorCodes.ApiBodyRequired));

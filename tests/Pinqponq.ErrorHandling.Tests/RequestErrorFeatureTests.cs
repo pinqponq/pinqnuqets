@@ -13,6 +13,7 @@ public sealed class RequestErrorFeatureTests
     {
         var harness = new ErrorResponseHarness();
         harness.LocalizationOptions.Enabled = true;
+        harness.LocalizationOptions.ExceptionMessageIsResponseCode = true;
         harness.LocalizationOptions.CatalogDirectory = null;
 
         var httpContext = await harness.InvokeAsync(

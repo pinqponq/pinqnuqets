@@ -48,8 +48,8 @@ public sealed class RequestLoggingMiddleware
             return;
         }
 
-        var identifier = DeviceIdentifier.Read(httpContext, _deviceIdentifierHeader);
-        var correlationId = ResolveCorrelationId(httpContext);
+        var identifier = RequestIdentifiers.ReadDeviceIdentifier(httpContext, _deviceIdentifierHeader);
+        var correlationId = RequestIdentifiers.ResolveCorrelationId(httpContext);
 
         var redactionPlan = PinqloqRedaction.Resolve(httpContext);
 
@@ -148,17 +148,9 @@ public sealed class RequestLoggingMiddleware
         }
     }
 
-    // Mirrors the SDK's own resolution order (see PinqloqRequestLoggingMiddleware.ResolveCorrelationId) so a
-    // caller-propagated correlation id survives through this custom middleware instead of only the trace id.
-    private static string ResolveCorrelationId(HttpContext httpContext)
-    {
-        var header = httpContext.Request.Headers[PinqloqRequestLoggingMiddleware.CorrelationIdHeaderName].ToString();
-        return string.IsNullOrWhiteSpace(header) ? httpContext.TraceIdentifier : header;
-    }
-
-    // Uses the route pattern (e.g. "api/tickets/{id}/convert") so variable segments like id don't
+    // Uses the route pattern (e.g. "api/orders/{id}") so variable segments like id don't
     // produce a different event name per request; falls back to the raw path if the endpoint can't be resolved.
-    // Wildcard patterns like the Gateway's {**catch-all} proxy route don't carry the real path,
+    // Wildcard patterns like a reverse proxy's {**catch-all} route don't carry the real path,
     // so the template is ignored in that case and the real path is used instead (otherwise every request would map to the same event).
     private static string BuildRequestEventName(HttpContext httpContext, string requestPath)
     {

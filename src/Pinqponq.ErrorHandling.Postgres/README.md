@@ -2,8 +2,8 @@
 
 PostgreSQL error mapping for [Pinqponq.ErrorHandling](../Pinqponq.ErrorHandling/README.md).
 A `PostgresException` from Npgsql — thrown directly or wrapped in an EF Core
-`DbUpdateException` — is answered with HTTP 400 and a stable `database_*` code instead of
-a 500 with a driver message.
+`DbUpdateException` — is answered with a stable `database_*` code instead of a driver message:
+constraint and value errors with HTTP 400, other database errors with 500 (configurable).
 
 ## Install
 
@@ -34,7 +34,10 @@ app.UsePinqponqErrorHandling();
 | 22P02 | `InvalidTextRepresentation` | `database_invalid_format` |
 | anything else | | `database_error` |
 
-The status is always 400. The constants are in `PostgresErrorResponseCodes`.
+The mapped SQLSTATEs are answered 400; anything else (connection loss, deadlock, missing table, …)
+with `UnmappedStatusCode`, 500 by default:
+`AddPinqponqPostgresErrorHandling(options => options.UnmappedStatusCode = StatusCodes.Status400BadRequest)`.
+The constants are in `PostgresErrorResponseCodes`.
 
 ## Logging
 

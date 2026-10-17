@@ -19,6 +19,15 @@ public sealed class ErrorLocalizationOptions
     /// </summary>
     public string LanguageHeader { get; set; } = "Accept-Language";
 
+    /// <summary>
+    /// Whether an exception's message is the response code to look up (<c>throw new
+    /// InvalidOperationException("order_not_found")</c>). Defaults to false: the code from the status
+    /// mapping (<c>StatusMappingResolver</c> or the built-in table) is looked up. Either way a code the
+    /// catalog does not know becomes <see cref="FallbackResponseCode"/>; an <c>IExceptionResolver</c>'s code
+    /// is always the one looked up.
+    /// </summary>
+    public bool ExceptionMessageIsResponseCode { get; set; }
+
     /// <summary>Language used when the header is missing or has no message for the code. Defaults to <c>EN</c>.</summary>
     public string DefaultLanguage { get; set; } = "EN";
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Xunit;
 
@@ -7,7 +8,7 @@ namespace Pinqponq.ErrorHandling.Postgres.Tests;
 
 public sealed class PostgresExceptionResolverTests
 {
-    private readonly PostgresExceptionResolver _resolver = new();
+    private readonly PostgresExceptionResolver _resolver = new(Options.Create(new PostgresErrorHandlingOptions()));
 
     internal static PostgresException CreatePostgresException(string sqlState) =>
         new(
@@ -25,8 +26,7 @@ public sealed class PostgresExceptionResolverTests
     [InlineData(PostgresErrorCodes.NotNullViolation, PostgresErrorResponseCodes.DatabaseNotNullViolation)]
     [InlineData(PostgresErrorCodes.StringDataRightTruncation, PostgresErrorResponseCodes.DatabaseValueTooLong)]
     [InlineData(PostgresErrorCodes.InvalidTextRepresentation, PostgresErrorResponseCodes.DatabaseInvalidFormat)]
-    [InlineData(PostgresErrorCodes.DeadlockDetected, PostgresErrorResponseCodes.DatabaseError)]
-    public void Postgres_exception_is_a_bad_request_with_the_code_of_its_sql_state(string sqlState, string expectedResponseCode)
+    public void Mapped_postgres_exception_is_a_bad_request_with_the_code_of_its_sql_state(string sqlState, string expectedResponseCode)
     {
         var resolution = _resolver.Resolve(CreatePostgresException(sqlState));
 
@@ -34,6 +34,28 @@ public sealed class PostgresExceptionResolverTests
         Assert.Equal(StatusCodes.Status400BadRequest, resolution.StatusCode);
         Assert.Equal(expectedResponseCode, resolution.ResponseCode);
         Assert.Equal(PostgresErrorResponseCodes.DatabaseError, resolution.FallbackResponseCode);
+    }
+
+    [Fact]
+    public void Unmapped_postgres_exception_is_a_server_error_by_default()
+    {
+        var resolution = _resolver.Resolve(CreatePostgresException(PostgresErrorCodes.DeadlockDetected));
+
+        Assert.NotNull(resolution);
+        Assert.Equal(StatusCodes.Status500InternalServerError, resolution.StatusCode);
+        Assert.Equal(PostgresErrorResponseCodes.DatabaseError, resolution.ResponseCode);
+    }
+
+    [Fact]
+    public void Unmapped_postgres_exception_uses_the_configured_status()
+    {
+        var resolver = new PostgresExceptionResolver(Options.Create(new PostgresErrorHandlingOptions { UnmappedStatusCode = StatusCodes.Status400BadRequest }));
+
+        var resolution = resolver.Resolve(CreatePostgresException(PostgresErrorCodes.UndefinedTable));
+
+        Assert.NotNull(resolution);
+        Assert.Equal(StatusCodes.Status400BadRequest, resolution.StatusCode);
+        Assert.Equal(PostgresErrorResponseCodes.DatabaseError, resolution.ResponseCode);
     }
 
     [Fact]
