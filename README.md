@@ -82,6 +82,30 @@ dotnet pack -c Release    # .nupkg per package (one consistent version via CPM)
 > Dependency versions live in `Directory.Packages.props`.
 > Integration tests are marked with `[Trait("Category", "Integration")]`.
 
+## Releasing packages
+
+Packages are published to nuget.org by CI. Nobody uploads them by hand.
+
+**To release a package (for a person or an AI agent):**
+1. In the package's `.csproj`, raise `<Version>` (Semantic Versioning). Each package has its own version.
+2. Add a line under `[Unreleased]` in `CHANGELOG.md`.
+3. Open a pull request. Merge it into `master` when CI is green.
+4. After the merge, the `publish` job in `.github/workflows/ci.yml` runs. It pushes every package whose version is not yet on nuget.org. A package whose `<Version>` you did not raise is skipped.
+5. Check the run under the repository's **Actions** tab. The `NuGet login` and `Push to nuget.org` steps must be green. The new version shows up on nuget.org a few minutes later, after nuget.org has validated it.
+
+**How the login works.** CI does not store a nuget.org API key. It uses NuGet Trusted Publishing: GitHub gives the job a short-lived OIDC token, nuget.org checks it against a policy and returns an API key that is valid for one hour. The pieces:
+- nuget.org policy (account `pinqponq` > Trusted Publishing): repository owner `pinqponq`, repository `pinqnuqets`, workflow file `ci.yml`, no environment, scope "Push new packages and package versions", glob `Pinqponq.*`.
+- Repository secret `NUGET_USER`: the nuget.org profile name (not an e-mail address).
+- The `publish` job needs `permissions: id-token: write`. If you rename `ci.yml` or move the `publish` job to another workflow file, update the nuget.org policy as well, or the login fails.
+
+**If publishing fails**
+- `NuGet login` fails: the policy does not match (owner, repository or workflow file name), or the policy owner cannot publish the `Pinqponq.*` packages.
+- `Push to nuget.org` is rejected with 403: the policy scope or glob pattern does not cover the package. A package with a new ID needs the scope "Push new packages and package versions".
+- The run is green but the version is missing on nuget.org: nuget.org is still validating it, wait a few minutes.
+- Re-run the `publish` job from the Actions tab after you fix the cause. Versions that are already published are skipped, so a re-run is safe.
+
+**Manual fallback.** Only if CI cannot be used: `dotnet build Pinqponq.Nugets.sln -c Release`, then `dotnet pack Pinqponq.Nugets.sln -c Release --no-build -o ./artifacts/nupkg`, then upload the `.nupkg` files on nuget.org under **Upload**. Never commit an API key to the repository.
+
 ## Contributing & security
 
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
