@@ -10,7 +10,7 @@ stop shipping the same bugs repeatedly, and replace naming/contract scatter
 (e.g. `ISmsService` vs `IGSMService`) with one standard surface.
 
 Packages hold **fixed behavior that wraps an external dependency**;
-project-specific business logic (domain repositories, message contracts, OTP-role
+product-specific business logic (domain repositories, message contracts, OTP-role
 rules) is **not** packaged.
 
 - Targets: `net8.0`, `net9.0`, `net10.0` — .NET 8 and later (`PinqponqTargetFrameworks` in `Directory.Build.props`)

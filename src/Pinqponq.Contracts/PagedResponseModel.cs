@@ -11,7 +11,7 @@ public class PagedResponseModel<T> : BaseResponseModel
     /// <summary>One-based page number actually returned.</summary>
     public int Page { get; set; }
 
-    /// <summary>Page size.</summary>
+    /// <summary>Number of rows per page that this response used (after the maximum page size cap).</summary>
     public int Size { get; set; }
 
     /// <summary>Total number of rows across all pages.</summary>

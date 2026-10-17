@@ -11,7 +11,7 @@ Thanks for your interest in contributing. This repository packages shared .NET i
 
 1. Fork and clone the repository.
 2. Create a feature branch from `main` (or `master`).
-3. Make focused changes; keep project-specific business logic out of these packages (see "Scope of the packages" below).
+3. Make focused changes; keep product-specific business logic out of these packages (see "Scope of the packages" below).
 4. Build and test:
 
 ```bash
@@ -39,12 +39,14 @@ dotnet test  -c Release -f net10.0 --filter "Category!=Integration"   # skips Te
 
 ## Scope of the packages
 
-These packages hold only what any Pinqponq ASP.NET Core API wants for itself.
+These packages hold only code that every Pinqponq ASP.NET Core API needs in the same form. A product-specific thing never goes into them. The same rule is in `CLAUDE.md`, which automated task runners (and other AI agents) read first.
 
-- For every type, option, default, constant and message ask: would a project other than the first one need exactly this?
-- Product-specific headers, query keys, routes, response codes, messages, defaults and one-product options belong in that product. A doubtful part stays in the product, or becomes a setting with a neutral default in an opt-in package.
-- Technology-specific packages (PostgreSQL, MongoDB, EF Core, Vault) are welcome as long as nothing in them names a product.
-- Say in the pull request, per package, what stayed in, what stayed in the product, and why.
+- Test every type, option, default, constant and message: would a product other than the one this code came from need exactly this? If the answer depends on one product, it stays in that product.
+- Product-specific means: a header, query key, route, response code, message or default taken from one product's client or contract; an option that exists for one product only; a feature that only products with one kind of client (for example a mobile app) need.
+- If you are not sure a part is shared, leave it in the product. You may instead move it into its own opt-in package as a setting that is off by default, with a default that was not copied from a product.
+- Technology-specific code (PostgreSQL, MongoDB, EF Core, Vault) is welcome in its own opt-in package, as long as nothing in it names a product.
+- Say in the pull request, for each package, what the package kept, what was left in the product, and why.
+- Reviewers: a product-specific constant or default in a `pinqnuqets` change is a blocker.
 
 ## Code of conduct
 
