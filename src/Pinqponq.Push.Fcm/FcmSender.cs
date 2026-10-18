@@ -178,6 +178,11 @@ internal sealed class FcmSender : IFcmSender
 
     private void LogSendFailures(IReadOnlyList<FcmSendResult> sendResults)
     {
+        if (!_fcmOptions.IsSendFailureLoggingEnabled)
+        {
+            return;
+        }
+
         var failedResults = sendResults.Where(sendResult => !sendResult.IsSuccess).ToList();
         if (failedResults.Count == 0)
         {
