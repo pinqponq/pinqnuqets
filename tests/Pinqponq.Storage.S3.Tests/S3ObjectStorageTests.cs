@@ -7,7 +7,7 @@ namespace Pinqponq.Storage.S3.Tests;
 
 public sealed class S3ObjectStorageTests
 {
-    private static readonly TimeSpan Expiry = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan PRESIGNED_URL_EXPIRY = TimeSpan.FromMinutes(15);
 
     public static TheoryData<string?> EmptyKeys => new() { null, "", "   " };
 
@@ -19,8 +19,8 @@ public sealed class S3ObjectStorageTests
         var destinationFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.Upload(key!, new MemoryStream(), "image/png"));
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateDownloadUrl(key!, Expiry));
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateUploadUrl(key!, "image/png", Expiry));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateDownloadUrl(key!, PRESIGNED_URL_EXPIRY));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateUploadUrl(key!, "image/png", PRESIGNED_URL_EXPIRY));
         await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.GetMetadata(key!));
         await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.DownloadToFile(key!, destinationFilePath));
         await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.Download(key!));
@@ -75,11 +75,11 @@ public sealed class S3ObjectStorageTests
     public async Task CreateDownloadUrl_presigns_a_get_that_expires_in_utc()
     {
         var (storage, fake) = StorageOptionsFactory.Storage();
-        var earliestExpiry = DateTime.UtcNow.Add(Expiry);
+        var earliestExpiry = DateTime.UtcNow.Add(PRESIGNED_URL_EXPIRY);
 
-        var downloadUrl = await storage.CreateDownloadUrl("avatars/1.png", Expiry);
+        var downloadUrl = await storage.CreateDownloadUrl("avatars/1.png", PRESIGNED_URL_EXPIRY);
 
-        var latestExpiry = DateTime.UtcNow.Add(Expiry);
+        var latestExpiry = DateTime.UtcNow.Add(PRESIGNED_URL_EXPIRY);
         var presignRequest = fake.SingleRequest<GetPreSignedUrlRequest>();
         Assert.Equal(FakeStorageClient.PRESIGNED_URL, downloadUrl);
         Assert.Equal(StorageOptionsFactory.BUCKET_NAME, presignRequest.BucketName);
@@ -93,11 +93,11 @@ public sealed class S3ObjectStorageTests
     public async Task CreateUploadUrl_presigns_a_put_bound_to_the_content_type()
     {
         var (storage, fake) = StorageOptionsFactory.Storage();
-        var earliestExpiry = DateTime.UtcNow.Add(Expiry);
+        var earliestExpiry = DateTime.UtcNow.Add(PRESIGNED_URL_EXPIRY);
 
-        var uploadUrl = await storage.CreateUploadUrl("videos/1.mp4", "video/mp4", Expiry);
+        var uploadUrl = await storage.CreateUploadUrl("videos/1.mp4", "video/mp4", PRESIGNED_URL_EXPIRY);
 
-        var latestExpiry = DateTime.UtcNow.Add(Expiry);
+        var latestExpiry = DateTime.UtcNow.Add(PRESIGNED_URL_EXPIRY);
         var presignRequest = fake.SingleRequest<GetPreSignedUrlRequest>();
         Assert.Equal(FakeStorageClient.PRESIGNED_URL, uploadUrl);
         Assert.Equal(StorageOptionsFactory.BUCKET_NAME, presignRequest.BucketName);
@@ -113,7 +113,7 @@ public sealed class S3ObjectStorageTests
     {
         var (storage, fake) = StorageOptionsFactory.Storage();
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateUploadUrl("videos/1.mp4", contentType!, Expiry));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.CreateUploadUrl("videos/1.mp4", contentType!, PRESIGNED_URL_EXPIRY));
 
         Assert.Empty(fake.Requests);
     }
@@ -147,8 +147,8 @@ public sealed class S3ObjectStorageTests
         var storageOptions = serviceUrl is null ? StorageOptionsFactory.Aws() : StorageOptionsFactory.Compatible(serviceUrl);
         var (storage, fake) = StorageOptionsFactory.Storage(storageOptions);
 
-        await storage.CreateDownloadUrl("avatars/1.png", Expiry);
-        await storage.CreateUploadUrl("avatars/1.png", "image/png", Expiry);
+        await storage.CreateDownloadUrl("avatars/1.png", PRESIGNED_URL_EXPIRY);
+        await storage.CreateUploadUrl("avatars/1.png", "image/png", PRESIGNED_URL_EXPIRY);
 
         Assert.All(fake.Requests, request => Assert.Equal(expectedProtocol, Assert.IsType<GetPreSignedUrlRequest>(request).Protocol));
     }

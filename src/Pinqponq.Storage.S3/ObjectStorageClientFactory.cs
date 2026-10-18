@@ -10,16 +10,16 @@ internal static class ObjectStorageClientFactory
     public static IAmazonS3 CreateClient(ObjectStorageOptions storageOptions)
     {
         var credentials = new BasicAWSCredentials(storageOptions.AccessKey, storageOptions.SecretKey);
-        return new AmazonS3Client(credentials, CreateClientConfig(storageOptions));
+        return new AmazonS3Client(credentials, CreateClientConfiguration(storageOptions));
     }
 
-    public static AmazonS3Config CreateClientConfig(ObjectStorageOptions storageOptions)
+    public static AmazonS3Config CreateClientConfiguration(ObjectStorageOptions storageOptions)
     {
         var usesServiceUrl = !string.IsNullOrWhiteSpace(storageOptions.ServiceUrl);
         var forcePathStyle = storageOptions.ForcePathStyle ?? usesServiceUrl;
         var checksumMode = ToSdkChecksumMode(storageOptions.RequestChecksumMode);
 
-        var clientConfig = new AmazonS3Config
+        var clientConfiguration = new AmazonS3Config
         {
             ForcePathStyle = forcePathStyle,
             RequestChecksumCalculation = checksumMode.Calculation,
@@ -28,19 +28,19 @@ internal static class ObjectStorageClientFactory
 
         if (usesServiceUrl)
         {
-            clientConfig.ServiceURL = storageOptions.ServiceUrl;
+            clientConfiguration.ServiceURL = storageOptions.ServiceUrl;
         }
         else
         {
-            clientConfig.RegionEndpoint = RegionEndpoint.GetBySystemName(storageOptions.Region);
+            clientConfiguration.RegionEndpoint = RegionEndpoint.GetBySystemName(storageOptions.Region);
         }
 
         if (!string.IsNullOrWhiteSpace(storageOptions.AuthenticationRegion))
         {
-            clientConfig.AuthenticationRegion = storageOptions.AuthenticationRegion;
+            clientConfiguration.AuthenticationRegion = storageOptions.AuthenticationRegion;
         }
 
-        return clientConfig;
+        return clientConfiguration;
     }
 
     private static (RequestChecksumCalculation Calculation, ResponseChecksumValidation Validation) ToSdkChecksumMode(

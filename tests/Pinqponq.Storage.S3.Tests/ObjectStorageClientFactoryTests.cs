@@ -11,25 +11,25 @@ public sealed class ObjectStorageClientFactoryTests
     [Fact]
     public void Aws_options_use_the_region_with_virtual_host_addressing()
     {
-        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(StorageOptionsFactory.Aws());
+        var clientConfiguration = ObjectStorageClientFactory.CreateClientConfiguration(StorageOptionsFactory.Aws());
 
-        Assert.Equal(RegionEndpoint.EUWest1, clientConfig.RegionEndpoint);
-        Assert.Null(clientConfig.ServiceURL);
-        Assert.False(clientConfig.ForcePathStyle);
-        Assert.Null(clientConfig.AuthenticationRegion);
-        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfig.RequestChecksumCalculation);
-        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfig.ResponseChecksumValidation);
+        Assert.Equal(RegionEndpoint.EUWest1, clientConfiguration.RegionEndpoint);
+        Assert.Null(clientConfiguration.ServiceURL);
+        Assert.False(clientConfiguration.ForcePathStyle);
+        Assert.Null(clientConfiguration.AuthenticationRegion);
+        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfiguration.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfiguration.ResponseChecksumValidation);
     }
 
     [Fact]
     public void Service_url_options_use_the_endpoint_with_path_addressing()
     {
-        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(
+        var clientConfiguration = ObjectStorageClientFactory.CreateClientConfiguration(
             StorageOptionsFactory.Compatible("https://minio.example.com"));
 
-        Assert.StartsWith("https://minio.example.com", clientConfig.ServiceURL);
-        Assert.True(clientConfig.ForcePathStyle);
-        Assert.Null(clientConfig.AuthenticationRegion);
+        Assert.StartsWith("https://minio.example.com", clientConfiguration.ServiceURL);
+        Assert.True(clientConfiguration.ForcePathStyle);
+        Assert.Null(clientConfiguration.AuthenticationRegion);
     }
 
     [Theory]
@@ -42,8 +42,8 @@ public sealed class ObjectStorageClientFactoryTests
         var compatibleOptions = StorageOptionsFactory.Compatible("https://minio.example.com");
         compatibleOptions.ForcePathStyle = forcePathStyle;
 
-        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfig(awsOptions).ForcePathStyle);
-        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfig(compatibleOptions).ForcePathStyle);
+        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfiguration(awsOptions).ForcePathStyle);
+        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfiguration(compatibleOptions).ForcePathStyle);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class ObjectStorageClientFactoryTests
         var storageOptions = StorageOptionsFactory.Compatible("https://minio.example.com");
         storageOptions.AuthenticationRegion = "us-east-1";
 
-        Assert.Equal("us-east-1", ObjectStorageClientFactory.CreateClientConfig(storageOptions).AuthenticationRegion);
+        Assert.Equal("us-east-1", ObjectStorageClientFactory.CreateClientConfiguration(storageOptions).AuthenticationRegion);
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public sealed class ObjectStorageClientFactoryTests
         var storageOptions = StorageOptionsFactory.Aws();
         storageOptions.RequestChecksumMode = ObjectStorageChecksumMode.WhenSupported;
 
-        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(storageOptions);
+        var clientConfiguration = ObjectStorageClientFactory.CreateClientConfiguration(storageOptions);
 
-        Assert.Equal(RequestChecksumCalculation.WHEN_SUPPORTED, clientConfig.RequestChecksumCalculation);
-        Assert.Equal(ResponseChecksumValidation.WHEN_SUPPORTED, clientConfig.ResponseChecksumValidation);
+        Assert.Equal(RequestChecksumCalculation.WHEN_SUPPORTED, clientConfiguration.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_SUPPORTED, clientConfiguration.ResponseChecksumValidation);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class ObjectStorageClientFactoryTests
         storageOptions.RequestChecksumMode = (ObjectStorageChecksumMode)99;
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(
-            () => ObjectStorageClientFactory.CreateClientConfig(storageOptions));
+            () => ObjectStorageClientFactory.CreateClientConfiguration(storageOptions));
 
         Assert.StartsWith("Unknown checksum mode.", exception.Message);
     }
@@ -86,17 +86,17 @@ public sealed class ObjectStorageClientFactoryTests
         storageOptions.RequestChecksumMode = ObjectStorageChecksumMode.WhenSupported;
 
         var returnedOptions = storageOptions.UseCloudflareR2("account123");
-        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(storageOptions);
+        var clientConfiguration = ObjectStorageClientFactory.CreateClientConfiguration(storageOptions);
 
         Assert.Same(storageOptions, returnedOptions);
         Assert.Equal("https://account123.r2.cloudflarestorage.com", storageOptions.ServiceUrl);
         Assert.Null(storageOptions.Region);
         Assert.True(storageOptions.DisablePayloadSigning);
-        Assert.StartsWith("https://account123.r2.cloudflarestorage.com", clientConfig.ServiceURL);
-        Assert.True(clientConfig.ForcePathStyle);
-        Assert.Equal("auto", clientConfig.AuthenticationRegion);
-        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfig.RequestChecksumCalculation);
-        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfig.ResponseChecksumValidation);
+        Assert.StartsWith("https://account123.r2.cloudflarestorage.com", clientConfiguration.ServiceURL);
+        Assert.True(clientConfiguration.ForcePathStyle);
+        Assert.Equal("auto", clientConfiguration.AuthenticationRegion);
+        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfiguration.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfiguration.ResponseChecksumValidation);
     }
 
     [Theory]
