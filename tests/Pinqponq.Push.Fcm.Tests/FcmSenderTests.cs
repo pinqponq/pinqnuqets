@@ -116,6 +116,34 @@ public sealed class FcmSenderTests
     }
 
     [Fact]
+    public async Task SendToTokens_with_send_failure_logging_disabled_logs_nothing_but_still_reports_the_failures()
+    {
+        using var app = new FcmTestApp(options => options.IsSendFailureLoggingEnabled = false);
+        app.Server.FailSend("token-ios", FakeFcmError.ThirdPartyAuth);
+        app.Server.FailSend("token-invalid", FakeFcmError.Unregistered);
+
+        var results = await app.Sender.SendToTokens(Message, ["token-ios", "token-invalid"]);
+        var dataOnlyResults = await app.Sender.SendDataOnlyToTokens(new Dictionary<string, string> { ["key"] = "value" }, ["token-invalid"]);
+
+        Assert.Empty(app.LogService.Entries);
+        Assert.True(results[0].IsProviderCredentialInvalid);
+        Assert.True(results[1].IsTokenInvalid);
+        Assert.True(Assert.Single(dataOnlyResults).IsTokenInvalid);
+        Assert.Equal(2, app.InvalidTokenHandler.Calls.Count);
+    }
+
+    [Fact]
+    public async Task SubscribeToTopic_with_send_failure_logging_disabled_still_logs_rejected_tokens()
+    {
+        using var app = new FcmTestApp(options => options.IsSendFailureLoggingEnabled = false);
+        app.Server.FailTopic("token-b", "NOT_FOUND");
+
+        await app.Sender.SubscribeToTopic(["token-a", "token-b"], "news");
+
+        Assert.Equal(FcmLogEvents.TopicSubscribePartialFailure, Assert.Single(app.LogService.Entries).EventName);
+    }
+
+    [Fact]
     public async Task SendToTokens_logs_a_token_of_exactly_the_suffix_length_whole()
     {
         using var app = new FcmTestApp();

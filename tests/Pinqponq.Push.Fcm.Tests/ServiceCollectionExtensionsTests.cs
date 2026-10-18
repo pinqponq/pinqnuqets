@@ -56,6 +56,7 @@ public sealed class ServiceCollectionExtensionsTests
                 ["Fcm:IsEnabled"] = "true",
                 ["Fcm:CredentialJson"] = TestServiceAccount.CreateJson(),
                 ["Fcm:DataOnlyAndroidPriority"] = "High",
+                ["Fcm:IsSendFailureLoggingEnabled"] = "false",
             })
             .Build();
         var services = NewServices();
@@ -65,6 +66,7 @@ public sealed class ServiceCollectionExtensionsTests
         var fcmOptions = provider.GetRequiredService<IOptions<FcmOptions>>().Value;
 
         Assert.Equal(FirebaseAdmin.Messaging.Priority.High, fcmOptions.DataOnlyAndroidPriority);
+        Assert.False(fcmOptions.IsSendFailureLoggingEnabled);
         Assert.NotNull(fcmOptions.CredentialJson);
     }
 

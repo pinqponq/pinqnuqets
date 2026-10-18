@@ -117,11 +117,12 @@ public sealed class FcmOptionsValidatorTests
     }
 
     [Fact]
-    public void Defaults_are_enabled_with_normal_data_only_priority()
+    public void Defaults_are_enabled_with_normal_data_only_priority_and_send_failure_logging()
     {
         var fcmOptions = new FcmOptions();
 
         Assert.True(fcmOptions.IsEnabled);
+        Assert.True(fcmOptions.IsSendFailureLoggingEnabled);
         Assert.Equal(Priority.Normal, fcmOptions.DataOnlyAndroidPriority);
         Assert.Equal("Fcm", FcmOptions.SectionName);
     }

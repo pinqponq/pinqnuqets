@@ -58,6 +58,7 @@ from Vault (`Pinqponq.Configuration.Vault`) into `Fcm:CredentialJson`.
 | `CredentialPath` | — | Service account JSON file. A relative path is resolved against the app directory. |
 | `CredentialJson` | — | The service account JSON itself. Set this or `CredentialPath`, not both. |
 | `DataOnlyAndroidPriority` | `Normal` | Android priority of `SendDataOnlyToTokens`. `High` wakes the device at once. Use it only when the app shows a notification for every such push, or Android lowers the app's priority. |
+| `IsSendFailureLoggingEnabled` | `true` | `false` turns off the `fcm_send_partial_failure` and `fcm_provider_credential_invalid` log records. Use it when your application logs the returned results itself, so each failure is logged once. Topic log records stay on. |
 
 The options are validated at startup: when `IsEnabled` is `true`, exactly one credential must
 be set, the file must exist and the JSON must be a service account.
@@ -112,8 +113,8 @@ credentials, so a record holds only the last 6 characters of each token.
 
 | Event | Level | When |
 |---|---|---|
-| `fcm_send_partial_failure` | Warning | Some tokens of a send failed. |
-| `fcm_provider_credential_invalid` | Error | A send failed with `ThirdPartyAuthError`. |
+| `fcm_send_partial_failure` | Warning | Some tokens of a send failed. Off when `IsSendFailureLoggingEnabled` is `false`. |
+| `fcm_provider_credential_invalid` | Error | A send failed with `ThirdPartyAuthError`. Off when `IsSendFailureLoggingEnabled` is `false`. |
 | `fcm_topic_subscribe_partial_failure` / `fcm_topic_unsubscribe_partial_failure` | Warning | FCM rejected tokens of a topic change. Each failure has FCM's reason. |
 | `fcm_disabled` | Debug | `IsEnabled` is `false` and a send was skipped. |
 

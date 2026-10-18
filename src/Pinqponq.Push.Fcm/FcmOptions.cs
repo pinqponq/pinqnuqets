@@ -33,4 +33,13 @@ public sealed class FcmOptions
     /// show a notification.
     /// </summary>
     public Priority DataOnlyAndroidPriority { get; set; } = Priority.Normal;
+
+    /// <summary>
+    /// When <see langword="true"/>, a send to tokens with failed tokens writes a
+    /// <see cref="FcmLogEvents.SendPartialFailure"/> or <see cref="FcmLogEvents.ProviderCredentialInvalid"/>
+    /// log record. Set it to <see langword="false"/> when the application logs the returned
+    /// <see cref="FcmSendResult"/> list itself, so each failure is logged once. Topic log records are not
+    /// affected. Defaults to <see langword="true"/>.
+    /// </summary>
+    public bool IsSendFailureLoggingEnabled { get; set; } = true;
 }
