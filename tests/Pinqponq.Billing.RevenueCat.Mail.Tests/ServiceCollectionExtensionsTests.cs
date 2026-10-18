@@ -46,6 +46,21 @@ public sealed class ServiceCollectionExtensionsTests
     };
 
     [Fact]
+    public void Null_arguments_are_rejected_before_anything_is_registered()
+    {
+        var services = new ServiceCollection();
+
+        var nullServices = Assert.Throws<ArgumentNullException>(
+            () => DependencyInjection.ServiceCollectionExtensions.AddPinqponqRevenueCatMail<FixedRecipientResolver>(null!, ConfigureBrand));
+        var nullConfigure = Assert.Throws<ArgumentNullException>(
+            () => services.AddPinqponqRevenueCatMail<FixedRecipientResolver>(null!));
+
+        Assert.Equal("services", nullServices.ParamName);
+        Assert.Equal("configure", nullConfigure.ParamName);
+        Assert.Empty(services);
+    }
+
+    [Fact]
     public void Registers_listener_renderer_and_resolver()
     {
         var services = NewServices();
