@@ -1,3 +1,4 @@
+using System.Reflection;
 using Xunit;
 
 namespace Pinqponq.Storage.S3.Tests;
@@ -44,12 +45,13 @@ public sealed class ObjectStorageOptionsValidatorTests
     public void Missing_required_value_fails(string propertyName)
     {
         var storageOptions = StorageOptionsFactory.Aws();
-        typeof(ObjectStorageOptions).GetProperty(propertyName)!.SetValue(storageOptions, " ");
+        var requiredProperty = Assert.IsAssignableFrom<PropertyInfo>(typeof(ObjectStorageOptions).GetProperty(propertyName));
+        requiredProperty.SetValue(storageOptions, " ");
 
         var result = _validator.Validate(null, storageOptions);
 
         Assert.True(result.Failed);
-        Assert.Equal($"{propertyName} is required.", Assert.Single(result.Failures!));
+        Assert.Equal($"{propertyName} is required.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
     }
 
     [Fact]
@@ -63,7 +65,7 @@ public sealed class ObjectStorageOptionsValidatorTests
         Assert.True(result.Failed);
         Assert.Equal(
             "Set exactly one of ServiceUrl (S3-compatible store) or Region (AWS S3).",
-            Assert.Single(result.Failures!));
+            Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
     }
 
     [Fact]
@@ -75,7 +77,7 @@ public sealed class ObjectStorageOptionsValidatorTests
         var result = _validator.Validate(null, storageOptions);
 
         Assert.True(result.Failed);
-        Assert.Contains("Set exactly one of ServiceUrl", Assert.Single(result.Failures!));
+        Assert.Contains("Set exactly one of ServiceUrl", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
     }
 
     [Theory]
@@ -86,7 +88,7 @@ public sealed class ObjectStorageOptionsValidatorTests
         var result = _validator.Validate(null, StorageOptionsFactory.Compatible(serviceUrl));
 
         Assert.True(result.Failed);
-        Assert.Equal("ServiceUrl must be an absolute http or https URL.", Assert.Single(result.Failures!));
+        Assert.Equal("ServiceUrl must be an absolute http or https URL.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
     }
 
     [Fact]
@@ -94,6 +96,6 @@ public sealed class ObjectStorageOptionsValidatorTests
     {
         var result = _validator.Validate(null, new ObjectStorageOptions());
 
-        Assert.Equal(4, result.Failures!.Count());
+        Assert.Equal(4, Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures).Count());
     }
 }
