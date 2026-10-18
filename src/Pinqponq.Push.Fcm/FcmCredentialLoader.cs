@@ -12,8 +12,7 @@ internal static class FcmCredentialLoader
         return serviceAccountCredential.ToGoogleCredential();
     }
 
+    /// <summary>A rooted <paramref name="credentialPath"/> is returned as it is: <see cref="Path.Combine(string, string)"/> drops the base for it.</summary>
     internal static string ResolveCredentialPath(string credentialPath) =>
-        Path.IsPathRooted(credentialPath)
-            ? credentialPath
-            : Path.Combine(AppContext.BaseDirectory, credentialPath);
+        Path.Combine(AppContext.BaseDirectory, credentialPath);
 }

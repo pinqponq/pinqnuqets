@@ -94,6 +94,29 @@ public sealed class FcmOptionsValidatorTests
     }
 
     [Fact]
+    public void Null_options_throw()
+    {
+        Assert.Throws<ArgumentNullException>(() => Validator.Validate(null, null!));
+    }
+
+    [Fact]
+    public void Absolute_credential_path_is_used_as_it_is()
+    {
+        var fullPath = Path.Combine(Path.GetTempPath(), $"fcm-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(fullPath, TestServiceAccount.CreateJson());
+        try
+        {
+            var result = Validator.Validate(null, new FcmOptions { CredentialPath = fullPath });
+
+            Assert.True(result.Succeeded);
+        }
+        finally
+        {
+            File.Delete(fullPath);
+        }
+    }
+
+    [Fact]
     public void Defaults_are_enabled_with_normal_data_only_priority()
     {
         var fcmOptions = new FcmOptions();

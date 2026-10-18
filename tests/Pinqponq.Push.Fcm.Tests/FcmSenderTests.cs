@@ -62,6 +62,7 @@ public sealed class FcmSenderTests
         Assert.Empty(app.InvalidTokenHandler.Calls);
         var logEntry = Assert.Single(app.LogService.Entries);
         Assert.Equal("Error", logEntry.Level);
+        Assert.Equal("FCM could not authenticate against the platform push provider.", logEntry.Message);
         Assert.Equal(FcmLogEvents.ProviderCredentialInvalid, logEntry.EventName);
     }
 
@@ -105,12 +106,25 @@ public sealed class FcmSenderTests
 
         var logEntry = Assert.Single(app.LogService.Entries);
         Assert.Equal("Warn", logEntry.Level);
+        Assert.Equal("FCM rejected some tokens.", logEntry.Message);
         Assert.Equal(FcmLogEvents.SendPartialFailure, logEntry.EventName);
         Assert.Equal(1, logEntry.Data!["success"]);
         Assert.Equal(1, logEntry.Data["failure"]);
         var failure = Assert.Single((List<Dictionary<string, object?>>)logEntry.Data["failures"]!);
         Assert.Equal("123456", failure["tokenSuffix"]);
         Assert.Equal(nameof(MessagingErrorCode.Unregistered), failure["errorCode"]);
+    }
+
+    [Fact]
+    public async Task SendToTokens_logs_a_token_of_exactly_the_suffix_length_whole()
+    {
+        using var app = new FcmTestApp();
+        app.Server.FailSend("abcdef", FakeFcmError.Unregistered);
+
+        await app.Sender.SendToTokens(Message, ["abcdef"]);
+
+        var failure = Assert.Single((List<Dictionary<string, object?>>)app.LogService.Entries[0].Data!["failures"]!);
+        Assert.Equal("abcdef", failure["tokenSuffix"]);
     }
 
     [Fact]
@@ -206,6 +220,7 @@ public sealed class FcmSenderTests
         Assert.False(app.IsAppCreated);
         var logEntry = Assert.Single(app.LogService.Entries);
         Assert.Equal("Debug", logEntry.Level);
+        Assert.Equal("FCM is disabled; the push was not sent.", logEntry.Message);
         Assert.Equal(FcmLogEvents.Disabled, logEntry.EventName);
         Assert.Equal(2, logEntry.Data!["tokenCount"]);
     }
@@ -251,7 +266,8 @@ public sealed class FcmSenderTests
     {
         using var app = new FcmTestApp();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => app.Sender.SendDataOnlyToTokens(new Dictionary<string, string>(), ["token-a"]));
+        var emptyDataException = await Assert.ThrowsAsync<ArgumentException>(() => app.Sender.SendDataOnlyToTokens(new Dictionary<string, string>(), ["token-a"]));
+        Assert.StartsWith("A data-only push needs at least one data entry.", emptyDataException.Message);
         await Assert.ThrowsAsync<ArgumentNullException>(() => app.Sender.SendDataOnlyToTokens(null!, ["token-a"]));
         await Assert.ThrowsAsync<ArgumentNullException>(() => app.Sender.SendDataOnlyToTokens(new Dictionary<string, string> { ["a"] = "b" }, null!));
         Assert.Empty(app.Server.SentMessages);
@@ -336,6 +352,7 @@ public sealed class FcmSenderTests
 
         var logEntry = Assert.Single(app.LogService.Entries);
         Assert.Equal("Warn", logEntry.Level);
+        Assert.Equal("FCM rejected some tokens while subscribing them to a topic.", logEntry.Message);
         Assert.Equal(FcmLogEvents.TopicSubscribePartialFailure, logEntry.EventName);
         Assert.Equal("news", logEntry.Data!["topic"]);
         Assert.Equal(1, logEntry.Data["success"]);
@@ -372,7 +389,9 @@ public sealed class FcmSenderTests
         var topicRequest = Assert.Single(app.Server.TopicRequests);
         Assert.EndsWith(":batchRemove", topicRequest.Path);
         Assert.Equal("/topics/news", topicRequest.Topic);
-        Assert.Equal(FcmLogEvents.TopicUnsubscribePartialFailure, Assert.Single(app.LogService.Entries).EventName);
+        var logEntry = Assert.Single(app.LogService.Entries);
+        Assert.Equal("FCM rejected some tokens while unsubscribing them from a topic.", logEntry.Message);
+        Assert.Equal(FcmLogEvents.TopicUnsubscribePartialFailure, logEntry.EventName);
     }
 
     [Fact]

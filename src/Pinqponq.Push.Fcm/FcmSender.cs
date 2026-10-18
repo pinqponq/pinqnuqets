@@ -290,5 +290,5 @@ internal sealed class FcmSender : IFcmSender
     /// not enough to send a push with.
     /// </summary>
     private static string ToTokenSuffix(string token) =>
-        token.Length <= TOKEN_SUFFIX_LENGTH ? token : token[^TOKEN_SUFFIX_LENGTH..];
+        token[^Math.Min(token.Length, TOKEN_SUFFIX_LENGTH)..];
 }
