@@ -47,12 +47,12 @@ Vault with `Pinqponq.Configuration.Vault`.
 Cloudflare R2, configured in code:
 
 ```csharp
-builder.Services.AddPinqponqObjectStorage(storage =>
+builder.Services.AddPinqponqObjectStorage(storageOptions =>
 {
-    storage.UseCloudflareR2(accountId);
-    storage.BucketName = bucketName;
-    storage.AccessKey = accessKey;
-    storage.SecretKey = secretKey;
+    storageOptions.UseCloudflareR2(accountId);
+    storageOptions.BucketName = bucketName;
+    storageOptions.AccessKey = accessKey;
+    storageOptions.SecretKey = secretKey;
 });
 ```
 

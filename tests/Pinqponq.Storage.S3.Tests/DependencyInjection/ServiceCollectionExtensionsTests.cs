@@ -78,7 +78,7 @@ public sealed class ServiceCollectionExtensionsTests
     public void Invalid_options_stop_startup()
     {
         var services = new ServiceCollection();
-        services.AddPinqponqObjectStorage(storage => storage.Region = StorageOptionsFactory.REGION);
+        services.AddPinqponqObjectStorage(storageOptions => storageOptions.Region = StorageOptionsFactory.REGION);
         using var provider = services.BuildServiceProvider();
 
         var exception = Assert.Throws<OptionsValidationException>(
