@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Push.Fcm` 1.1.0: `FcmOptions.IsSendFailureLoggingEnabled` (default `true`) lets an application that logs the
+  returned `FcmSendResult` list itself turn off the package's own send-failure log records. 1.0.0 stays valid.
+- `Pinqponq.Push.Fcm` 1.0.0: the Firebase Cloud Messaging sender extracted from a product backend.
+  `AddPinqponqFcm(section)` / `AddPinqponqFcm(configure)` register `IFcmSender`: `SendToTokens`,
+  `SendDataOnlyToTokens`, `SendToTopic`, `SubscribeToTopic`, `UnsubscribeFromTopic`. Sends to tokens
+  return an `FcmSendResult` per token (`IsTokenInvalid` for `Unregistered`, `IsProviderCredentialInvalid`
+  for `ThirdPartyAuthError`) and pass invalid tokens to an optional `IFcmInvalidTokenHandler`. Token lists
+  are split into FCM's 500 (send) and 1,000 (topic) limits. `FcmOptions` (`IsEnabled`, `CredentialPath`
+  or `CredentialJson`, `DataOnlyAndroidPriority`, default `Normal`) are validated at startup.
+  `IsSendFailureLoggingEnabled` (default `true`) can turn off the send failure log records. The package
+  uses its own named Firebase app and logs failures through `ILogService` with token suffixes only.
+  FirebaseAdmin 3.4.0. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Billing.RevenueCat.Mail` 1.0.0: subscription event mails. `AddPinqponqRevenueCatMail<TResolver>`
   registers an `IRevenueCatEventListener` that maps `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`,
   `BILLING_ISSUE` and `EXPIRATION` to mails (only `InitialPurchase` enabled by default), asks the product's

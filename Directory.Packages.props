@@ -63,6 +63,10 @@
     <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.12" />
     <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.3" />
 
+    <!-- Push (Pinqponq.Push.Fcm). FirebaseAdmin's Google.Apis.Auth dependency resolves to the
+         1.77.0 pinned above for SSO Google. -->
+    <PackageVersion Include="FirebaseAdmin" Version="3.4.0" />
+
     <!-- Test stack. Assertions are xunit's own Assert: no assertion library is referenced. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />
