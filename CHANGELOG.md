@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Billing.RevenueCat.Mail` 1.0.0: subscription event mails. `AddPinqponqRevenueCatMail<TResolver>`
+  registers an `IRevenueCatEventListener` that maps `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`,
+  `BILLING_ISSUE` and `EXPIRATION` to mails (only `InitialPurchase` enabled by default), asks the product's
+  `IRevenueCatMailRecipientResolver` for the address and language, renders a branded HTML mail with a
+  plain-text version through `IRevenueCatMailRenderer` (default layout, per-event `TemplateOverride`, every
+  value HTML-encoded) and sends it through `IEmailSender`. A failure is logged and reported to
+  `IRevenueCatWebhookObserver` (`RevenueCatMailLogEvents.Sent/Skipped/Failed`) and never fails the webhook;
+  a request cancellation propagates. Options are validated on startup. Defaults, none taken from a product:
+  English texts for every event that name only the brand, `DefaultLanguage` `en`, `InitialPurchase` the only
+  enabled event, `RequirePremiumEntitlement` on, `PrimaryColor` `#333333`, `OnPrimaryColor` `#ffffff`, no logo, footer = brand name. Targets `net8.0`, `net9.0` and `net10.0`.
+- `Pinqponq.Mail` 1.1.0: `EmailMessage.PlainTextBody`. When set on an HTML mail, the mail is sent as
+  multipart/alternative with the plain text first and the HTML last, so clients without HTML show the text.
 - `Pinqponq.Auth.ApiKey` 1.0.0: the shared-secret header check for service-to-service endpoints.
   `AddPinqponqApiKey(name, configure)` registers a named `ApiKeyOptions` (`HeaderName`, required and
   validated on startup; `ApiKey`) and `[RequireApiKey(name)]` returns 401 for a missing, empty or wrong

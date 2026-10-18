@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Pinqponq.Mail;
 using Pinqponq.Mail.DependencyInjection;
 using Pinqponq.Playground.Infrastructure;
+using Pinqponq.Playground.Scenarios.Support;
 
 namespace Pinqponq.Playground.Scenarios;
 
@@ -202,7 +203,7 @@ public static class MailScenarios
 
             context.Step("Mail sent");
 
-            var messages = await WaitForCountAsync(mailhog, context, expected: 5);
+            var messages = await MailHogInbox.WaitForCount(mailhog, expected: 5, context.CancellationToken);
             context.Artifact("delivered copies", messages.Select(message => new
             {
                 message.Subject,
@@ -277,27 +278,7 @@ public static class MailScenarios
 
     private static async Task<CapturedMail?> WaitForMailAsync(MailHogClient mailhog, ScenarioContext context)
     {
-        var messages = await WaitForCountAsync(mailhog, context, expected: 1);
+        var messages = await MailHogInbox.WaitForCount(mailhog, expected: 1, context.CancellationToken);
         return messages.Count > 0 ? messages[0] : null;
-    }
-
-    private static async Task<IReadOnlyList<CapturedMail>> WaitForCountAsync(
-        MailHogClient mailhog,
-        ScenarioContext context,
-        int expected)
-    {
-        IReadOnlyList<CapturedMail> messages = [];
-        for (var attempt = 0; attempt < 25; attempt++)
-        {
-            messages = await mailhog.ListAsync(50, context.CancellationToken);
-            if (messages.Count >= expected)
-            {
-                return messages;
-            }
-
-            await Task.Delay(200, context.CancellationToken);
-        }
-
-        return messages;
     }
 }

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Billing.RevenueCat.Mail</PackageId>
+    <Title>Pinqponq Billing RevenueCat Mail</Title>
+    <Description>Subscription event mails for Pinqponq.Billing.RevenueCat: maps webhook events to mails, resolves the recipient through the consuming product, renders a branded HTML mail with a plain-text version and sends it through Pinqponq.Mail without ever failing the webhook.</Description>
+    <PackageTags>$(PackageTags);revenuecat;billing;subscription;email;mail</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pinqponq.Billing.RevenueCat\Pinqponq.Billing.RevenueCat.csproj" />
+    <ProjectReference Include="..\Pinqponq.Mail\Pinqponq.Mail.csproj" />
+  </ItemGroup>
+
+</Project>
