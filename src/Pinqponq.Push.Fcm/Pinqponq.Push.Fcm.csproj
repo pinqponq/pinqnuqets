@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Push.Fcm</PackageId>
+    <Title>Pinqponq Push FCM</Title>
+    <Description>Firebase Cloud Messaging sender: notification and data-only pushes to device tokens, topic sends and topic subscriptions, with a result per token that says whether the token is dead or the push provider credentials are broken.</Description>
+    <PackageTags>$(PackageTags);push;fcm;firebase;firebase-cloud-messaging;notification</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FirebaseAdmin" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.Push.Fcm.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pinqponq.Observability.Abstractions\Pinqponq.Observability.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
