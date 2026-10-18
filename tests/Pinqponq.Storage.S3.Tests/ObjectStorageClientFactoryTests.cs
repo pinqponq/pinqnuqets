@@ -1,0 +1,128 @@
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Xunit;
+
+namespace Pinqponq.Storage.S3.Tests;
+
+public sealed class ObjectStorageClientFactoryTests
+{
+    [Fact]
+    public void Aws_options_use_the_region_with_virtual_host_addressing()
+    {
+        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(StorageOptionsFactory.Aws());
+
+        Assert.Equal(RegionEndpoint.EUWest1, clientConfig.RegionEndpoint);
+        Assert.Null(clientConfig.ServiceURL);
+        Assert.False(clientConfig.ForcePathStyle);
+        Assert.Null(clientConfig.AuthenticationRegion);
+        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfig.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfig.ResponseChecksumValidation);
+    }
+
+    [Fact]
+    public void Service_url_options_use_the_endpoint_with_path_addressing()
+    {
+        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(
+            StorageOptionsFactory.Compatible("https://minio.example.com"));
+
+        Assert.StartsWith("https://minio.example.com", clientConfig.ServiceURL);
+        Assert.True(clientConfig.ForcePathStyle);
+        Assert.Null(clientConfig.AuthenticationRegion);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Explicit_path_style_wins_over_the_default(bool forcePathStyle)
+    {
+        var awsOptions = StorageOptionsFactory.Aws();
+        awsOptions.ForcePathStyle = forcePathStyle;
+        var compatibleOptions = StorageOptionsFactory.Compatible("https://minio.example.com");
+        compatibleOptions.ForcePathStyle = forcePathStyle;
+
+        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfig(awsOptions).ForcePathStyle);
+        Assert.Equal(forcePathStyle, ObjectStorageClientFactory.CreateClientConfig(compatibleOptions).ForcePathStyle);
+    }
+
+    [Fact]
+    public void Authentication_region_is_passed_to_the_client()
+    {
+        var storageOptions = StorageOptionsFactory.Compatible("https://minio.example.com");
+        storageOptions.AuthenticationRegion = "us-east-1";
+
+        Assert.Equal("us-east-1", ObjectStorageClientFactory.CreateClientConfig(storageOptions).AuthenticationRegion);
+    }
+
+    [Fact]
+    public void When_supported_checksum_mode_maps_to_the_sdk_default()
+    {
+        var storageOptions = StorageOptionsFactory.Aws();
+        storageOptions.RequestChecksumMode = ObjectStorageChecksumMode.WhenSupported;
+
+        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(storageOptions);
+
+        Assert.Equal(RequestChecksumCalculation.WHEN_SUPPORTED, clientConfig.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_SUPPORTED, clientConfig.ResponseChecksumValidation);
+    }
+
+    [Fact]
+    public void Unknown_checksum_mode_is_rejected()
+    {
+        var storageOptions = StorageOptionsFactory.Aws();
+        storageOptions.RequestChecksumMode = (ObjectStorageChecksumMode)99;
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => ObjectStorageClientFactory.CreateClientConfig(storageOptions));
+
+        Assert.StartsWith("Unknown checksum mode.", exception.Message);
+    }
+
+    [Fact]
+    public void Cloudflare_r2_sets_the_endpoint_and_compatibility_settings()
+    {
+        var storageOptions = StorageOptionsFactory.Aws();
+        storageOptions.RequestChecksumMode = ObjectStorageChecksumMode.WhenSupported;
+
+        var returnedOptions = storageOptions.UseCloudflareR2("account123");
+        var clientConfig = ObjectStorageClientFactory.CreateClientConfig(storageOptions);
+
+        Assert.Same(storageOptions, returnedOptions);
+        Assert.Equal("https://account123.r2.cloudflarestorage.com", storageOptions.ServiceUrl);
+        Assert.Null(storageOptions.Region);
+        Assert.True(storageOptions.DisablePayloadSigning);
+        Assert.StartsWith("https://account123.r2.cloudflarestorage.com", clientConfig.ServiceURL);
+        Assert.True(clientConfig.ForcePathStyle);
+        Assert.Equal("auto", clientConfig.AuthenticationRegion);
+        Assert.Equal(RequestChecksumCalculation.WHEN_REQUIRED, clientConfig.RequestChecksumCalculation);
+        Assert.Equal(ResponseChecksumValidation.WHEN_REQUIRED, clientConfig.ResponseChecksumValidation);
+    }
+
+    [Theory]
+    [MemberData(nameof(S3ObjectStorageTests.EmptyKeys), MemberType = typeof(S3ObjectStorageTests))]
+    public void Cloudflare_r2_rejects_an_empty_account_id(string? accountId)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => StorageOptionsFactory.Aws().UseCloudflareR2(accountId!));
+    }
+
+    [Fact]
+    public async Task Created_client_presigns_urls_against_the_service_url()
+    {
+        var storageOptions = StorageOptionsFactory.Compatible("http://localhost:9000");
+        using var client = ObjectStorageClientFactory.CreateClient(storageOptions);
+        var presignRequest = new GetPreSignedUrlRequest
+        {
+            BucketName = StorageOptionsFactory.BUCKET_NAME,
+            Key = "avatars/1.png",
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.AddMinutes(15),
+            Protocol = Protocol.HTTP
+        };
+
+        var presignedUrl = await client.GetPreSignedURLAsync(presignRequest);
+
+        Assert.StartsWith($"http://localhost:9000/{StorageOptionsFactory.BUCKET_NAME}/avatars/1.png?", presignedUrl);
+        Assert.Contains("X-Amz-Credential=test-access-key", presignedUrl);
+    }
+}

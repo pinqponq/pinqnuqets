@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Storage.S3</PackageId>
+    <Title>Pinqponq Storage S3</Title>
+    <Description>S3 and S3-compatible object storage (AWS S3, Cloudflare R2, MinIO): upload, download, presigned URLs, metadata, copy, delete and a bucket health check.</Description>
+    <PackageTags>$(PackageTags);s3;r2;cloudflare-r2;object-storage;presigned-url;aws;health-check</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.Storage.S3.Tests" />
+  </ItemGroup>
+
+</Project>

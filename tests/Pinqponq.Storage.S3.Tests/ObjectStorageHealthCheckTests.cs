@@ -1,0 +1,46 @@
+using System.Net;
+using Amazon.S3.Model;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using Xunit;
+
+namespace Pinqponq.Storage.S3.Tests;
+
+public sealed class ObjectStorageHealthCheckTests
+{
+    [Fact]
+    public async Task Reachable_bucket_is_healthy()
+    {
+        var (client, fake) = FakeStorageClient.Create();
+        var healthCheck = new ObjectStorageHealthCheck(client, Options.Create(StorageOptionsFactory.Aws()));
+
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal(StorageOptionsFactory.BUCKET_NAME, fake.SingleRequest<HeadBucketRequest>().BucketName);
+    }
+
+    [Fact]
+    public async Task Unreachable_bucket_is_unhealthy_with_the_error()
+    {
+        var (client, fake) = FakeStorageClient.Create();
+        fake.Failure = FakeStorageClient.StatusError(HttpStatusCode.Forbidden);
+        var healthCheck = new ObjectStorageHealthCheck(client, Options.Create(StorageOptionsFactory.Aws()));
+
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+
+        Assert.Equal(HealthStatus.Unhealthy, result.Status);
+        Assert.Same(fake.Failure, result.Exception);
+        Assert.Equal($"Bucket '{StorageOptionsFactory.BUCKET_NAME}' is unreachable.", result.Description);
+    }
+
+    [Fact]
+    public void Constructor_rejects_missing_dependencies()
+    {
+        var (client, _) = FakeStorageClient.Create();
+
+        Assert.Throws<ArgumentNullException>(
+            () => new ObjectStorageHealthCheck(null!, Options.Create(StorageOptionsFactory.Aws())));
+        Assert.Throws<ArgumentNullException>(() => new ObjectStorageHealthCheck(client, null!));
+    }
+}
