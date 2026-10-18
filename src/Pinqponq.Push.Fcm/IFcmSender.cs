@@ -14,7 +14,7 @@ public interface IFcmSender
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sends a push without a notification block; the app decides what to show. Android priority comes
+    /// Sends a push without a notification block, so the app decides what to show. Android priority comes
     /// from <see cref="FcmOptions.DataOnlyAndroidPriority"/>. Results as in <see cref="SendToTokens"/>.
     /// </summary>
     Task<IReadOnlyList<FcmSendResult>> SendDataOnlyToTokens(

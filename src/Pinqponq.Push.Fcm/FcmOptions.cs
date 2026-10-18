@@ -29,7 +29,7 @@ public sealed class FcmOptions
     /// <summary>
     /// Android priority of the pushes sent by <see cref="IFcmSender.SendDataOnlyToTokens"/>. Defaults to
     /// <see cref="Priority.Normal"/>, the FCM default for data messages. <see cref="Priority.High"/> wakes
-    /// the device right away; Android lowers the priority of an app whose high-priority pushes do not
+    /// the device right away, but Android lowers the priority of an app whose high-priority pushes do not
     /// show a notification.
     /// </summary>
     public Priority DataOnlyAndroidPriority { get; set; } = Priority.Normal;

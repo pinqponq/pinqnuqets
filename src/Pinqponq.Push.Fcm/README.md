@@ -1,7 +1,7 @@
 # Pinqponq.Push.Fcm
 
 Firebase Cloud Messaging (FCM) sender for backends that push to mobile apps. You give it a
-Firebase service account; it gives you an `IFcmSender` that sends notifications and data-only
+Firebase service account, and it gives you an `IFcmSender` that sends notifications and data-only
 pushes to device tokens, sends to topics and manages topic subscriptions. Every send to tokens
 returns one result per token that says whether the token is invalid (delete it) or the push
 provider credentials are broken (fix them, every push to that platform fails).
@@ -57,7 +57,7 @@ from Vault (`Pinqponq.Configuration.Vault`) into `Fcm:CredentialJson`.
 | `IsEnabled` | `true` | `false` sends nothing and needs no credential (developer machines). |
 | `CredentialPath` | — | Service account JSON file. A relative path is resolved against the app directory. |
 | `CredentialJson` | — | The service account JSON itself. Set this or `CredentialPath`, not both. |
-| `DataOnlyAndroidPriority` | `Normal` | Android priority of `SendDataOnlyToTokens`. `High` wakes the device at once; use it only when the app shows a notification for every such push, or Android lowers the app's priority. |
+| `DataOnlyAndroidPriority` | `Normal` | Android priority of `SendDataOnlyToTokens`. `High` wakes the device at once. Use it only when the app shows a notification for every such push, or Android lowers the app's priority. |
 
 The options are validated at startup: when `IsEnabled` is `true`, exactly one credential must
 be set, the file must exist and the JSON must be a service account.
@@ -67,11 +67,11 @@ be set, the file must exist and the JSON must be a service account.
 | Method | Sends |
 |---|---|
 | `SendToTokens(message, tokens)` | A notification (title, body, optional image and data) to device tokens. |
-| `SendDataOnlyToTokens(data, tokens)` | Data without a notification block; the app decides what to show. |
+| `SendDataOnlyToTokens(data, tokens)` | Data without a notification block. The app decides what to show. |
 | `SendToTopic(topic, message)` | A notification to every device subscribed to the topic. |
 | `SubscribeToTopic(tokens, topic)` / `UnsubscribeFromTopic(tokens, topic)` | Topic membership. Rejected tokens are logged. |
 
-- More than 500 tokens are split into several FCM calls (1,000 for topic changes); you can pass any number.
+- More than 500 tokens are split into several FCM calls (1,000 for topic changes), so you can pass any number.
 - No tokens, or `IsEnabled` set to `false`, sends nothing and returns an empty list.
 - `FcmMessage.Android` and `FcmMessage.Apns` take FirebaseAdmin's `AndroidConfig` and `ApnsConfig`
   as they are. The package sets nothing there by default: no sound, badge or content-available.
@@ -92,7 +92,7 @@ tokens were given:
 wrong Firebase project gives the same answer for every token, and deleting them all would be
 wrong. They come back as failures with their `ErrorCode`.
 
-To delete invalid tokens, implement `IFcmInvalidTokenHandler` and register it; the sender calls it
+To delete invalid tokens, implement `IFcmInvalidTokenHandler` and register it. The sender calls it
 after each send with the tokens FCM reported as `Unregistered`:
 
 ```csharp
@@ -114,7 +114,7 @@ credentials, so a record holds only the last 6 characters of each token.
 |---|---|---|
 | `fcm_send_partial_failure` | Warning | Some tokens of a send failed. |
 | `fcm_provider_credential_invalid` | Error | A send failed with `ThirdPartyAuthError`. |
-| `fcm_topic_subscribe_partial_failure` / `fcm_topic_unsubscribe_partial_failure` | Warning | FCM rejected tokens of a topic change; each failure has FCM's reason. |
+| `fcm_topic_subscribe_partial_failure` / `fcm_topic_unsubscribe_partial_failure` | Warning | FCM rejected tokens of a topic change. Each failure has FCM's reason. |
 | `fcm_disabled` | Debug | `IsEnabled` is `false` and a send was skipped. |
 
 ## Firebase app

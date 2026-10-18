@@ -31,19 +31,19 @@ public sealed class FcmSenderTests
     public async Task SendToTokens_marks_an_unregistered_token_invalid_and_passes_it_to_the_handler()
     {
         using var app = new FcmTestApp();
-        app.Server.FailSend("token-dead", FakeFcmError.Unregistered);
+        app.Server.FailSend("token-invalid", FakeFcmError.Unregistered);
 
-        var results = await app.Sender.SendToTokens(Message, ["token-alive", "token-dead"]);
+        var results = await app.Sender.SendToTokens(Message, ["token-alive", "token-invalid"]);
 
-        var deadResult = results[1];
-        Assert.False(deadResult.IsSuccess);
-        Assert.True(deadResult.IsTokenInvalid);
-        Assert.False(deadResult.IsProviderCredentialInvalid);
-        Assert.Equal(nameof(MessagingErrorCode.Unregistered), deadResult.ErrorCode);
-        Assert.Contains("NOT_FOUND", deadResult.ErrorMessage);
+        var invalidResult = results[1];
+        Assert.False(invalidResult.IsSuccess);
+        Assert.True(invalidResult.IsTokenInvalid);
+        Assert.False(invalidResult.IsProviderCredentialInvalid);
+        Assert.Equal(nameof(MessagingErrorCode.Unregistered), invalidResult.ErrorCode);
+        Assert.Contains("NOT_FOUND", invalidResult.ErrorMessage);
         Assert.True(results[0].IsSuccess);
         var handlerCall = Assert.Single(app.InvalidTokenHandler.Calls);
-        Assert.Equal(["token-dead"], handlerCall);
+        Assert.Equal(["token-invalid"], handlerCall);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public sealed class FcmSenderTests
         Assert.False(app.IsAppCreated);
         var logEntry = Assert.Single(app.LogService.Entries);
         Assert.Equal("Debug", logEntry.Level);
-        Assert.Equal("FCM is disabled; the push was not sent.", logEntry.Message);
+        Assert.Equal("FCM is disabled, so the push was not sent.", logEntry.Message);
         Assert.Equal(FcmLogEvents.Disabled, logEntry.EventName);
         Assert.Equal(2, logEntry.Data!["tokenCount"]);
     }
@@ -249,16 +249,16 @@ public sealed class FcmSenderTests
     }
 
     [Fact]
-    public async Task SendDataOnlyToTokens_uses_the_configured_android_priority_and_reports_dead_tokens()
+    public async Task SendDataOnlyToTokens_uses_the_configured_android_priority_and_reports_invalid_tokens()
     {
         using var app = new FcmTestApp(options => options.DataOnlyAndroidPriority = Priority.High);
-        app.Server.FailSend("token-dead", FakeFcmError.Unregistered);
+        app.Server.FailSend("token-invalid", FakeFcmError.Unregistered);
 
-        var results = await app.Sender.SendDataOnlyToTokens(new Dictionary<string, string> { ["type"] = "sync" }, ["token-dead"]);
+        var results = await app.Sender.SendDataOnlyToTokens(new Dictionary<string, string> { ["type"] = "sync" }, ["token-invalid"]);
 
         Assert.True(Assert.Single(results).IsTokenInvalid);
         Assert.Equal("high", app.Server.SentMessages[0]["android"]!["priority"]!.GetValue<string>());
-        Assert.Equal(["token-dead"], Assert.Single(app.InvalidTokenHandler.Calls));
+        Assert.Equal(["token-invalid"], Assert.Single(app.InvalidTokenHandler.Calls));
     }
 
     [Fact]

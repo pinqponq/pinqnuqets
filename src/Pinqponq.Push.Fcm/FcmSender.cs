@@ -170,7 +170,7 @@ internal sealed class FcmSender : IFcmSender
         }
 
         _logService.Debug(
-            "FCM is disabled; the push was not sent.",
+            "FCM is disabled, so the push was not sent.",
             new Dictionary<string, object?> { ["tokenCount"] = tokenCount },
             eventName: FcmLogEvents.Disabled);
         return true;
@@ -309,7 +309,7 @@ internal sealed class FcmSender : IFcmSender
         data?.ToDictionary(dataEntry => dataEntry.Key, dataEntry => dataEntry.Value);
 
     /// <summary>
-    /// Device tokens are credentials: only the end is logged, enough to match entries of the same device,
+    /// Device tokens are credentials: only the end is logged, enough to match log records of the same device,
     /// not enough to send a push with.
     /// </summary>
     private static string ToTokenSuffix(string token) =>
