@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Push.Fcm` 1.1.0: `FcmOptions.IsSendFailureLoggingEnabled` (default `true`) lets an application that logs the
+  returned `FcmSendResult` list itself turn off the package's own send-failure log records. 1.0.0 stays valid.
 - `Pinqponq.Push.Fcm` 1.0.0: the Firebase Cloud Messaging sender extracted from a product backend.
   `AddPinqponqFcm(section)` / `AddPinqponqFcm(configure)` register `IFcmSender`: `SendToTokens`,
   `SendDataOnlyToTokens`, `SendToTopic`, `SubscribeToTopic`, `UnsubscribeFromTopic`. Sends to tokens
