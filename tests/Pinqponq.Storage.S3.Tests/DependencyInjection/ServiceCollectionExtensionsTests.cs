@@ -78,7 +78,7 @@ public sealed class ServiceCollectionExtensionsTests
     public void Invalid_options_stop_startup()
     {
         var services = new ServiceCollection();
-        services.AddPinqponqObjectStorage(storage => storage.Region = "eu-west-1");
+        services.AddPinqponqObjectStorage(storage => storage.Region = StorageOptionsFactory.REGION);
         using var provider = services.BuildServiceProvider();
 
         var exception = Assert.Throws<OptionsValidationException>(
@@ -129,6 +129,6 @@ public sealed class ServiceCollectionExtensionsTests
         storageOptions.BucketName = StorageOptionsFactory.BUCKET_NAME;
         storageOptions.AccessKey = StorageOptionsFactory.ACCESS_KEY;
         storageOptions.SecretKey = StorageOptionsFactory.SECRET_KEY;
-        storageOptions.Region = "eu-west-1";
+        storageOptions.Region = StorageOptionsFactory.REGION;
     }
 }

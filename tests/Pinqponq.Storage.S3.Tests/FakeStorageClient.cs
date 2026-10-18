@@ -15,7 +15,7 @@ public sealed class FakeStorageClient : AmazonS3Client, IAmazonS3
     public const string PRESIGNED_URL = "https://storage.example/presigned";
 
     public FakeStorageClient()
-        : base(new BasicAWSCredentials(StorageOptionsFactory.ACCESS_KEY, StorageOptionsFactory.SECRET_KEY), RegionEndpoint.EUWest1)
+        : base(new BasicAWSCredentials(StorageOptionsFactory.ACCESS_KEY, StorageOptionsFactory.SECRET_KEY), RegionEndpoint.GetBySystemName(StorageOptionsFactory.REGION))
     {
     }
 
@@ -27,9 +27,9 @@ public sealed class FakeStorageClient : AmazonS3Client, IAmazonS3
 
     public Exception? Failure { get; set; }
 
-    public T SingleRequest<T>() where T : AmazonWebServiceRequest => Assert.IsType<T>(Assert.Single(Requests));
+    public T GetSingleRequest<T>() where T : AmazonWebServiceRequest => Assert.IsType<T>(Assert.Single(Requests));
 
-    public static AmazonS3Exception StatusError(HttpStatusCode statusCode) =>
+    public static AmazonS3Exception CreateStatusError(HttpStatusCode statusCode) =>
         new($"Storage answered {statusCode}.") { StatusCode = statusCode };
 
     public override Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default) =>

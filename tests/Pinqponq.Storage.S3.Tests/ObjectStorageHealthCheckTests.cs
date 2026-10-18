@@ -13,20 +13,20 @@ public sealed class ObjectStorageHealthCheckTests
     public async Task Reachable_bucket_is_healthy()
     {
         var fake = new FakeStorageClient();
-        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.Aws()));
+        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.CreateAwsOptions()));
 
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal(StorageOptionsFactory.BUCKET_NAME, fake.SingleRequest<HeadBucketRequest>().BucketName);
+        Assert.Equal(StorageOptionsFactory.BUCKET_NAME, fake.GetSingleRequest<HeadBucketRequest>().BucketName);
     }
 
     [Fact]
     public async Task Unreachable_bucket_is_unhealthy_with_the_error()
     {
         var fake = new FakeStorageClient();
-        fake.Failure = FakeStorageClient.StatusError(HttpStatusCode.Forbidden);
-        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.Aws()));
+        fake.Failure = FakeStorageClient.CreateStatusError(HttpStatusCode.Forbidden);
+        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.CreateAwsOptions()));
 
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
@@ -41,7 +41,7 @@ public sealed class ObjectStorageHealthCheckTests
         IAmazonS3 client = new FakeStorageClient();
 
         Assert.Throws<ArgumentNullException>(
-            () => new ObjectStorageHealthCheck(null!, Options.Create(StorageOptionsFactory.Aws())));
+            () => new ObjectStorageHealthCheck(null!, Options.Create(StorageOptionsFactory.CreateAwsOptions())));
         Assert.Throws<ArgumentNullException>(() => new ObjectStorageHealthCheck(client, null!));
     }
 }
