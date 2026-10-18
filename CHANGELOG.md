@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   enabled event, `RequirePremiumEntitlement` on, `PrimaryColor` `#333333`, `OnPrimaryColor` `#ffffff`, no logo, footer = brand name. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Mail` 1.1.0: `EmailMessage.PlainTextBody`. When set on an HTML mail, the mail is sent as
   multipart/alternative with the plain text first and the HTML last, so clients without HTML show the text.
+- `Pinqponq.Storage.S3` 1.0.0: object storage on AWS S3 and S3-compatible stores (Cloudflare R2, MinIO).
+  `AddPinqponqObjectStorage` (configuration section or `Action<ObjectStorageOptions>`) registers one
+  `IAmazonS3` client and `IObjectStorage`: `Upload`, presigned `CreateDownloadUrl` / `CreateUploadUrl`
+  (UTC expiry, the upload URL signs the content type), `GetMetadata` (null for a missing key), `Download`,
+  `DownloadToFile` (`ObjectNotFoundException` for a missing key), `Copy` and `Delete`. `ObjectStorageOptions`
+  is validated at startup (bucket, keys, and exactly one of `ServiceUrl` or `Region`); `UseCloudflareR2(accountId)`
+  sets the R2 endpoint, path-style addressing, unsigned payloads, `WhenRequired` checksums and the `auto`
+  signing region. `AddPinqponqObjectStorageHealthCheck` sends a HEAD request for the bucket. No bucket,
+  region or key layout defaults. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Auth.ApiKey` 1.0.0: the shared-secret header check for service-to-service endpoints.
   `AddPinqponqApiKey(name, configure)` registers a named `ApiKeyOptions` (`HeaderName`, required and
   validated on startup; `ApiKey`) and `[RequireApiKey(name)]` returns 401 for a missing, empty or wrong
