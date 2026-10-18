@@ -77,6 +77,7 @@ the mail listener (scoped, as an `IRevenueCatEventListener`), the default render
 | `Brand.Name` | none | Replaces `{BrandName}` in every text. Required. |
 | `Brand.LogoUrl` | none | Absolute http(s) URL. Without it the header shows the brand name. |
 | `Brand.PrimaryColor` | `#333333` | Header and button color, `#rgb` or `#rrggbb`. |
+| `Brand.OnPrimaryColor` | `#ffffff` | Color of the brand name and the button label on `PrimaryColor`, `#rgb` or `#rrggbb`. |
 | `Brand.FooterText` | brand name | Footer line; `{BrandName}` is replaced. |
 | `DefaultLanguage` | `en` | Used when the recipient has no language or one without texts. Required. |
 | `RequirePremiumEntitlement` | `true` | Only events that carry `RevenueCatOptions.PremiumEntitlementId` send a mail. |
@@ -127,11 +128,12 @@ Each mail step is logged through `ILogger` and reported to `IRevenueCatWebhookOb
 observer `Pinqponq.Billing.RevenueCat` already uses, with the names in
 `RevenueCatMailLogEvents`:
 
-| Event | Level | When |
-|---|---|---|
-| `webhook_revenuecat_mail_sent` | Info | The mail was handed to `IEmailSender`. |
-| `webhook_revenuecat_mail_skipped` | Info | No mail: `reason` is one of `RevenueCatMailSkipReasons` (entitlement not premium, subscriber unresolved, resolver returned null, invalid address). |
-| `webhook_revenuecat_mail_failed` | Warning | Resolving, rendering or sending threw. `ILogger` gets the exception; the webhook still succeeds. |
+| Event | Observer level | `ILogger` level | When |
+|---|---|---|---|
+| `webhook_revenuecat_mail_sent` | Info | Information | The mail was handed to `IEmailSender`. |
+| `webhook_revenuecat_mail_skipped` | Info | Information | No mail: `reason` is one of `RevenueCatMailSkipReasons` (entitlement not premium, subscriber unresolved, resolver returned null, invalid address). |
+| `webhook_revenuecat_mail_failed` | Warning | Error, with the exception | Resolving, rendering or sending threw. The webhook still succeeds. |
 
 A disabled event logs nothing. The data carries the event id and type, the subscriber id and
-the mail event, never the address. A cancellation of the webhook request is not caught.
+the mail event, never the address. A cancellation of the webhook request is logged as failed
+and then rethrown.

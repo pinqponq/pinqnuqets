@@ -63,6 +63,20 @@ public sealed class RevenueCatMailOptionsValidatorTests
     }
 
     [Theory]
+    [InlineData("#fff", true)]
+    [InlineData("#0A0B0C", true)]
+    [InlineData("white", false)]
+    [InlineData("#ffffff; display: none", false)]
+    [InlineData(null, false)]
+    public void On_primary_color_must_be_a_hex_color(string? color, bool isValid)
+    {
+        var options = ValidOptions();
+        options.Brand.OnPrimaryColor = color!;
+
+        Assert.Equal(isValid, !Failures(options).Any(failure => failure.Contains("OnPrimaryColor")));
+    }
+
+    [Theory]
     [InlineData("https://example.com/logo.png", true)]
     [InlineData("http://example.com/logo.png", true)]
     [InlineData("/logo.png", false)]

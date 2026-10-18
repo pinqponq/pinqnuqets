@@ -54,6 +54,9 @@ public sealed class RevenueCatMailBrand
     /// <summary>Header and button color as <c>#rgb</c> or <c>#rrggbb</c>. Defaults to a neutral dark gray.</summary>
     public string PrimaryColor { get; set; } = "#333333";
 
+    /// <summary>Color of the brand name and the button label shown on <see cref="PrimaryColor"/>, as <c>#rgb</c> or <c>#rrggbb</c>. Defaults to white.</summary>
+    public string OnPrimaryColor { get; set; } = "#ffffff";
+
     /// <summary>Optional footer line; <c>{BrandName}</c> is replaced. Without it the footer shows <see cref="Name"/>.</summary>
     public string? FooterText { get; set; }
 }
@@ -61,7 +64,6 @@ public sealed class RevenueCatMailBrand
 /// <summary>Settings of one <see cref="RevenueCatMailEvent"/>.</summary>
 public sealed class RevenueCatMailEventOptions
 {
-    /// <summary>Whether this event sends a mail.</summary>
     public bool Enabled { get; set; }
 
     /// <summary>

@@ -9,6 +9,7 @@ public static class RevenueCatMailTemplatePlaceholders
     public const string Language = "{Language}";
     public const string BrandName = "{BrandName}";
     public const string PrimaryColor = "{PrimaryColor}";
+    public const string OnPrimaryColor = "{OnPrimaryColor}";
     public const string LogoUrl = "{LogoUrl}";
     public const string Subject = "{Subject}";
     public const string Preheader = "{Preheader}";

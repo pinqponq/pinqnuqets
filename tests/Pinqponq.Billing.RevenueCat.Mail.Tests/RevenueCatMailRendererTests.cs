@@ -59,6 +59,20 @@ public sealed class RevenueCatMailRendererTests
     }
 
     [Fact]
+    public void On_primary_color_is_used_for_the_brand_name_and_the_button_label()
+    {
+        _brand.OnPrimaryColor = "#101010";
+        _text.CallToActionLabel = "Open";
+        _eventOptions.CallToActionUrl = "https://example.com/account";
+
+        var html = Render().HtmlBody;
+
+        Assert.Contains("font-weight: bold; color: #101010;\">Example</span>", html);
+        Assert.Contains("color: #101010; font-size: 15px; font-weight: bold; text-decoration: none;", html);
+        Assert.DoesNotContain("#ffffff;\">Example", html);
+    }
+
+    [Fact]
     public void Html_in_brand_and_texts_is_encoded()
     {
         _brand.Name = "<b>Brand</b>";
@@ -177,12 +191,12 @@ public sealed class RevenueCatMailRendererTests
         _text.CallToActionLabel = "Go";
         _eventOptions.CallToActionUrl = "https://example.com/go";
         _eventOptions.TemplateOverride =
-            "{Language}|{BrandName}|{PrimaryColor}|{LogoUrl}|{Subject}|{Preheader}|{Title}|{CallToActionLabel}|{CallToActionUrl}|{FooterText}|{Unknown}";
+            "{Language}|{BrandName}|{PrimaryColor}|{OnPrimaryColor}|{LogoUrl}|{Subject}|{Preheader}|{Title}|{CallToActionLabel}|{CallToActionUrl}|{FooterText}|{Unknown}";
 
         var mail = Render("de");
 
         Assert.Equal(
-            "de|Example|#123456|https://example.com/logo.png|Welcome to Example|Preview for Example|Hello from Example|Go|https://example.com/go|Example|{Unknown}",
+            "de|Example|#123456|#ffffff|https://example.com/logo.png|Welcome to Example|Preview for Example|Hello from Example|Go|https://example.com/go|Example|{Unknown}",
             mail.HtmlBody);
         Assert.Equal("Welcome to Example", mail.Subject);
         Assert.Contains("Go: https://example.com/go", mail.PlainTextBody);

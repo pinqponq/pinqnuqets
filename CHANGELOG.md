@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `IRevenueCatWebhookObserver` (`RevenueCatMailLogEvents.Sent/Skipped/Failed`) and never fails the webhook;
   a request cancellation propagates. Options are validated on startup. Defaults, none taken from a product:
   English texts for every event that name only the brand, `DefaultLanguage` `en`, `InitialPurchase` the only
-  enabled event, `RequirePremiumEntitlement` on, `PrimaryColor` `#333333`, no logo, footer = brand name. Targets `net8.0`, `net9.0` and `net10.0`.
+  enabled event, `RequirePremiumEntitlement` on, `PrimaryColor` `#333333`, `OnPrimaryColor` `#ffffff`, no logo, footer = brand name. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Mail` 1.1.0: `EmailMessage.PlainTextBody`. When set on an HTML mail, the mail is sent as
   multipart/alternative with the plain text first and the HTML last, so clients without HTML show the text.
 - `Pinqponq.Auth.ApiKey` 1.0.0: the shared-secret header check for service-to-service endpoints.

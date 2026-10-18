@@ -44,6 +44,7 @@ public sealed class RevenueCatMailTextsTests
         Assert.Null(options.Brand.LogoUrl);
         Assert.Null(options.Brand.FooterText);
         Assert.Equal("#333333", options.Brand.PrimaryColor);
+        Assert.Equal("#ffffff", options.Brand.OnPrimaryColor);
         Assert.True(options.Texts.ContainsKey("EN"));
         Assert.Equal(Enum.GetValues<RevenueCatMailEvent>().Length, options.Events.Count);
         Assert.All(options.Events, entry =>

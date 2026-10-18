@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Billing.RevenueCat.Mail;
 
-/// <summary>Validates <see cref="RevenueCatMailOptions"/> at startup.</summary>
 public sealed partial class RevenueCatMailOptionsValidator : IValidateOptions<RevenueCatMailOptions>
 {
     public ValidateOptionsResult Validate(string? name, RevenueCatMailOptions options)
@@ -25,14 +24,20 @@ public sealed partial class RevenueCatMailOptionsValidator : IValidateOptions<Re
             failures.Add($"{nameof(RevenueCatMailOptions.Brand)}.{nameof(RevenueCatMailBrand.Name)} is required.");
         }
 
-        if (brand.PrimaryColor is null || !HexColorPattern().IsMatch(brand.PrimaryColor))
-        {
-            failures.Add($"{nameof(RevenueCatMailOptions.Brand)}.{nameof(RevenueCatMailBrand.PrimaryColor)} must be a #rgb or #rrggbb color.");
-        }
+        ValidateColor(brand.PrimaryColor, nameof(RevenueCatMailBrand.PrimaryColor), failures);
+        ValidateColor(brand.OnPrimaryColor, nameof(RevenueCatMailBrand.OnPrimaryColor), failures);
 
         if (brand.LogoUrl is not null && !IsAbsoluteHttpUrl(brand.LogoUrl))
         {
             failures.Add($"{nameof(RevenueCatMailOptions.Brand)}.{nameof(RevenueCatMailBrand.LogoUrl)} must be an absolute http or https URL.");
+        }
+    }
+
+    private static void ValidateColor(string? color, string propertyName, List<string> failures)
+    {
+        if (color is null || !HexColorPattern().IsMatch(color))
+        {
+            failures.Add($"{nameof(RevenueCatMailOptions.Brand)}.{propertyName} must be a #rgb or #rrggbb color.");
         }
     }
 

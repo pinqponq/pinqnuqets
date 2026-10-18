@@ -82,7 +82,6 @@ public sealed class RevenueCatMailText
     /// <summary>Heading of the mail. Required.</summary>
     public string Title { get; set; } = string.Empty;
 
-    /// <summary>Body paragraphs, in order.</summary>
     public IList<string> Paragraphs { get; set; } = new List<string>();
 
     /// <summary>Optional button label; see <see cref="RevenueCatMailEventOptions.CallToActionUrl"/>.</summary>
