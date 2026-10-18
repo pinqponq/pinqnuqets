@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
+using System.Text;
 using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Mail;
@@ -23,8 +25,7 @@ public sealed class SmtpEmailSender : IEmailSender
         _options = options.Value;
     }
 
-    /// <inheritdoc />
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    internal MailMessage CreateMailMessage(EmailMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
         if (string.IsNullOrWhiteSpace(message.To))
@@ -42,13 +43,27 @@ public sealed class SmtpEmailSender : IEmailSender
             throw new ArgumentException("Email body is required.", nameof(message));
         }
 
-        using var mailMessage = new MailMessage
+        var mailMessage = new MailMessage
         {
             From = new MailAddress(_options.FromEmail, _options.FromName),
             Subject = message.Subject,
-            Body = message.Body,
-            IsBodyHtml = message.IsBodyHtml,
         };
+
+        try
+        {
+            FillMailMessage(mailMessage, message);
+            return mailMessage;
+        }
+        catch
+        {
+            mailMessage.Dispose();
+            throw;
+        }
+    }
+
+    private void FillMailMessage(MailMessage mailMessage, EmailMessage message)
+    {
+        SetBody(mailMessage, message);
 
         AddRecipients(mailMessage.To, message.To);
         if (mailMessage.To.Count == 0)
@@ -105,6 +120,12 @@ public sealed class SmtpEmailSender : IEmailSender
                 mailMessage.Attachments.Add(new Attachment(resolvedPath));
             }
         }
+    }
+
+    /// <inheritdoc />
+    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    {
+        using var mailMessage = CreateMailMessage(message);
 
         using var smtpClient = new SmtpClient(_options.SmtpHost)
         {
@@ -118,6 +139,24 @@ public sealed class SmtpEmailSender : IEmailSender
         }
 
         await smtpClient.SendMailAsync(mailMessage, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void SetBody(MailMessage mailMessage, EmailMessage message)
+    {
+        var hasPlainTextAlternative = message.IsBodyHtml && !string.IsNullOrWhiteSpace(message.PlainTextBody);
+        if (!hasPlainTextAlternative)
+        {
+            mailMessage.Body = message.Body;
+            mailMessage.IsBodyHtml = message.IsBodyHtml;
+            return;
+        }
+
+        // Mail clients show the last part of a multipart/alternative message they can render,
+        // so the plain text goes first (as the body) and the HTML last (as an alternate view).
+        mailMessage.Body = message.PlainTextBody;
+        mailMessage.IsBodyHtml = false;
+        mailMessage.AlternateViews.Add(
+            AlternateView.CreateAlternateViewFromString(message.Body, Encoding.UTF8, MediaTypeNames.Text.Html));
     }
 
     private static void AddRecipients(MailAddressCollection collection, string addresses)

@@ -24,6 +24,13 @@ public sealed class EmailMessage
     /// <summary>Whether the body is HTML. Defaults to true.</summary>
     public bool IsBodyHtml { get; set; } = true;
 
+    /// <summary>
+    /// Optional plain-text version of an HTML <see cref="Body"/>. When set, the mail is sent as
+    /// multipart/alternative, so clients that do not render HTML show this text instead.
+    /// Ignored when <see cref="IsBodyHtml"/> is false.
+    /// </summary>
+    public string? PlainTextBody { get; set; }
+
     /// <summary>Optional file paths to attach; missing paths cause <see cref="ArgumentException"/>.</summary>
     public List<string>? Attachments { get; set; }
 }

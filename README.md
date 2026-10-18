@@ -66,6 +66,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Configuration.Vault** | HashiCorp Vault configuration provider: one KV v2 record shaped like `appsettings.json`, Vault CLI token lookup | [README](src/Pinqponq.Configuration.Vault/README.md) |
 | **Pinqponq.Billing.RevenueCat** | RevenueCat webhook handling: payload model, Authorization header check, event dispatch; storage via `IRevenueCatSubscriptionStore` | [README](src/Pinqponq.Billing.RevenueCat/README.md) |
 | **Pinqponq.Push.Fcm** | Firebase Cloud Messaging sender: token, data-only and topic pushes, topic subscriptions, per-token results with invalid-token and provider-credential flags; invalid tokens via `IFcmInvalidTokenHandler` | [README](src/Pinqponq.Push.Fcm/README.md) |
+| **Pinqponq.Billing.RevenueCat.Mail** | Subscription event mails on top of Billing.RevenueCat and Mail: enabled events, recipient lookup via `IRevenueCatMailRecipientResolver`, branded HTML + plain text, per-language copy | [README](src/Pinqponq.Billing.RevenueCat.Mail/README.md) |
 
 Each package exposes an `AddPinqponqXxx(...)` DI extension (where applicable) and an options class. Install from nuget.org once published, or reference the project under `src/`.
 

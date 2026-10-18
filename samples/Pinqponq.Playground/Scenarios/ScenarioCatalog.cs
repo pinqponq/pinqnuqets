@@ -27,6 +27,7 @@ public sealed class ScenarioCatalog
         scenarios.AddRange(MailScenarios.Create());
         scenarios.AddRange(LiveKitScenarios.Create());
         scenarios.AddRange(RevenueCatScenarios.Create());
+        scenarios.AddRange(RevenueCatMailScenarios.Create());
         scenarios.AddRange(DatabaseScenarios.Create());
         scenarios.AddRange(RabbitMqScenarios.Create());
         scenarios.AddRange(ErrorHandlingScenarios.Create());
@@ -79,6 +80,8 @@ public sealed class ScenarioCatalog
             "Access tokens, webhook signature/checksum verification, RoomService over Twirp."),
         new("Pinqponq.Billing.RevenueCat", "Billing.RevenueCat", "Billing",
             "Webhook auth header, event dispatch, idempotency, superseded-event guard, TRANSFER."),
+        new("Pinqponq.Billing.RevenueCat.Mail", "Billing.RevenueCat.Mail", "Billing",
+            "Subscription event mails: enabled events, recipient lookup, language fallback, MailHog delivery."),
         new("Pinqponq.Messaging.RabbitMq", "Messaging.RabbitMq", "Messaging",
             "Publish/consume, DLX, DLX-disabled drop, publish retry."),
         new("Pinqponq.ErrorHandling", "ErrorHandling", "Cross-cutting",
