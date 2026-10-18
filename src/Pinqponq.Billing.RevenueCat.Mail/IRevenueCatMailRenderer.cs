@@ -24,7 +24,6 @@ public sealed record RevenueCatMailRenderRequest(
     RevenueCatMailEventOptions EventOptions,
     RevenueCatEventContext Context);
 
-/// <summary>A rendered mail.</summary>
 /// <param name="Subject">Subject line.</param>
 /// <param name="HtmlBody">HTML body.</param>
 /// <param name="PlainTextBody">Plain-text version for clients that do not show HTML.</param>

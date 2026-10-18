@@ -1,6 +1,5 @@
 namespace Pinqponq.Billing.RevenueCat.Mail;
 
-/// <summary>Settings for the subscription event mails.</summary>
 public sealed class RevenueCatMailOptions
 {
     private const string EnglishLanguage = "en";
@@ -61,7 +60,6 @@ public sealed class RevenueCatMailBrand
     public string? FooterText { get; set; }
 }
 
-/// <summary>Settings of one <see cref="RevenueCatMailEvent"/>.</summary>
 public sealed class RevenueCatMailEventOptions
 {
     public bool Enabled { get; set; }
