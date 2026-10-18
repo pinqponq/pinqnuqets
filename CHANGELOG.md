@@ -15,8 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return an `FcmSendResult` per token (`IsTokenInvalid` for `Unregistered`, `IsProviderCredentialInvalid`
   for `ThirdPartyAuthError`) and pass invalid tokens to an optional `IFcmInvalidTokenHandler`. Token lists
   are split into FCM's 500 (send) and 1,000 (topic) limits. `FcmOptions` (`IsEnabled`, `CredentialPath`
-  or `CredentialJson`, `DataOnlyAndroidPriority`, default `Normal`, `IsSendFailureLoggingEnabled`, default
-  `true`) are validated at startup. The package
+  or `CredentialJson`, `DataOnlyAndroidPriority`, default `Normal`) are validated at startup.
+  `IsSendFailureLoggingEnabled` (default `true`) can turn off the send failure log records. The package
   uses its own named Firebase app and logs failures through `ILogService` with token suffixes only.
   FirebaseAdmin 3.4.0. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Auth.ApiKey` 1.0.0: the shared-secret header check for service-to-service endpoints.
