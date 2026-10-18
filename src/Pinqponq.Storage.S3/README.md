@@ -130,8 +130,9 @@ Cloudflare R2 needs the settings below, several of them easy to miss.
 ## Notes / behavior
 
 - **Empty keys are rejected.** Every method throws `ArgumentException` for a
-  null, empty or whitespace key, and `CreateDownloadUrl` / `CreateUploadUrl`
-  throw `ArgumentOutOfRangeException` for an expiry that is not positive.
+  null, empty or whitespace key; `Upload` and `CreateUploadUrl` do the same for
+  the content type. `CreateDownloadUrl` / `CreateUploadUrl` throw
+  `ArgumentOutOfRangeException` for an expiry that is not positive.
 - **Missing objects.** `GetMetadata` returns `null` for a missing key;
   `Download` and `DownloadToFile` throw `ObjectNotFoundException`. `Delete` of
   a missing key succeeds, as it does on S3.
