@@ -111,7 +111,8 @@ only surfaced later, when a message with attachments is actually sent.
 - **`IEmailSender`** — the sending contract: `Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)`.
 - **`EmailMessage`** — `To` and `Subject`/`Body` are `required`; `Cc`, `Bcc` are
   optional comma/semicolon-separated address lists; `IsBodyHtml` defaults to `true`;
-  `Attachments` is an optional list of file paths.
+  `Attachments` is an optional list of file paths; `PlainTextBody` is an optional plain-text
+  version of an HTML body, sent as multipart/alternative for clients that do not show HTML.
 - **`SmtpOptions`** — configuration as described above.
 - **`SmtpEmailSender`** — the `IEmailSender` implementation, built on
   `System.Net.Mail.SmtpClient` and `MailMessage`.
