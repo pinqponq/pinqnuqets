@@ -48,10 +48,10 @@ public sealed class ObjectStorageOptionsValidatorTests
         var requiredProperty = Assert.IsAssignableFrom<PropertyInfo>(typeof(ObjectStorageOptions).GetProperty(propertyName));
         requiredProperty.SetValue(storageOptions, " ");
 
-        var result = _validator.Validate(null, storageOptions);
+        var validationResult = _validator.Validate(null, storageOptions);
 
-        Assert.True(result.Failed);
-        Assert.Equal($"{propertyName} is required.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
+        Assert.True(validationResult.Failed);
+        Assert.Equal($"{propertyName} is required.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(validationResult.Failures)));
     }
 
     [Fact]
@@ -60,12 +60,12 @@ public sealed class ObjectStorageOptionsValidatorTests
         var storageOptions = StorageOptionsFactory.CreateAwsOptions();
         storageOptions.Region = null;
 
-        var result = _validator.Validate(null, storageOptions);
+        var validationResult = _validator.Validate(null, storageOptions);
 
-        Assert.True(result.Failed);
+        Assert.True(validationResult.Failed);
         Assert.Equal(
             "Set exactly one of ServiceUrl (S3-compatible store) or Region (AWS S3).",
-            Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
+            Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(validationResult.Failures)));
     }
 
     [Fact]
@@ -74,10 +74,10 @@ public sealed class ObjectStorageOptionsValidatorTests
         var storageOptions = StorageOptionsFactory.CreateCompatibleOptions("https://minio.example.com");
         storageOptions.Region = StorageOptionsFactory.REGION;
 
-        var result = _validator.Validate(null, storageOptions);
+        var validationResult = _validator.Validate(null, storageOptions);
 
-        Assert.True(result.Failed);
-        Assert.Contains("Set exactly one of ServiceUrl", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
+        Assert.True(validationResult.Failed);
+        Assert.Contains("Set exactly one of ServiceUrl", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(validationResult.Failures)));
     }
 
     [Theory]
@@ -85,17 +85,17 @@ public sealed class ObjectStorageOptionsValidatorTests
     [InlineData("ftp://minio.example.com")]
     public void Service_url_that_is_not_an_http_url_fails(string serviceUrl)
     {
-        var result = _validator.Validate(null, StorageOptionsFactory.CreateCompatibleOptions(serviceUrl));
+        var validationResult = _validator.Validate(null, StorageOptionsFactory.CreateCompatibleOptions(serviceUrl));
 
-        Assert.True(result.Failed);
-        Assert.Equal("ServiceUrl must be an absolute http or https URL.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures)));
+        Assert.True(validationResult.Failed);
+        Assert.Equal("ServiceUrl must be an absolute http or https URL.", Assert.Single(Assert.IsAssignableFrom<IEnumerable<string>>(validationResult.Failures)));
     }
 
     [Fact]
     public void Every_failure_is_reported_at_once()
     {
-        var result = _validator.Validate(null, new ObjectStorageOptions());
+        var validationResult = _validator.Validate(null, new ObjectStorageOptions());
 
-        Assert.Equal(4, Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures).Count());
+        Assert.Equal(4, Assert.IsAssignableFrom<IEnumerable<string>>(validationResult.Failures).Count());
     }
 }

@@ -9,10 +9,10 @@ public sealed class S3ObjectStorageTests
 {
     private static readonly TimeSpan PRESIGNED_URL_EXPIRY = TimeSpan.FromMinutes(15);
 
-    public static TheoryData<string?> EmptyKeys => new() { null, "", "   " };
+    public static TheoryData<string?> BlankValues => new() { null, "", "   " };
 
     [Theory]
-    [MemberData(nameof(EmptyKeys))]
+    [MemberData(nameof(BlankValues))]
     public async Task Every_method_rejects_an_empty_key_without_calling_storage(string? key)
     {
         var (storage, fake) = StorageOptionsFactory.CreateStorage();
@@ -71,6 +71,17 @@ public sealed class S3ObjectStorageTests
         Assert.Empty(fake.Requests);
     }
 
+    [Theory]
+    [MemberData(nameof(BlankValues))]
+    public async Task Upload_rejects_an_empty_content_type(string? contentType)
+    {
+        var (storage, fake) = StorageOptionsFactory.CreateStorage();
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => storage.Upload("avatars/1.png", new MemoryStream(), contentType!));
+
+        Assert.Empty(fake.Requests);
+    }
+
     [Fact]
     public async Task CreateDownloadUrl_presigns_a_get_that_expires_in_utc()
     {
@@ -108,7 +119,7 @@ public sealed class S3ObjectStorageTests
     }
 
     [Theory]
-    [MemberData(nameof(EmptyKeys))]
+    [MemberData(nameof(BlankValues))]
     public async Task CreateUploadUrl_rejects_an_empty_content_type(string? contentType)
     {
         var (storage, fake) = StorageOptionsFactory.CreateStorage();
@@ -259,7 +270,7 @@ public sealed class S3ObjectStorageTests
     }
 
     [Theory]
-    [MemberData(nameof(EmptyKeys))]
+    [MemberData(nameof(BlankValues))]
     public async Task DownloadToFile_rejects_an_empty_destination(string? destinationFilePath)
     {
         var (storage, fake) = StorageOptionsFactory.CreateStorage();

@@ -15,9 +15,9 @@ public sealed class ObjectStorageHealthCheckTests
         var fake = new FakeStorageClient();
         var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.CreateAwsOptions()));
 
-        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var healthResult = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal(HealthStatus.Healthy, healthResult.Status);
         Assert.Equal(StorageOptionsFactory.BUCKET_NAME, fake.GetSingleRequest<HeadBucketRequest>().BucketName);
     }
 
@@ -28,11 +28,11 @@ public sealed class ObjectStorageHealthCheckTests
         fake.Failure = FakeStorageClient.CreateStatusError(HttpStatusCode.Forbidden);
         var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.CreateAwsOptions()));
 
-        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var healthResult = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
-        Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Same(fake.Failure, result.Exception);
-        Assert.Equal($"Bucket '{StorageOptionsFactory.BUCKET_NAME}' is unreachable.", result.Description);
+        Assert.Equal(HealthStatus.Unhealthy, healthResult.Status);
+        Assert.Same(fake.Failure, healthResult.Exception);
+        Assert.Equal($"Bucket '{StorageOptionsFactory.BUCKET_NAME}' is unreachable.", healthResult.Description);
     }
 
     [Fact]

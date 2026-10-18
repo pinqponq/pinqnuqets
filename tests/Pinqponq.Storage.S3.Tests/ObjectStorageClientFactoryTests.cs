@@ -102,7 +102,7 @@ public sealed class ObjectStorageClientFactoryTests
     }
 
     [Theory]
-    [MemberData(nameof(S3ObjectStorageTests.EmptyKeys), MemberType = typeof(S3ObjectStorageTests))]
+    [MemberData(nameof(S3ObjectStorageTests.BlankValues), MemberType = typeof(S3ObjectStorageTests))]
     public void Cloudflare_r2_rejects_an_empty_account_id(string? accountId)
     {
         Assert.ThrowsAny<ArgumentException>(() => StorageOptionsFactory.CreateAwsOptions().UseCloudflareR2(accountId!));

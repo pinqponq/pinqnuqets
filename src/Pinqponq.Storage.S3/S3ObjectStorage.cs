@@ -24,6 +24,7 @@ public sealed class S3ObjectStorage : IObjectStorage
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
 
         var putObjectRequest = new PutObjectRequest
         {
