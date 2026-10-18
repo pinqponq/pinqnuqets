@@ -157,6 +157,7 @@ public sealed class S3ObjectStorage : IObjectStorage
     private GetPreSignedUrlRequest CreatePresignedUrlRequest(string key, HttpVerb verb, TimeSpan expiry)
     {
         var expiresAt = DateTime.UtcNow.Add(expiry);
+        var urlProtocol = ResolveUrlProtocol();
 
         return new GetPreSignedUrlRequest
         {
@@ -164,13 +165,14 @@ public sealed class S3ObjectStorage : IObjectStorage
             Key = key,
             Verb = verb,
             Expires = expiresAt,
-            Protocol = ResolveUrlProtocol()
+            Protocol = urlProtocol
         };
     }
 
     private Protocol ResolveUrlProtocol()
     {
-        var usesPlainHttpEndpoint = _storageOptions.ServiceUrl?.StartsWith("http://", StringComparison.OrdinalIgnoreCase) == true;
+        var usesPlainHttpEndpoint = Uri.TryCreate(_storageOptions.ServiceUrl, UriKind.Absolute, out var serviceUri)
+            && serviceUri.Scheme == Uri.UriSchemeHttp;
         return usesPlainHttpEndpoint ? Protocol.HTTP : Protocol.HTTPS;
     }
 

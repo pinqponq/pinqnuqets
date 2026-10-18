@@ -6,6 +6,9 @@ namespace Pinqponq.Storage.S3;
 /// </summary>
 public sealed class ObjectStorageOptions
 {
+    private const string CLOUDFLARE_R2_HOST = "r2.cloudflarestorage.com";
+    private const string CLOUDFLARE_R2_SIGNING_REGION = "auto";
+
     /// <summary>Bucket every object key refers to.</summary>
     public string BucketName { get; set; } = string.Empty;
 
@@ -44,7 +47,7 @@ public sealed class ObjectStorageOptions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
 
-        ServiceUrl = $"https://{accountId}.r2.cloudflarestorage.com";
+        ServiceUrl = $"https://{accountId}.{CLOUDFLARE_R2_HOST}";
         Region = null;
         ForcePathStyle = true;
         // R2 does not implement chunked payload signing (STREAMING-AWS4-HMAC-SHA256-PAYLOAD).
@@ -52,7 +55,7 @@ public sealed class ObjectStorageOptions
         // R2 rejects the CRC checksums the AWS SDK adds to every request by default.
         RequestChecksumMode = ObjectStorageChecksumMode.WhenRequired;
         // R2 is region-agnostic and expects requests signed for the "auto" region.
-        AuthenticationRegion = "auto";
+        AuthenticationRegion = CLOUDFLARE_R2_SIGNING_REGION;
         return this;
     }
 }

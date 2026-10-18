@@ -28,6 +28,15 @@ public sealed class ObjectStorageOptionsValidatorTests
         Assert.True(_validator.Validate(null, storageOptions).Succeeded);
     }
 
+    [Fact]
+    public void Blank_service_url_next_to_a_region_is_ignored()
+    {
+        var storageOptions = StorageOptionsFactory.Aws();
+        storageOptions.ServiceUrl = " ";
+
+        Assert.True(_validator.Validate(null, storageOptions).Succeeded);
+    }
+
     [Theory]
     [InlineData(nameof(ObjectStorageOptions.BucketName))]
     [InlineData(nameof(ObjectStorageOptions.AccessKey))]

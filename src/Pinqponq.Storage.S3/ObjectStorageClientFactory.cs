@@ -16,11 +16,12 @@ internal static class ObjectStorageClientFactory
     public static AmazonS3Config CreateClientConfig(ObjectStorageOptions storageOptions)
     {
         var usesServiceUrl = !string.IsNullOrWhiteSpace(storageOptions.ServiceUrl);
+        var forcePathStyle = storageOptions.ForcePathStyle ?? usesServiceUrl;
         var checksumMode = ToSdkChecksumMode(storageOptions.RequestChecksumMode);
 
         var clientConfig = new AmazonS3Config
         {
-            ForcePathStyle = storageOptions.ForcePathStyle ?? usesServiceUrl,
+            ForcePathStyle = forcePathStyle,
             RequestChecksumCalculation = checksumMode.Calculation,
             ResponseChecksumValidation = checksumMode.Validation
         };

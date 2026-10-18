@@ -60,10 +60,11 @@ public class FakeStorageClient : DispatchProxy
 
     private static object FailedTask(Type taskType, Exception failure)
     {
-        var resultType = taskType.GetGenericArguments().Single();
-        var fromException = typeof(Task).GetMethods()
-            .Single(method => method.Name == nameof(Task.FromException) && method.IsGenericMethod)
-            .MakeGenericMethod(resultType);
-        return fromException.Invoke(null, [failure])!;
+        var resultType = taskType.GetGenericArguments()[0];
+        var fromException = typeof(Task)
+            .GetMethod(nameof(Task.FromException), genericParameterCount: 1, [typeof(Exception)])
+            ?? throw new MissingMethodException(nameof(Task), nameof(Task.FromException));
+        return fromException.MakeGenericMethod(resultType).Invoke(null, [failure])
+            ?? throw new InvalidOperationException("Task.FromException returned no task.");
     }
 }

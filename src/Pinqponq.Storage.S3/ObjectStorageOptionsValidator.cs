@@ -34,7 +34,7 @@ internal sealed class ObjectStorageOptionsValidator : IValidateOptions<ObjectSto
                 $"or {nameof(ObjectStorageOptions.Region)} (AWS S3).");
         }
 
-        if (hasServiceUrl && !IsHttpUrl(options.ServiceUrl!))
+        if (hasServiceUrl && options.ServiceUrl is { } serviceUrl && !IsHttpUrl(serviceUrl))
         {
             failures.Add($"{nameof(ObjectStorageOptions.ServiceUrl)} must be an absolute http or https URL.");
         }
