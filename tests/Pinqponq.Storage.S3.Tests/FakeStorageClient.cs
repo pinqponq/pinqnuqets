@@ -1,5 +1,5 @@
 using System.Net;
-using System.Reflection;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -7,10 +7,17 @@ using Xunit;
 
 namespace Pinqponq.Storage.S3.Tests;
 
-// IAmazonS3 has hundreds of members; a dispatch proxy answers only the calls the package makes.
-public class FakeStorageClient : DispatchProxy
+// Overrides only the calls the package makes. A DispatchProxy over IAmazonS3 cannot be built on
+// the .NET 8 runtime (TypeLoadException), so the fake derives from the real client instead.
+// GetPreSignedURLAsync is not virtual, so it is re-implemented on the interface the package calls.
+public sealed class FakeStorageClient : AmazonS3Client, IAmazonS3
 {
     public const string PRESIGNED_URL = "https://storage.example/presigned";
+
+    public FakeStorageClient()
+        : base(new BasicAWSCredentials(StorageOptionsFactory.ACCESS_KEY, StorageOptionsFactory.SECRET_KEY), RegionEndpoint.EUWest1)
+    {
+    }
 
     public List<AmazonWebServiceRequest> Requests { get; } = [];
 
@@ -22,49 +29,33 @@ public class FakeStorageClient : DispatchProxy
 
     public T SingleRequest<T>() where T : AmazonWebServiceRequest => Assert.IsType<T>(Assert.Single(Requests));
 
-    public static (IAmazonS3 Client, FakeStorageClient Fake) Create()
-    {
-        var client = Create<IAmazonS3, FakeStorageClient>();
-        return (client, (FakeStorageClient)(object)client);
-    }
-
     public static AmazonS3Exception StatusError(HttpStatusCode statusCode) =>
         new($"Storage answered {statusCode}.") { StatusCode = statusCode };
 
-    protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+    public override Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => new PutObjectResponse());
+
+    Task<string> IAmazonS3.GetPreSignedURLAsync(GetPreSignedUrlRequest request) =>
+        Respond(request, () => PRESIGNED_URL);
+
+    public override Task<GetObjectMetadataResponse> GetObjectMetadataAsync(GetObjectMetadataRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => MetadataResponse);
+
+    public override Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => new GetObjectResponse { ResponseStream = new MemoryStream(ObjectContent) });
+
+    public override Task<CopyObjectResponse> CopyObjectAsync(CopyObjectRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => new CopyObjectResponse());
+
+    public override Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => new DeleteObjectResponse());
+
+    public override Task<HeadBucketResponse> HeadBucketAsync(HeadBucketRequest request, CancellationToken cancellationToken = default) =>
+        Respond(request, () => new HeadBucketResponse());
+
+    private Task<T> Respond<T>(AmazonWebServiceRequest request, Func<T> response)
     {
-        ArgumentNullException.ThrowIfNull(targetMethod);
-
-        if (args is { Length: > 0 } && args[0] is AmazonWebServiceRequest request)
-        {
-            Requests.Add(request);
-        }
-
-        if (Failure is not null)
-        {
-            return FailedTask(targetMethod.ReturnType, Failure);
-        }
-
-        return targetMethod.Name switch
-        {
-            nameof(IAmazonS3.PutObjectAsync) => Task.FromResult(new PutObjectResponse()),
-            nameof(IAmazonS3.GetPreSignedURLAsync) => Task.FromResult(PRESIGNED_URL),
-            nameof(IAmazonS3.GetObjectMetadataAsync) => Task.FromResult(MetadataResponse),
-            nameof(IAmazonS3.GetObjectAsync) => Task.FromResult(new GetObjectResponse { ResponseStream = new MemoryStream(ObjectContent) }),
-            nameof(IAmazonS3.CopyObjectAsync) => Task.FromResult(new CopyObjectResponse()),
-            nameof(IAmazonS3.DeleteObjectAsync) => Task.FromResult(new DeleteObjectResponse()),
-            nameof(IAmazonS3.HeadBucketAsync) => Task.FromResult(new HeadBucketResponse()),
-            _ => throw new NotSupportedException($"{targetMethod.Name} is not faked.")
-        };
-    }
-
-    private static object FailedTask(Type taskType, Exception failure)
-    {
-        var resultType = taskType.GetGenericArguments()[0];
-        var fromException = typeof(Task)
-            .GetMethod(nameof(Task.FromException), genericParameterCount: 1, [typeof(Exception)])
-            ?? throw new MissingMethodException(nameof(Task), nameof(Task.FromException));
-        return fromException.MakeGenericMethod(resultType).Invoke(null, [failure])
-            ?? throw new InvalidOperationException("Task.FromException returned no task.");
+        Requests.Add(request);
+        return Failure is null ? Task.FromResult(response()) : Task.FromException<T>(Failure);
     }
 }

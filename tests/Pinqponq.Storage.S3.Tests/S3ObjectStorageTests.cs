@@ -298,7 +298,7 @@ public sealed class S3ObjectStorageTests
     [Fact]
     public void Constructor_rejects_missing_dependencies()
     {
-        var (client, _) = FakeStorageClient.Create();
+        IAmazonS3 client = new FakeStorageClient();
 
         Assert.Throws<ArgumentNullException>(
             () => new S3ObjectStorage(null!, Microsoft.Extensions.Options.Options.Create(StorageOptionsFactory.Aws())));

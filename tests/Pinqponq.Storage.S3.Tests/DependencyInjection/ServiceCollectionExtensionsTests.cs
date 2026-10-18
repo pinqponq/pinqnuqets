@@ -26,7 +26,7 @@ public sealed class ServiceCollectionExtensionsTests
     [Fact]
     public void Client_registered_by_the_application_wins()
     {
-        var (client, _) = FakeStorageClient.Create();
+        IAmazonS3 client = new FakeStorageClient();
         var services = new ServiceCollection();
         services.AddSingleton(client);
         services.AddPinqponqObjectStorage(ConfigureAws);
@@ -127,8 +127,8 @@ public sealed class ServiceCollectionExtensionsTests
     private static void ConfigureAws(ObjectStorageOptions storageOptions)
     {
         storageOptions.BucketName = StorageOptionsFactory.BUCKET_NAME;
-        storageOptions.AccessKey = "test-access-key";
-        storageOptions.SecretKey = "test-secret-key";
+        storageOptions.AccessKey = StorageOptionsFactory.ACCESS_KEY;
+        storageOptions.SecretKey = StorageOptionsFactory.SECRET_KEY;
         storageOptions.Region = "eu-west-1";
     }
 }

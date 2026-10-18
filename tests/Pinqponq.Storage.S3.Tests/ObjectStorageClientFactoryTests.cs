@@ -123,6 +123,6 @@ public sealed class ObjectStorageClientFactoryTests
         var presignedUrl = await client.GetPreSignedURLAsync(presignRequest);
 
         Assert.StartsWith($"http://localhost:9000/{StorageOptionsFactory.BUCKET_NAME}/avatars/1.png?", presignedUrl);
-        Assert.Contains("X-Amz-Credential=test-access-key", presignedUrl);
+        Assert.Contains($"X-Amz-Credential={StorageOptionsFactory.ACCESS_KEY}", presignedUrl);
     }
 }

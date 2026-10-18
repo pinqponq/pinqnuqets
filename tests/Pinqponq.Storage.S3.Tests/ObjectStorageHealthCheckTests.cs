@@ -1,4 +1,5 @@
 using System.Net;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -11,8 +12,8 @@ public sealed class ObjectStorageHealthCheckTests
     [Fact]
     public async Task Reachable_bucket_is_healthy()
     {
-        var (client, fake) = FakeStorageClient.Create();
-        var healthCheck = new ObjectStorageHealthCheck(client, Options.Create(StorageOptionsFactory.Aws()));
+        var fake = new FakeStorageClient();
+        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.Aws()));
 
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
@@ -23,9 +24,9 @@ public sealed class ObjectStorageHealthCheckTests
     [Fact]
     public async Task Unreachable_bucket_is_unhealthy_with_the_error()
     {
-        var (client, fake) = FakeStorageClient.Create();
+        var fake = new FakeStorageClient();
         fake.Failure = FakeStorageClient.StatusError(HttpStatusCode.Forbidden);
-        var healthCheck = new ObjectStorageHealthCheck(client, Options.Create(StorageOptionsFactory.Aws()));
+        var healthCheck = new ObjectStorageHealthCheck(fake, Options.Create(StorageOptionsFactory.Aws()));
 
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
@@ -37,7 +38,7 @@ public sealed class ObjectStorageHealthCheckTests
     [Fact]
     public void Constructor_rejects_missing_dependencies()
     {
-        var (client, _) = FakeStorageClient.Create();
+        IAmazonS3 client = new FakeStorageClient();
 
         Assert.Throws<ArgumentNullException>(
             () => new ObjectStorageHealthCheck(null!, Options.Create(StorageOptionsFactory.Aws())));
