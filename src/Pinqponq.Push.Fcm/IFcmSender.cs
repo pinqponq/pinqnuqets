@@ -5,7 +5,7 @@ public interface IFcmSender
 {
     /// <summary>
     /// Sends a notification to device tokens. Returns one result per token, in the order the tokens were
-    /// given. Tokens FCM reports as dead are also passed to <see cref="IFcmInvalidTokenHandler"/>.
+    /// given. Tokens FCM reports as invalid are also passed to <see cref="IFcmInvalidTokenHandler"/>.
     /// No tokens, or <see cref="FcmOptions.IsEnabled"/> false, sends nothing and returns an empty list.
     /// </summary>
     Task<IReadOnlyList<FcmSendResult>> SendToTokens(

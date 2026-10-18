@@ -6,6 +6,7 @@ internal static class FcmCredentialLoader
 {
     internal static GoogleCredential Load(FcmOptions options)
     {
+        // FcmOptionsValidator guarantees that CredentialPath is set when CredentialJson is not.
         var serviceAccountCredential = string.IsNullOrWhiteSpace(options.CredentialJson)
             ? CredentialFactory.FromFile<ServiceAccountCredential>(ResolveCredentialPath(options.CredentialPath!))
             : CredentialFactory.FromJson<ServiceAccountCredential>(options.CredentialJson);

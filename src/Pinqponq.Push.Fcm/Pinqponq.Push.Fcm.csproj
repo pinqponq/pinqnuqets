@@ -9,7 +9,7 @@
     <Version>1.0.0</Version>
     <PackageId>Pinqponq.Push.Fcm</PackageId>
     <Title>Pinqponq Push FCM</Title>
-    <Description>Firebase Cloud Messaging sender: notification and data-only pushes to device tokens, topic sends and topic subscriptions, with a result per token that says whether the token is dead or the push provider credentials are broken.</Description>
+    <Description>Firebase Cloud Messaging sender: notification and data-only pushes to device tokens, topic sends and topic subscriptions, with a result per token that says whether the token is invalid or the push provider credentials are broken.</Description>
     <PackageTags>$(PackageTags);push;fcm;firebase;firebase-cloud-messaging;notification</PackageTags>
   </PropertyGroup>
 

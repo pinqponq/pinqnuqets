@@ -49,8 +49,9 @@ public sealed class FcmOptionsValidator : IValidateOptions<FcmOptions>
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
         {
+            // ValidateOptionsResult carries only text, so the exception type and message stand in for the exception.
             return ValidateOptionsResult.Fail(
-                $"The Firebase credential is not a valid service account JSON: {exception.Message}");
+                $"The Firebase credential is not a valid service account JSON: {exception.GetType().Name}: {exception.Message}");
         }
     }
 }

@@ -3,7 +3,7 @@
 Firebase Cloud Messaging (FCM) sender for backends that push to mobile apps. You give it a
 Firebase service account; it gives you an `IFcmSender` that sends notifications and data-only
 pushes to device tokens, sends to topics and manages topic subscriptions. Every send to tokens
-returns one result per token that says whether the token is dead (delete it) or the push
+returns one result per token that says whether the token is invalid (delete it) or the push
 provider credentials are broken (fix them, every push to that platform fails).
 
 The client side is in [deveng-core-kmp](https://github.com/pinqponq/deveng-core-kmp)
@@ -76,7 +76,7 @@ be set, the file must exist and the JSON must be a service account.
 - `FcmMessage.Android` and `FcmMessage.Apns` take FirebaseAdmin's `AndroidConfig` and `ApnsConfig`
   as they are. The package sets nothing there by default: no sound, badge or content-available.
 
-## Results and dead tokens
+## Results and invalid tokens
 
 `SendToTokens` and `SendDataOnlyToTokens` return an `FcmSendResult` per token, in the order the
 tokens were given:
@@ -88,18 +88,18 @@ tokens were given:
 | `IsTokenInvalid` | FCM answered `Unregistered`: the token will never work again. |
 | `IsProviderCredentialInvalid` | FCM answered `ThirdPartyAuthError`: the APNs key (or another provider credential) is invalid. Not the token's fault. |
 
-`InvalidArgument` and `SenderIdMismatch` are not treated as dead tokens: a bad payload or the
+`InvalidArgument` and `SenderIdMismatch` are not treated as invalid tokens: a bad payload or the
 wrong Firebase project gives the same answer for every token, and deleting them all would be
 wrong. They come back as failures with their `ErrorCode`.
 
-To delete dead tokens, implement `IFcmInvalidTokenHandler` and register it; the sender calls it
+To delete invalid tokens, implement `IFcmInvalidTokenHandler` and register it; the sender calls it
 after each send with the tokens FCM reported as `Unregistered`:
 
 ```csharp
-public sealed class DeviceTokenCleaner(AppDbContext db) : IFcmInvalidTokenHandler
+public sealed class DeviceTokenCleaner(AppDbContext dbContext) : IFcmInvalidTokenHandler
 {
     public Task HandleInvalidTokens(IReadOnlyList<string> invalidTokens, CancellationToken cancellationToken = default) =>
-        db.Devices.Where(device => invalidTokens.Contains(device.PushToken)).ExecuteDeleteAsync(cancellationToken);
+        dbContext.Devices.Where(device => invalidTokens.Contains(device.PushToken)).ExecuteDeleteAsync(cancellationToken);
 }
 
 builder.Services.AddScoped<IFcmInvalidTokenHandler, DeviceTokenCleaner>();

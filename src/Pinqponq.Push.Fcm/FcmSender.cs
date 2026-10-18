@@ -62,11 +62,13 @@ internal sealed class FcmSender : IFcmSender
             return;
         }
 
+        var notification = BuildNotification(message);
+        var topicData = CopyData(message.Data);
         var topicMessage = new Message
         {
             Topic = topic,
-            Notification = BuildNotification(message),
-            Data = CopyData(message.Data),
+            Notification = notification,
+            Data = topicData,
             Android = message.Android,
             Apns = message.Apns,
         };
@@ -140,11 +142,7 @@ internal sealed class FcmSender : IFcmSender
             cancellationToken.ThrowIfCancellationRequested();
             var topicResponse = await changeSubscription(messaging, tokenBatch).ConfigureAwait(false);
             successCount += topicResponse.SuccessCount;
-            failures.AddRange(topicResponse.Errors.Select(topicError => new Dictionary<string, object?>
-            {
-                ["reason"] = topicError.Reason,
-                ["tokenSuffix"] = ToTokenSuffix(tokenBatch[topicError.Index]),
-            }));
+            failures.AddRange(topicResponse.Errors.Select(topicError => BuildTopicFailureEntry(topicError, tokenBatch)));
         }
 
         if (failures.Count == 0)
@@ -186,17 +184,13 @@ internal sealed class FcmSender : IFcmSender
             return;
         }
 
+        var successCount = sendResults.Count - failedResults.Count;
+        var failureEntries = failedResults.Select(BuildSendFailureEntry).ToList();
         var failureData = new Dictionary<string, object?>
         {
-            ["success"] = sendResults.Count - failedResults.Count,
+            ["success"] = successCount,
             ["failure"] = failedResults.Count,
-            ["failures"] = failedResults
-                .Select(failedResult => new Dictionary<string, object?>
-                {
-                    ["errorCode"] = failedResult.ErrorCode,
-                    ["tokenSuffix"] = ToTokenSuffix(failedResult.Token),
-                })
-                .ToList(),
+            ["failures"] = failureEntries,
         };
 
         if (failedResults.Exists(failedResult => failedResult.IsProviderCredentialInvalid))
@@ -234,14 +228,18 @@ internal sealed class FcmSender : IFcmSender
     private static FcmSendResult BuildSendResult(string token, SendResponse sendResponse)
     {
         var messagingErrorCode = sendResponse.Exception?.MessagingErrorCode;
+        var errorCode = ResolveErrorCode(sendResponse.Exception, messagingErrorCode);
+        var errorMessage = sendResponse.Exception?.Message;
+        var isTokenInvalid = messagingErrorCode is MessagingErrorCode.Unregistered;
+        var isProviderCredentialInvalid = messagingErrorCode is MessagingErrorCode.ThirdPartyAuthError;
         return new FcmSendResult
         {
             Token = token,
             IsSuccess = sendResponse.IsSuccess,
-            ErrorCode = ResolveErrorCode(sendResponse.Exception, messagingErrorCode),
-            ErrorMessage = sendResponse.Exception?.Message,
-            IsTokenInvalid = messagingErrorCode is MessagingErrorCode.Unregistered,
-            IsProviderCredentialInvalid = messagingErrorCode is MessagingErrorCode.ThirdPartyAuthError,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+            IsTokenInvalid = isTokenInvalid,
+            IsProviderCredentialInvalid = isProviderCredentialInvalid,
         };
     }
 
@@ -255,23 +253,28 @@ internal sealed class FcmSender : IFcmSender
         return messagingException?.ErrorCode.ToString();
     }
 
-    private static MulticastMessage BuildNotificationMulticast(FcmMessage message, List<string> batchTokens) =>
-        new()
+    private static MulticastMessage BuildNotificationMulticast(FcmMessage message, List<string> batchTokens)
+    {
+        var notification = BuildNotification(message);
+        var multicastData = CopyData(message.Data);
+        return new MulticastMessage
         {
             Tokens = batchTokens,
-            Notification = BuildNotification(message),
-            Data = CopyData(message.Data),
+            Notification = notification,
+            Data = multicastData,
             Android = message.Android,
             Apns = message.Apns,
         };
+    }
 
     private MulticastMessage BuildDataOnlyMulticast(IReadOnlyDictionary<string, string> data, List<string> batchTokens)
     {
         var androidConfig = new AndroidConfig { Priority = _fcmOptions.DataOnlyAndroidPriority };
+        var multicastData = CopyData(data);
         return new MulticastMessage
         {
             Tokens = batchTokens,
-            Data = CopyData(data),
+            Data = multicastData,
             Android = androidConfig,
         };
     }
@@ -280,6 +283,26 @@ internal sealed class FcmSender : IFcmSender
     {
         var imageUrl = string.IsNullOrWhiteSpace(message.ImageUrl) ? null : message.ImageUrl;
         return new Notification { Title = message.Title, Body = message.Body, ImageUrl = imageUrl };
+    }
+
+    private static Dictionary<string, object?> BuildSendFailureEntry(FcmSendResult failedResult)
+    {
+        var tokenSuffix = ToTokenSuffix(failedResult.Token);
+        return new Dictionary<string, object?>
+        {
+            ["errorCode"] = failedResult.ErrorCode,
+            ["tokenSuffix"] = tokenSuffix,
+        };
+    }
+
+    private static Dictionary<string, object?> BuildTopicFailureEntry(ErrorInfo topicError, IReadOnlyList<string> batchTokens)
+    {
+        var tokenSuffix = ToTokenSuffix(batchTokens[topicError.Index]);
+        return new Dictionary<string, object?>
+        {
+            ["reason"] = topicError.Reason,
+            ["tokenSuffix"] = tokenSuffix,
+        };
     }
 
     private static Dictionary<string, string>? CopyData(IReadOnlyDictionary<string, string>? data) =>
