@@ -170,14 +170,14 @@ public sealed class PeriodicJobServiceTests
         await using var harness = PeriodicJobHarness.Create(options =>
         {
             options.Interval = Interval;
-            options.Name = "media-expiry";
+            options.Name = "cleanup";
         });
         harness.Probe.Behavior = (_, _) => Task.FromException(new InvalidOperationException("boom"));
 
         await harness.Start();
         await Eventually.True(() => harness.ErrorLogs.Count == 1, "error log");
 
-        Assert.Contains("Periodic job media-expiry failed", Assert.Single(harness.ErrorLogs).Message);
+        Assert.Contains("Periodic job cleanup failed", Assert.Single(harness.ErrorLogs).Message);
     }
 
     [Fact]

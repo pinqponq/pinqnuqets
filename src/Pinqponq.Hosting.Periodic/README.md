@@ -1,7 +1,7 @@
 # Pinqponq.Hosting.Periodic
 
-Runs periodic background jobs in a .NET host. The application writes only the job's work; the
-package runs it on a schedule as a hosted service:
+Runs periodic background jobs in a .NET host. The application writes only the job's work. The
+package runs that work on a schedule as a hosted service:
 
 - an on/off switch,
 - an optional delay after the host starts,
@@ -26,11 +26,11 @@ dotnet add package Pinqponq.Hosting.Periodic
 Write the job. It is resolved from the run's scope, so its constructor can take scoped services:
 
 ```csharp
-public sealed class MomentExpiryJob(IMomentRepository momentRepository) : IPeriodicJob
+public sealed class ExpiredRecordCleanupJob(IRecordRepository recordRepository) : IPeriodicJob
 {
     public async Task Run(IServiceProvider scopedServices, CancellationToken cancellationToken)
     {
-        await momentRepository.ExpireOldMoments(cancellationToken);
+        await recordRepository.DeleteExpiredRecords(cancellationToken);
     }
 }
 ```
@@ -38,25 +38,25 @@ public sealed class MomentExpiryJob(IMomentRepository momentRepository) : IPerio
 Register it with its schedule:
 
 ```csharp
-builder.Services.AddPinqponqPeriodicJob<MomentExpiryJob>(options =>
+builder.Services.AddPinqponqPeriodicJob<ExpiredRecordCleanupJob>(options =>
 {
     options.Interval = TimeSpan.FromMinutes(5);
     options.StartupDelay = TimeSpan.FromMinutes(1);
-    options.IsEnabled = momentSettings.ExpiryWorkerEnabled;
+    options.IsEnabled = cleanupSettings.IsEnabled;
 });
 ```
 
 Or bind the options from a configuration section:
 
 ```csharp
-builder.Services.AddPinqponqPeriodicJob<MomentExpiryJob>(
-    builder.Configuration.GetSection("Jobs:MomentExpiry"));
+builder.Services.AddPinqponqPeriodicJob<ExpiredRecordCleanupJob>(
+    builder.Configuration.GetSection("Jobs:Cleanup"));
 ```
 
 ```json
 {
   "Jobs": {
-    "MomentExpiry": {
+    "Cleanup": {
       "Interval": "00:05:00",
       "StartupDelay": "00:01:00",
       "IsEnabled": true
@@ -125,25 +125,27 @@ singleton. The package asks it before every run of every periodic job:
 - it returns `null`: this run is skipped, and the job tries again at its next run,
 - it throws: the run is logged as failed.
 
-Without a gate, every run starts. The package itself does not reference any lock store; an
+Without a gate, every run starts. The package itself does not reference any lock store. An
 implementation can wrap a distributed lock such as `IDistributedLock` from `Pinqponq.Cache`.
 
 ## Health check
 
 ```csharp
 builder.Services.AddHealthChecks()
-    .AddPinqponqPeriodicJob<MomentExpiryJob>();
+    .AddPinqponqPeriodicJob<ExpiredRecordCleanupJob>();
 ```
 
-The check is unhealthy when the job has not finished a run successfully for longer than
-`staleAfter` (default: two intervals). Before the first successful run, the time is counted from
-the end of `StartupDelay`. A disabled job, and a job whose hosted service has not started yet, are
-healthy. The result data carries `startedAt`, `lastSuccessAt` and `lastFailureAt` when they are
+The check reports its failure status (default `Unhealthy`) when the job has not finished a run
+successfully for longer than `staleAfter` (default: two intervals). Before the first successful
+run, the time is counted from the end of `StartupDelay`. A disabled job, and a job whose hosted
+service has not started yet, are healthy. A check for a job type that was never registered with
+`AddPinqponqPeriodicJob` reports the failure status, so a missing registration does not stay
+hidden. The result data carries `startedAt`, `lastSuccessAt` and `lastFailureAt` when they are
 known.
 
 | Parameter | Default |
 |---|---|
 | `name` | the job's type name |
-| `staleAfter` | two intervals; it must be greater than zero |
+| `staleAfter` | two intervals. It must be greater than zero. |
 | `failureStatus` | `Unhealthy` |
 | `tags` | none |

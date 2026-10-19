@@ -2,8 +2,8 @@ namespace Pinqponq.Hosting.Periodic;
 
 /// <summary>
 /// Decides whether a run may start, for example so that only one replica of a service runs a job
-/// at a time. Register one implementation as a singleton to apply it to every periodic job;
-/// without one, every run starts.
+/// at a time. Register one implementation as a singleton to apply it to every periodic job.
+/// Without one, every run starts.
 /// </summary>
 public interface IPeriodicJobGate
 {

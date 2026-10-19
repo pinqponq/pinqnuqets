@@ -47,13 +47,14 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds a health check that is unhealthy when <typeparamref name="TJob"/> has not finished a
-    /// run successfully for longer than <paramref name="staleAfter"/>. A disabled job is healthy.
+    /// Adds a health check that reports <paramref name="failureStatus"/> when <typeparamref name="TJob"/>
+    /// has not finished a run successfully for longer than <paramref name="staleAfter"/>, or when
+    /// the job itself was never registered with <c>AddPinqponqPeriodicJob</c>. A disabled job is healthy.
     /// </summary>
-    /// <param name="builder">The health checks builder.</param>
+    /// <param name="builder">The builder returned by <c>AddHealthChecks()</c>.</param>
     /// <param name="name">The health check name. Default: the job's type name.</param>
     /// <param name="staleAfter">How long the job may go without a successful run. Default: two intervals.</param>
-    /// <param name="failureStatus">The status reported when the job is late.</param>
+    /// <param name="failureStatus">The status reported when the job is late or was never registered.</param>
     /// <param name="tags">Tags for filtering health checks.</param>
     public static IHealthChecksBuilder AddPinqponqPeriodicJob<TJob>(
         this IHealthChecksBuilder builder,
@@ -97,6 +98,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<PeriodicJobRunRegistry>();
         services.TryAddScoped<TJob>();
+        services.TryAddSingleton<PeriodicJobRegistration<TJob>>();
         services.AddHostedService<PeriodicJobService<TJob>>();
     }
 
@@ -109,9 +111,11 @@ public static class ServiceCollectionExtensions
         var jobOptions = serviceProvider.GetRequiredService<IOptionsMonitor<PeriodicJobOptions>>().Get(jobKey);
         var jobName = PeriodicJobKey.ResolveName<TJob>(jobOptions);
         var staleTime = staleAfter ?? jobOptions.Interval * StaleIntervalCount;
+        var isJobRegistered = serviceProvider.GetService<PeriodicJobRegistration<TJob>>() is not null;
         return new PeriodicJobHealthCheck(
             jobKey,
             jobName,
+            isJobRegistered,
             jobOptions,
             staleTime,
             serviceProvider.GetRequiredService<PeriodicJobRunRegistry>(),

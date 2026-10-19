@@ -25,7 +25,8 @@ internal sealed class PeriodicJobHarness : IAsyncDisposable
     public CapturingLoggerProvider LogProvider { get; }
 
     public BackgroundService JobService =>
-        Services.GetServices<IHostedService>().OfType<BackgroundService>().First();
+        Services.GetServices<IHostedService>().OfType<BackgroundService>().SingleOrDefault()
+        ?? throw new InvalidOperationException("Expected exactly one periodic job hosted service.");
 
     public IReadOnlyList<CapturedLog> ErrorLogs =>
         LogProvider.Logs.Where(log => log.Level == LogLevel.Error).ToList();
@@ -49,12 +50,12 @@ internal sealed class PeriodicJobHarness : IAsyncDisposable
 
     public Task Start() => JobService.StartAsync(CancellationToken.None);
 
-    // From .NET 10 the host runs ExecuteAsync on a thread pool thread, so the job may create its
+    // From .NET 10 the host runs ExecuteAsync on a thread pool thread, so the job may schedule its
     // timer after StartAsync returns. Advancing the fake clock before that would be lost.
     public async Task StartAndWaitForFirstTimer()
     {
         await Start();
-        await Eventually.True(() => Time.CreatedTimerCount >= 1, "first timer");
+        await Eventually.True(() => Time.ScheduledTimerCount >= 1, "first timer");
     }
 
     public async Task AdvanceAndWaitForRunCount(TimeSpan duration, int expectedRunCount)
@@ -81,13 +82,34 @@ internal sealed class PeriodicJobHarness : IAsyncDisposable
 
 internal sealed class TimerCountingTimeProvider : FakeTimeProvider
 {
-    private int _createdTimerCount;
+    private int _scheduledTimerCount;
 
-    public int CreatedTimerCount => Volatile.Read(ref _createdTimerCount);
+    // Counts timers that have a due time. Task.Delay and PeriodicTimer create their timer first and
+    // set the due time with a later Change call, so counting created timers is not enough.
+    public int ScheduledTimerCount => Volatile.Read(ref _scheduledTimerCount);
 
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
     {
-        Interlocked.Increment(ref _createdTimerCount);
-        return base.CreateTimer(callback, state, dueTime, period);
+        var timer = new SchedulingTimer(base.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan), this);
+        timer.Change(dueTime, period);
+        return timer;
+    }
+
+    private sealed class SchedulingTimer(ITimer innerTimer, TimerCountingTimeProvider timeProvider) : ITimer
+    {
+        public bool Change(TimeSpan dueTime, TimeSpan period)
+        {
+            var isChanged = innerTimer.Change(dueTime, period);
+            if (dueTime != Timeout.InfiniteTimeSpan)
+            {
+                Interlocked.Increment(ref timeProvider._scheduledTimerCount);
+            }
+
+            return isChanged;
+        }
+
+        public void Dispose() => innerTimer.Dispose();
+
+        public ValueTask DisposeAsync() => innerTimer.DisposeAsync();
     }
 }

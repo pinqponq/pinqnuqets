@@ -6,6 +6,7 @@ internal sealed class PeriodicJobHealthCheck : IHealthCheck
 {
     private readonly string _jobKey;
     private readonly string _jobName;
+    private readonly bool _isJobRegistered;
     private readonly PeriodicJobOptions _jobOptions;
     private readonly TimeSpan _staleAfter;
     private readonly PeriodicJobRunRegistry _runRegistry;
@@ -14,6 +15,7 @@ internal sealed class PeriodicJobHealthCheck : IHealthCheck
     public PeriodicJobHealthCheck(
         string jobKey,
         string jobName,
+        bool isJobRegistered,
         PeriodicJobOptions jobOptions,
         TimeSpan staleAfter,
         PeriodicJobRunRegistry runRegistry,
@@ -21,6 +23,7 @@ internal sealed class PeriodicJobHealthCheck : IHealthCheck
     {
         _jobKey = jobKey;
         _jobName = jobName;
+        _isJobRegistered = isJobRegistered;
         _jobOptions = jobOptions;
         _staleAfter = staleAfter;
         _runRegistry = runRegistry;
@@ -31,8 +34,15 @@ internal sealed class PeriodicJobHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        var failureStatus = context.Registration.FailureStatus;
+        if (!_isJobRegistered)
+        {
+            var notRegisteredResult = new HealthCheckResult(failureStatus, $"Periodic job {_jobName} is not registered, so it never runs.");
+            return Task.FromResult(notRegisteredResult);
+        }
+
         var runStatus = _runRegistry.Find(_jobKey);
-        var result = runStatus is null ? CheckNotStarted() : CheckRunStatus(runStatus, context.Registration.FailureStatus);
+        var result = runStatus is null ? CheckNotStarted() : CheckRunStatus(runStatus, failureStatus);
         return Task.FromResult(result);
     }
 

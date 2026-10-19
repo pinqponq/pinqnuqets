@@ -21,7 +21,7 @@ public sealed class PeriodicJobHealthCheckTests
     }
 
     [Fact]
-    public async Task Health_check_registered_without_the_job_reports_not_started()
+    public async Task Health_check_registered_without_the_job_reports_failure_status()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -31,8 +31,8 @@ public sealed class PeriodicJobHealthCheckTests
         var report = await serviceProvider.GetRequiredService<HealthCheckService>().CheckHealthAsync();
 
         var entry = report.Entries[nameof(ProbeJob)];
-        Assert.Equal(HealthStatus.Healthy, entry.Status);
-        Assert.Contains("has not started yet", entry.Description);
+        Assert.Equal(HealthStatus.Unhealthy, entry.Status);
+        Assert.Contains("ProbeJob is not registered", entry.Description);
     }
 
     [Fact]
