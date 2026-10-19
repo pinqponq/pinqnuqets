@@ -2,6 +2,8 @@
 
 These rules apply to all projects and all languages unless a language-specific file overrides them.
 
+**What belongs in this file:** standards for the code and text a developer writes (naming, structure, errors, comments, tests). How a task, pull request or automated runner works (branching, review steps, which devices to run, which issues to open) does not belong here; it goes into the instructions of the tool that does the work, for example `runner/skill/references/implementation.md`.
+
 ---
 
 ## Stack-specific rules
@@ -37,9 +39,10 @@ This file always loads. Stack-specific rules load automatically only when you to
 ## Separation of Concerns & Single Responsibility
 
 - Each code unit must have exactly one responsibility.
+- A function name that joins two actions with "And" (`saveAndClose`, `saveToPhotosAndDeleteTempFile`) does two jobs: split it into one function per action and call them in sequence from the caller. "And" between two conditions in a test name (`…_withRotatedPhotoAndLowFreeHeap_…`) is fine.
 - Extract large logical blocks (retry logic, setup, try-catch) into well-named sub-functions.
 - Apply SRP without over-engineering. Do not create abstractions without real value.
-- Before adding infrastructure the task did not ask for (a test project, CI step, shared helper, package), check the repo's open pull requests and branches for the same work. If one exists, build on it (branch from it and target it as the base) instead of opening a parallel one.
+- Shared libraries (pinqnuqets, deveng-core-kmp, deveng-networking-kmp, …) hold only what any product would need on its own. When moving product code into one, keep the product's conventions (header and route names, error codes and messages, defaults, policies such as which errors count as client errors) in the product. A setting counts as a convention when only one product would change it: do not add it to keep that product's behavior; the product rebuilds the behavior on the library's extension points (its own middleware, resolver, endpoint). Technology-specific parts go to separate optional packages. Check the moved code, its comments and its docs for product names before opening the pull request.
 - Layer dependency rules:
   - Application depends only on Domain.
   - Domain must not depend on any other layer; Domain may only depend on other Domain modules.
@@ -99,9 +102,23 @@ This file always loads. Stack-specific rules load automatically only when you to
 - When changing code, also check the comments tied to it: update or remove any that are no longer valid, but never delete a comment without understanding the context and rationale it carries.
 - In `TODO` comments, state the rationale, a tracking reference, and the removal condition where possible.
 - Do not auto-generate line-by-line comments just to explain generated code.
-- Keep comments short and concrete.
+- Keep comments concrete and in plain words. Clarity comes before brevity: do not shorten a comment if that removes meaning or makes it harder to follow. How to word a comment is in "Writing Style" below.
 
 **Core test:** if removing a comment would not lose an important, verifiable rationale or warning, the comment was unnecessary.
+
+---
+
+## Writing Style (comments, XML docs, KDoc, README, PR text)
+
+Text you write must be easy to understand on the first read. Clear wording matters more than short or clever wording, and shortening must never remove meaning. The company guide is `meta/document-writing-guide.md` (clear, understandable, plain); these are the rules that apply to code and pull requests.
+
+- One idea per sentence. Say who does what with plain verbs. Write "because", "so", "if", "when" out in full instead of arrows (`→`), slashes or semicolon chains.
+- Define a term the first time it appears, or use the plain description instead. Decision codes (`S238`), internal names ("runner", "shipped panel", "pre-contract") and jargon ("sparse", "floor", "snapshot") mean nothing to a reader outside the discussion. For a decision, write the question and the chosen option in words.
+- Use one word for one thing and keep it everywhere: the word the code or the API uses (`rowCount`, not "total" in one place and "count" in another; "log", not "entry", "record" and "match" mixed). Do not use a word both as a noun and as a verb ("page" the query).
+- Comments, XML docs and KDoc describe how the code works today. History, incident stories and "this used to be" go into the pull request or commit message.
+- A claim must be true as written. State its limit next to it ("exact", "all", "never" need a reason or an exception). When behavior changes, search the docs, README files, tool descriptions and PR text for the old statement and fix it.
+- Shared packages never name a product in their text ("rindle-backend's contract").
+- Before you finish, read each sentence you wrote as someone who has not seen the task. If you had to know something outside the text to follow it, add that or remove the sentence.
 
 ---
 
@@ -131,3 +148,13 @@ RabbitMQService(rabbitOptions)
 
 - Required config fields must be validated at startup.
 - Fail fast during application boot, not at runtime.
+
+---
+
+## Moving or Replacing Existing Code
+
+When a change moves code to a shared library or replaces a whole layer (error handling, logging, paging, data access), prove with tests written against the old code that the behavior stays the same.
+
+- A characterization test records what the old code does today. Test through public behavior (HTTP responses, logs sent, values a service returns), not through the classes that will be removed, so the same tests still compile after the move. Keep the code that names the old classes in one test helper.
+- These tests must pass on the old code without any of the new code, and they must still pass after the move. A test that passed before and fails after is a regression, so fix the code.
+- A move changes no behavior, and the move does not change any expected result of these tests. If the new library behaves differently, keep the old behavior in the code that uses it (a resolver, writer, middleware or small wrapper). A behavior change that the new library makes possible is made separately after the move, with a note on what changes, why it helps and which clients it can affect.

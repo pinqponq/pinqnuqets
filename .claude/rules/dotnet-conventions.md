@@ -44,6 +44,14 @@ Avoid crash-prone LINQ calls on collections.
 
 ---
 
+## Database Filters
+
+- Every new filter or search parameter on a large or write-heavy collection or table must use an index. Add the index in the same change, or do not add the filter.
+- An index costs time on every write. Index only the fields a stated need filters by. Do not add an index per key "in case".
+- A filter without an index scans the collection. Narrowing the time window does not make it safe. If an unindexed filter is really needed, it is a decision: record it and get it approved before the PR.
+
+---
+
 ## Startup & Dependency Registration
 
 - `Program.cs` must not become a God Object.
@@ -116,6 +124,20 @@ return new Response { HasNextPage = hasNextPage };
 // ✅ Correct
 PostgresErrorCodes.ForeignKeyViolation
 ```
+
+---
+
+## Shared Packages (pinqnuqets)
+
+`pinqnuqets` holds only code that every Pinqponq ASP.NET Core API needs in the same form. A product-specific thing never goes into it.
+
+- Test for every type, option, default, constant and message: would a product other than the one this code came from need exactly this? If the answer depends on one product, it stays in that product.
+- Product-specific means: a header, query key, route, response code, message or default taken from one product's client or contract; an option that exists for one product only; a feature that only products with one kind of client (for example a mobile app) need.
+- If you are not sure a part is shared, leave it in the product. You may instead move it into its own opt-in package as a setting with a neutral default, which means a default that was not copied from the first product. The setting is off by default.
+- Technology-specific code (PostgreSQL, MongoDB, EF Core, Vault) is fine in its own opt-in package, as long as nothing in it names a product.
+- When moving code out of a product into `pinqnuqets`, remove the product-specific parts first and leave them in the product. The product then keeps them as its own code on top of the package.
+- A pull request that adds or changes a `pinqnuqets` package lists, for each package, what the package kept, what was left in the product, and why.
+- Reviewers: a product-specific constant or default in a `pinqnuqets` change is a blocker.
 
 ---
 
