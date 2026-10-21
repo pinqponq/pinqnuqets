@@ -145,10 +145,10 @@ builder.Services.AddPinqponqRateLimiting(options =>
 
 A rejected request gets:
 
-- status `429`;
+- Status `429`.
 - `Retry-After`: the seconds until the window ends, rounded up and at least 1. The header is left
-  out only when the limiter gives no time;
-- the standard error body of Pinqponq.ErrorHandling with the response code
+  out only when the limiter gives no time.
+- The standard error body of Pinqponq.ErrorHandling with the response code
   `too_many_requests` (`CommonErrorCodes.TooManyRequests`):
 
 ```json

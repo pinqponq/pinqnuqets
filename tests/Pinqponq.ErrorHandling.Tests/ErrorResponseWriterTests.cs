@@ -146,10 +146,10 @@ public sealed class ErrorResponseWriterTests
         var writer = CreateWriter();
         var httpContext = CreateContext();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.Write(null!, 429, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName));
-        await Assert.ThrowsAsync<ArgumentException>(() => writer.Write(httpContext, 429, " ", DefaultMessage, EventName));
-        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.Write(httpContext, 429, CommonErrorCodes.TooManyRequests, null!, EventName));
-        await Assert.ThrowsAsync<ArgumentException>(() => writer.Write(httpContext, 429, CommonErrorCodes.TooManyRequests, DefaultMessage, ""));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.Write(null!, StatusCodes.Status429TooManyRequests, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName));
+        await Assert.ThrowsAsync<ArgumentException>(() => writer.Write(httpContext, StatusCodes.Status429TooManyRequests, " ", DefaultMessage, EventName));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.Write(httpContext, StatusCodes.Status429TooManyRequests, CommonErrorCodes.TooManyRequests, null!, EventName));
+        await Assert.ThrowsAsync<ArgumentException>(() => writer.Write(httpContext, StatusCodes.Status429TooManyRequests, CommonErrorCodes.TooManyRequests, DefaultMessage, ""));
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class EmbeddedCatalogTests
         var codesByResource = catalogAssembly.GetManifestResourceNames()
             .Where(resourceName => ErrorMessageCatalog.FindEmbeddedCatalogLanguage(resourceName) is not null)
             .ToDictionary(resourceName => resourceName, resourceName => ReadCodes(catalogAssembly, resourceName));
-        var englishCodes = codesByResource.Single(entry => entry.Key.EndsWith(".EN.json", StringComparison.Ordinal)).Value;
+        var englishCodes = Assert.Single(codesByResource, entry => entry.Key.EndsWith(".EN.json", StringComparison.Ordinal)).Value;
 
         Assert.Contains(CommonErrorCodes.TooManyRequests, englishCodes);
         Assert.Equal(12, codesByResource.Count);
