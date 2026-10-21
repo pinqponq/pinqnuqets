@@ -156,10 +156,8 @@ public sealed class ExceptionHandlingMiddleware
 
         var fallbackResponseCode = resolution?.FallbackResponseCode ?? _localizationOptions.FallbackResponseCode;
         var responseCode = SelectLocalizedResponseCode(resolution, mappedResponseCode, fallbackResponseCode);
-        var language = ResolveLanguage(context);
-        var localizedMessage = _errorMessageCatalog.FindMessage(responseCode, language)
-            ?? _errorMessageCatalog.FindMessage(fallbackResponseCode, language)
-            ?? _localizationOptions.DefaultMessage;
+        var language = ErrorMessageCatalog.ResolveRequestLanguage(context, _localizationOptions);
+        var localizedMessage = _errorMessageCatalog.FindMessageOrFallback(responseCode, fallbackResponseCode, language);
         return new ResolvedError(statusCode, responseCode, localizedMessage, language, reportedException, resolution?.LogDetail);
     }
 
@@ -220,14 +218,6 @@ public sealed class ExceptionHandlingMiddleware
         }
 
         return ExceptionMapping.Map(exception);
-    }
-
-    private string ResolveLanguage(HttpContext context)
-    {
-        var language = ErrorMessageCatalog.FirstLanguageTag(context.Request.Headers[_localizationOptions.LanguageHeader].ToString());
-        return string.IsNullOrWhiteSpace(language)
-            ? ErrorMessageCatalog.NormalizeLanguage(_localizationOptions.DefaultLanguage)
-            : ErrorMessageCatalog.NormalizeLanguage(language);
     }
 
     private sealed record ResolvedError(

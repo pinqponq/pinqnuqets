@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -58,7 +59,20 @@ internal sealed class ErrorMessageCatalog
             : null;
     }
 
+    public string FindMessageOrFallback(string responseCode, string fallbackResponseCode, string language) =>
+        FindMessage(responseCode, language)
+        ?? FindMessage(fallbackResponseCode, language)
+        ?? _localizationOptions.DefaultMessage;
+
     public static string NormalizeLanguage(string language) => language.ToUpperInvariant();
+
+    public static string ResolveRequestLanguage(HttpContext context, ErrorLocalizationOptions localizationOptions)
+    {
+        var language = FirstLanguageTag(context.Request.Headers[localizationOptions.LanguageHeader].ToString());
+        return string.IsNullOrWhiteSpace(language)
+            ? NormalizeLanguage(localizationOptions.DefaultLanguage)
+            : NormalizeLanguage(language);
+    }
 
     // An Accept-Language value lists several tags with weights ("tr-TR,tr;q=0.9,en;q=0.8"); the first one is used.
     public static string FirstLanguageTag(string headerValue) =>

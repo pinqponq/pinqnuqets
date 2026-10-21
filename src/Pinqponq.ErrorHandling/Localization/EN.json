@@ -2,5 +2,6 @@
   "general_error": "An unexpected error occurred.",
   "api_body_required": "Request body is required.",
   "api_page_size_invalid": "Page size must be greater than 0.",
-  "api_page_number_invalid": "Page number must be greater than 0."
+  "api_page_number_invalid": "Page number must be greater than 0.",
+  "too_many_requests": "Too many requests. Try again later."
 }

@@ -19,4 +19,7 @@ public static class CommonErrorCodes
 
     /// <summary>The requested page number is not valid.</summary>
     public const string ApiPageNumberInvalid = "api_page_number_invalid";
+
+    /// <summary>The caller sent more requests than its rate limit allows.</summary>
+    public const string TooManyRequests = "too_many_requests";
 }

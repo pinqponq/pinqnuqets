@@ -9,7 +9,7 @@ namespace Pinqponq.ErrorHandling.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>Registers and configures <see cref="ErrorHandlingOptions"/>.</summary>
+    /// <summary>Registers and configures <see cref="ErrorHandlingOptions"/> and registers <see cref="IErrorResponseWriter"/>.</summary>
     public static IServiceCollection AddPinqponqErrorHandling(
         this IServiceCollection services,
         Action<ErrorHandlingOptions>? configure = null)
@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
             services.AddOptions<ErrorHandlingOptions>();
         }
 
+        services.TryAddSingleton<IErrorResponseWriter, LocalizedErrorResponseWriter>();
         return services;
     }
 

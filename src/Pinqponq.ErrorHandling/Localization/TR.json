@@ -2,5 +2,6 @@
   "general_error": "Beklenmeyen bir hata oluştu.",
   "api_body_required": "İstek gövdesi gerekli.",
   "api_page_size_invalid": "Sayfa boyutu 0'dan büyük olmalı.",
-  "api_page_number_invalid": "Sayfa numarası 0'dan büyük olmalı."
+  "api_page_number_invalid": "Sayfa numarası 0'dan büyük olmalı.",
+  "too_many_requests": "Çok fazla istek gönderildi. Daha sonra tekrar deneyin."
 }

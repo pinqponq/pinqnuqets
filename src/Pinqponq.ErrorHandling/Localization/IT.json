@@ -2,5 +2,6 @@
   "general_error": "Si è verificato un errore imprevisto.",
   "api_body_required": "Il corpo della richiesta è obbligatorio.",
   "api_page_size_invalid": "La dimensione della pagina deve essere maggiore di 0.",
-  "api_page_number_invalid": "Il numero della pagina deve essere maggiore di 0."
+  "api_page_number_invalid": "Il numero della pagina deve essere maggiore di 0.",
+  "too_many_requests": "Troppe richieste. Riprova più tardi."
 }
