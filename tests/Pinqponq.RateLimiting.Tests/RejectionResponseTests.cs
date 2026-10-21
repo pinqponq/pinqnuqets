@@ -28,7 +28,7 @@ public sealed class RejectionResponseTests
 
         Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, rejectedResponse.StatusCode);
-        var retryAfterSeconds = int.Parse(rejectedResponse.Headers.GetValues("Retry-After").Single(), CultureInfo.InvariantCulture);
+        var retryAfterSeconds = int.Parse(Assert.Single(rejectedResponse.Headers.GetValues("Retry-After")), CultureInfo.InvariantCulture);
         Assert.InRange(retryAfterSeconds, 1, 60);
 
         using var body = JsonDocument.Parse(await rejectedResponse.Content.ReadAsStringAsync());
@@ -86,7 +86,7 @@ public sealed class RejectionResponseTests
         using var rejectedResponse = await host.Send(RateLimitingHost.PolicyPath, clientAddress: "10.0.0.1");
 
         Assert.Equal(HttpStatusCode.TooManyRequests, rejectedResponse.StatusCode);
-        var retryAfter = rejectedResponse.Headers.GetValues("Retry-After").Single();
+        var retryAfter = Assert.Single(rejectedResponse.Headers.GetValues("Retry-After"));
         Assert.Equal($"wait {retryAfter}", await rejectedResponse.Content.ReadAsStringAsync());
     }
 

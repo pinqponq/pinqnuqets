@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Pinqponq.RateLimiting` 1.0.0: ASP.NET Core rate limiting in one call. `AddPinqponqRateLimiting(configure)` or
-  `AddPinqponqRateLimiting(section, configure)` registers named fixed-window `Policies` (for `[EnableRateLimiting]` /
+  `AddPinqponqRateLimiting(section, configure)` registers named fixed-window `Policies` (for `[EnableRateLimiting]` and
   `RequireRateLimiting`) and `GlobalLimits` (chained when there are several, so a request must pass each one).
   Requests are counted by `ClientAddress`, `User`, `UserOrClientAddress` or `Custom`. `User` reads the
   `UserIdClaimType` claim (default `ClaimTypes.NameIdentifier`) and does not limit requests without a user. `Custom`

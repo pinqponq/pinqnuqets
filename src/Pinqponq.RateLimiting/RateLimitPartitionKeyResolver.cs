@@ -49,7 +49,7 @@ internal sealed class RateLimitPartitionKeyResolver
         if (IsFirstMissingClientAddress())
         {
             _logger.LogWarning(
-                "A request has no client address; every request without one shares the {PartitionKey} rate limit partition. Call UseForwardedHeaders before UseRateLimiter when the API runs behind a proxy.",
+                "A request has no client address. Every request without one shares the {PartitionKey} rate limit partition. Call UseForwardedHeaders before UseRateLimiter when the API runs behind a proxy.",
                 MissingClientAddressPartitionKey);
         }
 

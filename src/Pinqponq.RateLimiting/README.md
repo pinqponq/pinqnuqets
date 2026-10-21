@@ -1,6 +1,6 @@
 # Pinqponq.RateLimiting
 
-ASP.NET Core rate limiting set up in one call. You name the policies and their numbers; the
+ASP.NET Core rate limiting set up in one call. You name the policies and their numbers. The
 package registers the limiters, partitions requests by client address, user or your own key,
 and answers a rejected request with `429 Too Many Requests`, a `Retry-After` header and the
 standard error body.
@@ -119,9 +119,7 @@ after `UseRateLimiter`.
 
 A key sent in a request header identifies a caller, but a caller can send a different key with
 every request. Chain a limit per key with a looser limit per client address, so changing the key
-does not buy a new budget:
-
-`keyHeaderName` is the name of your product's key header.
+does not buy a new budget. `keyHeaderName` is the name of your product's key header:
 
 ```csharp
 builder.Services.AddPinqponqRateLimiting(options =>
