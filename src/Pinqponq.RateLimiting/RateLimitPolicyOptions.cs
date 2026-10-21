@@ -4,7 +4,7 @@ namespace Pinqponq.RateLimiting;
 
 /// <summary>
 /// One fixed-window limit: at most <see cref="PermitLimit"/> requests per <see cref="Window"/>
-/// for each partition. A request over the limit is rejected at once; it is never queued.
+/// for each partition. A request over the limit is rejected at once. It is never queued.
 /// </summary>
 public sealed class RateLimitPolicyOptions
 {
@@ -19,14 +19,15 @@ public sealed class RateLimitPolicyOptions
 
     /// <summary>
     /// Returns the partition value for <see cref="RateLimitPartitionSource.Custom"/>, for example the
-    /// value of an API key header. Required for <see cref="RateLimitPartitionSource.Custom"/>; it
-    /// cannot be set from configuration.
+    /// value of an API key header. Required for <see cref="RateLimitPartitionSource.Custom"/> and
+    /// allowed only there. It cannot be set from configuration.
     /// </summary>
     public Func<HttpContext, string?>? PartitionKeyResolver { get; set; }
 
     /// <summary>
     /// Whether the <see cref="PartitionKeyResolver"/> value is a secret, such as an API key. A secret
     /// value is kept only as its SHA-256 digest, so the raw value is never held as a partition key.
+    /// Allowed only for <see cref="RateLimitPartitionSource.Custom"/>.
     /// </summary>
     public bool IsPartitionKeySecret { get; set; }
 }

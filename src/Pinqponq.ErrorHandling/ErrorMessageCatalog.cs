@@ -59,6 +59,11 @@ internal sealed class ErrorMessageCatalog
             : null;
     }
 
+    public string FindMessageOrFallback(string responseCode, string fallbackResponseCode, string language) =>
+        FindMessage(responseCode, language)
+        ?? FindMessage(fallbackResponseCode, language)
+        ?? _localizationOptions.DefaultMessage;
+
     public static string NormalizeLanguage(string language) => language.ToUpperInvariant();
 
     public static string ResolveRequestLanguage(HttpContext context, ErrorLocalizationOptions localizationOptions)

@@ -69,6 +69,24 @@ public sealed class GlobalLimitTests
     }
 
     [Fact]
+    public async Task Budget_comes_back_when_the_window_ends()
+    {
+        await using var host = await RateLimitingHost.Start(services =>
+            services.AddPinqponqRateLimiting(options => options.GlobalLimits.Add(new RateLimitPolicyOptions
+            {
+                PermitLimit = 1,
+                Window = TimeSpan.FromMilliseconds(300),
+            })));
+
+        var withinWindow = await host.SendMany(2, () => host.Send(RateLimitingHost.UnlimitedPath, clientAddress: "10.0.0.1"));
+        await Task.Delay(TimeSpan.FromMilliseconds(700));
+        var nextWindow = await host.SendMany(1, () => host.Send(RateLimitingHost.UnlimitedPath, clientAddress: "10.0.0.1"));
+
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests], withinWindow);
+        Assert.Equal([HttpStatusCode.OK], nextWindow);
+    }
+
+    [Fact]
     public async Task Global_limit_and_a_named_policy_both_apply()
     {
         await using var host = await RateLimitingHost.Start(services =>

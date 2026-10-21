@@ -157,9 +157,7 @@ public sealed class ExceptionHandlingMiddleware
         var fallbackResponseCode = resolution?.FallbackResponseCode ?? _localizationOptions.FallbackResponseCode;
         var responseCode = SelectLocalizedResponseCode(resolution, mappedResponseCode, fallbackResponseCode);
         var language = ErrorMessageCatalog.ResolveRequestLanguage(context, _localizationOptions);
-        var localizedMessage = _errorMessageCatalog.FindMessage(responseCode, language)
-            ?? _errorMessageCatalog.FindMessage(fallbackResponseCode, language)
-            ?? _localizationOptions.DefaultMessage;
+        var localizedMessage = _errorMessageCatalog.FindMessageOrFallback(responseCode, fallbackResponseCode, language);
         return new ResolvedError(statusCode, responseCode, localizedMessage, language, reportedException, resolution?.LogDetail);
     }
 

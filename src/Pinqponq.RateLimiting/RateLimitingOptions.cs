@@ -25,7 +25,8 @@ public sealed class RateLimitingOptions
     /// <summary>
     /// Claim that identifies the user for <see cref="RateLimitPartitionSource.User"/> and
     /// <see cref="RateLimitPartitionSource.UserOrClientAddress"/>. Defaults to
-    /// <see cref="ClaimTypes.NameIdentifier"/>, the claim the JWT bearer handler maps <c>sub</c> to.
+    /// <see cref="ClaimTypes.NameIdentifier"/>. The JWT bearer handler maps <c>sub</c> to this claim while
+    /// its <c>MapInboundClaims</c> is on, which is the default.
     /// </summary>
     public string UserIdClaimType { get; set; } = ClaimTypes.NameIdentifier;
 }

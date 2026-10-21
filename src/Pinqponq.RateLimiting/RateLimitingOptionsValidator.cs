@@ -54,10 +54,20 @@ internal sealed class RateLimitingOptionsValidator : IValidateOptions<RateLimiti
             failures.Add($"{nameof(RateLimitPolicyOptions.Window)} of rate limit {policyDescription} must be greater than 0.");
         }
 
-        var isResolverMissing = policy.PartitionBy == RateLimitPartitionSource.Custom && policy.PartitionKeyResolver is null;
-        if (isResolverMissing)
+        var isCustom = policy.PartitionBy == RateLimitPartitionSource.Custom;
+        if (isCustom && policy.PartitionKeyResolver is null)
         {
             failures.Add($"{nameof(RateLimitPolicyOptions.PartitionKeyResolver)} of rate limit {policyDescription} is required when {nameof(RateLimitPolicyOptions.PartitionBy)} is {nameof(RateLimitPartitionSource.Custom)}.");
+        }
+
+        if (!isCustom && policy.PartitionKeyResolver is not null)
+        {
+            failures.Add($"{nameof(RateLimitPolicyOptions.PartitionKeyResolver)} of rate limit {policyDescription} is used only when {nameof(RateLimitPolicyOptions.PartitionBy)} is {nameof(RateLimitPartitionSource.Custom)}.");
+        }
+
+        if (!isCustom && policy.IsPartitionKeySecret)
+        {
+            failures.Add($"{nameof(RateLimitPolicyOptions.IsPartitionKeySecret)} of rate limit {policyDescription} is used only when {nameof(RateLimitPolicyOptions.PartitionBy)} is {nameof(RateLimitPartitionSource.Custom)}.");
         }
     }
 }

@@ -5,7 +5,7 @@ namespace Pinqponq.RateLimiting;
 /// <summary>
 /// Writes the body of a rejected request. The status code (429) and the <c>Retry-After</c> header
 /// are already set when it runs. The default writes the standard error body with the
-/// <c>too_many_requests</c> code; register your own implementation to return another body.
+/// <c>too_many_requests</c> code. Register your own implementation to return another body.
 /// </summary>
 public interface IRateLimitRejectionWriter
 {

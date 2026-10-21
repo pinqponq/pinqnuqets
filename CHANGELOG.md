@@ -12,11 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Pinqponq.RateLimiting` 1.0.0: ASP.NET Core rate limiting in one call. `AddPinqponqRateLimiting(configure)` or
   `AddPinqponqRateLimiting(section, configure)` registers named fixed-window `Policies` (for `[EnableRateLimiting]` /
   `RequireRateLimiting`) and `GlobalLimits` (chained when there are several, so a request must pass each one).
-  Requests are counted by `ClientAddress`, `User` (`UserIdClaimType`, default `ClaimTypes.NameIdentifier`; requests
-  without a user are not limited), `UserOrClientAddress` or `Custom` (`PartitionKeyResolver`, client address when it
-  returns nothing; `IsPartitionKeySecret` keeps only the SHA-256 digest). Requests without a client address share one
-  partition and a warning is logged once. A rejected request gets 429, `Retry-After` in whole seconds rounded up (at
-  least 1) and the standard error body with `too_many_requests`; `IRateLimitRejectionWriter` replaces the body.
+  Requests are counted by `ClientAddress`, `User`, `UserOrClientAddress` or `Custom`. `User` reads the
+  `UserIdClaimType` claim (default `ClaimTypes.NameIdentifier`) and does not limit requests without a user. `Custom`
+  uses the value of `PartitionKeyResolver`, and the client address when it returns nothing. `IsPartitionKeySecret`
+  keeps only the SHA-256 digest of that value. Requests without a client address share one partition, and a warning
+  is logged once. A rejected request gets 429, `Retry-After` in whole seconds rounded up (at least 1) and the
+  standard error body with `too_many_requests`. An `IRateLimitRejectionWriter` replaces the body.
   `PermitLimit` and `Window` have no defaults and are validated at startup. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.ErrorHandling` 1.2.0: `IErrorResponseWriter`, registered by `AddPinqponqErrorHandling`, writes the
   standard error body for a failure answered without an exception (localized when error localization is on) and

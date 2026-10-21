@@ -23,6 +23,8 @@ public sealed class RegistrationTests
         { "PermitLimit of rate limit global limit 1 must be greater than 0", options => { options.GlobalLimits.Add(ValidPolicy()); options.GlobalLimits.Add(new RateLimitPolicyOptions { Window = TimeSpan.FromMinutes(1) }); } },
         { "PartitionKeyResolver of rate limit policy 'test-policy' is required when PartitionBy is Custom", options => options.Policies.Add("test-policy", new RateLimitPolicyOptions { PermitLimit = 1, Window = TimeSpan.FromMinutes(1), PartitionBy = RateLimitPartitionSource.Custom }) },
         { "A rate limit policy name must not be empty", options => options.Policies.Add(" ", ValidPolicy()) },
+        { "PartitionKeyResolver of rate limit policy 'test-policy' is used only when PartitionBy is Custom", options => options.Policies.Add("test-policy", new RateLimitPolicyOptions { PermitLimit = 1, Window = TimeSpan.FromMinutes(1), PartitionKeyResolver = _ => "key" }) },
+        { "IsPartitionKeySecret of rate limit global limit 0 is used only when PartitionBy is Custom", options => options.GlobalLimits.Add(new RateLimitPolicyOptions { PermitLimit = 1, Window = TimeSpan.FromMinutes(1), PartitionBy = RateLimitPartitionSource.UserOrClientAddress, IsPartitionKeySecret = true }) },
         { "Rate limit global limit 0 has no settings", options => options.GlobalLimits.Add(null!) },
         { "UserIdClaimType is required", options => options.UserIdClaimType = "" },
     };

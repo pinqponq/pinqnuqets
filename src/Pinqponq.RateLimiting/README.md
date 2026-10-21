@@ -24,13 +24,13 @@ builder.Services.AddPinqponqRateLimiting(options =>
 {
     options.Policies.Add("sign-in", new RateLimitPolicyOptions
     {
-        PermitLimit = 10,
-        Window = TimeSpan.FromMinutes(5),
+        PermitLimit = 30,
+        Window = TimeSpan.FromMinutes(2),
         PartitionBy = RateLimitPartitionSource.UserOrClientAddress,
     });
     options.GlobalLimits.Add(new RateLimitPolicyOptions
     {
-        PermitLimit = 600,
+        PermitLimit = 1200,
         Window = TimeSpan.FromMinutes(1),
     });
 });
@@ -65,10 +65,10 @@ settings that configuration cannot hold, such as `PartitionKeyResolver`.
 {
   "RateLimiting": {
     "Policies": {
-      "sign-in": { "PermitLimit": 10, "Window": "00:05:00", "PartitionBy": "UserOrClientAddress" }
+      "sign-in": { "PermitLimit": 30, "Window": "00:02:00", "PartitionBy": "UserOrClientAddress" }
     },
     "GlobalLimits": [
-      { "PermitLimit": 600, "Window": "00:01:00" }
+      { "PermitLimit": 1200, "Window": "00:01:00" }
     ]
   }
 }
@@ -81,19 +81,19 @@ element by element.
 |---|---|---|
 | `Policies` | empty | Named policies for `[EnableRateLimiting(name)]` and `RequireRateLimiting(name)`. |
 | `GlobalLimits` | empty | Limits applied to every request. With several, a request must be allowed by each of them. |
-| `UserIdClaimType` | `ClaimTypes.NameIdentifier` | Claim that identifies the user. The JWT bearer handler maps `sub` to this claim. |
+| `UserIdClaimType` | `ClaimTypes.NameIdentifier` | Claim that identifies the user. The JWT bearer handler maps `sub` to this claim while its `MapInboundClaims` is on, which is the default. |
 
 | `RateLimitPolicyOptions` | Default | Notes |
 |---|---|---|
 | `PermitLimit` | none | Requests allowed per partition in one window. Required, greater than 0. |
 | `Window` | none | Length of the fixed window. Required, greater than 0. |
 | `PartitionBy` | `ClientAddress` | What requests are counted by (see below). |
-| `PartitionKeyResolver` | none | `Func<HttpContext, string?>` for `Custom`. Required for `Custom`. |
-| `IsPartitionKeySecret` | `false` | Keep the `Custom` value only as its SHA-256 digest. Set it for API keys and other secrets. |
+| `PartitionKeyResolver` | none | `Func<HttpContext, string?>` for `Custom`. Required for `Custom`, and only allowed there. |
+| `IsPartitionKeySecret` | `false` | Keep the `Custom` value only as its SHA-256 digest. Set it for API keys and other secrets. Only allowed for `Custom`. |
 
 Every setting is validated at startup. The application does not start when a limit or window is
-not greater than 0, a policy name is empty, a `Custom` policy has no resolver, or
-`UserIdClaimType` is empty.
+not greater than 0, a policy name is empty, a `Custom` policy has no resolver, another policy
+sets a resolver or `IsPartitionKeySecret`, or `UserIdClaimType` is empty.
 
 A request over a limit is rejected at once. It is never queued. The global limits are checked
 before the named policy, so a request counts against the global limits also when its named
@@ -117,24 +117,26 @@ after `UseRateLimiter`.
 
 ### A limit per API key and per address
 
-A key sent in a request header identifies a tenant, but a caller can send a different key with
+A key sent in a request header identifies a caller, but a caller can send a different key with
 every request. Chain a limit per key with a looser limit per client address, so changing the key
 does not buy a new budget:
+
+`keyHeaderName` is the name of your product's key header.
 
 ```csharp
 builder.Services.AddPinqponqRateLimiting(options =>
 {
     options.GlobalLimits.Add(new RateLimitPolicyOptions
     {
-        PermitLimit = 100,
+        PermitLimit = 250,
         Window = TimeSpan.FromMinutes(1),
         PartitionBy = RateLimitPartitionSource.Custom,
-        PartitionKeyResolver = context => context.Request.Headers["X-Api-Key"].FirstOrDefault(),
+        PartitionKeyResolver = context => context.Request.Headers[keyHeaderName].FirstOrDefault(),
         IsPartitionKeySecret = true,
     });
     options.GlobalLimits.Add(new RateLimitPolicyOptions
     {
-        PermitLimit = 500,
+        PermitLimit = 1500,
         Window = TimeSpan.FromMinutes(1),
         PartitionBy = RateLimitPartitionSource.ClientAddress,
     });
@@ -158,7 +160,7 @@ A rejected request gets:
 With `AddPinqponqErrorLocalization()` the message comes from the error message catalog in the
 language of the request. The failure is also described on `IRequestErrorFeature` with the event
 name `request_rate_limited` (`RateLimitingEvents.RequestRateLimited`), so Pinqponq.Observability's
-request log record carries it.
+request log carries it.
 
 To return another body, register your own `IRateLimitRejectionWriter`. The status code and the
 `Retry-After` header are already set when it runs:

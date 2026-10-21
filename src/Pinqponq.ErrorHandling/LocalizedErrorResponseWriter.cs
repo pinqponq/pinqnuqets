@@ -32,14 +32,9 @@ internal sealed class LocalizedErrorResponseWriter : IErrorResponseWriter
             : null;
         var message = language is null
             ? defaultMessage
-            : FindLocalizedMessage(responseCode, language);
+            : _errorMessageCatalog.FindMessageOrFallback(responseCode, _localizationOptions.FallbackResponseCode, language);
 
         RequestErrorDetail.Describe(context, eventName, statusCode, responseCode, message, language);
         await ErrorResponseWriter.Write(context, _options, statusCode, responseCode, message).ConfigureAwait(false);
     }
-
-    private string FindLocalizedMessage(string responseCode, string language) =>
-        _errorMessageCatalog.FindMessage(responseCode, language)
-        ?? _errorMessageCatalog.FindMessage(_localizationOptions.FallbackResponseCode, language)
-        ?? _localizationOptions.DefaultMessage;
 }

@@ -92,6 +92,8 @@ public sealed class RateLimitPartitionKeyResolverTests
     {
         var policy = new RateLimitPolicyOptions { PartitionBy = (RateLimitPartitionSource)99 };
 
-        Assert.Throws<InvalidOperationException>(() => Resolver.Resolve(CreateContext("10.0.0.1"), policy));
+        var exception = Assert.Throws<InvalidOperationException>(() => Resolver.Resolve(CreateContext("10.0.0.1"), policy));
+
+        Assert.Equal("Unknown rate limit partition source '99'.", exception.Message);
     }
 }
