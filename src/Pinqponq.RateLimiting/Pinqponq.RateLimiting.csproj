@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.RateLimiting</PackageId>
+    <Title>Pinqponq Rate Limiting</Title>
+    <Description>ASP.NET Core rate limiting set up in one call: fixed-window policies partitioned by client address, user or a caller-supplied key (hashed when it is a secret), chained global limits, a 429 rejection with Retry-After and the standard error body, and startup validation.</Description>
+    <PackageTags>$(PackageTags);rate-limiting;throttling;429;retry-after;aspnetcore;security</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.RateLimiting.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pinqponq.ErrorHandling\Pinqponq.ErrorHandling.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -2,5 +2,6 @@
   "general_error": "Ocurrió un error inesperado.",
   "api_body_required": "Se requiere el cuerpo de la solicitud.",
   "api_page_size_invalid": "El tamaño de página debe ser mayor que 0.",
-  "api_page_number_invalid": "El número de página debe ser mayor que 0."
+  "api_page_number_invalid": "El número de página debe ser mayor que 0.",
+  "too_many_requests": "Demasiadas solicitudes. Inténtalo de nuevo más tarde."
 }

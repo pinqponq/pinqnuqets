@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <PackageId>Pinqponq.Contracts</PackageId>
     <Title>Pinqponq Contracts</Title>
     <Description>Shared API contracts: the base response and error envelope (compatible with deveng-networking-kmp's ErrorResponse), paged request/response models, common error codes and the request error feature shared by the error handling and observability middlewares.</Description>

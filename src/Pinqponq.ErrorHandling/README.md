@@ -105,7 +105,7 @@ case-insensitive). A mapped code the catalog does not know (`not_found`, …) is
 | `FallbackResponseCode` | `general_error` | Code for an unknown resolver code; its message also serves an unknown mapped code. |
 | `DefaultMessage` | `An unexpected error occurred.` | Used when the catalog has no message at all. |
 | `CatalogDirectory` | `Localization` | The application's catalog, relative to `AppContext.BaseDirectory`: one `<LANGUAGE>.json` per language, each a `{ "code": "message" }` object. Its entries add codes and override the embedded ones. A file that cannot be read is logged and skipped. |
-| `CatalogAssemblies` | this package | Assemblies whose embedded `*.Localization.<LANGUAGE>.json` resources form the built-in catalog. This package ships `general_error`, `api_body_required`, `api_page_size_invalid` and `api_page_number_invalid` in AR, DE, EN, ES, FR, HI, ID, IT, JA, KO, PT and TR; Pinqponq.ErrorHandling.Postgres adds the `database_*` codes. |
+| `CatalogAssemblies` | this package | Assemblies whose embedded `*.Localization.<LANGUAGE>.json` resources form the built-in catalog. This package ships `general_error`, `api_body_required`, `api_page_size_invalid`, `api_page_number_invalid` and `too_many_requests` in AR, DE, EN, ES, FR, HI, ID, IT, JA, KO, PT and TR; Pinqponq.ErrorHandling.Postgres adds the `database_*` codes. |
 
 ## Exception resolvers
 
@@ -117,6 +117,26 @@ the driver exception inside an ORM exception) and extra `LogDetail` fields.
 With localization on, a resolver code the catalog does not know becomes the resolution's
 `FallbackResponseCode`, or the options' one.
 [Pinqponq.ErrorHandling.Postgres](../Pinqponq.ErrorHandling.Postgres/README.md) is one.
+
+## Writing an error without an exception
+
+`AddPinqponqErrorHandling` also registers `IErrorResponseWriter`. Use it when code answers a
+failure itself instead of throwing, for example a rejected rate limit (Pinqponq.RateLimiting uses
+it):
+
+```csharp
+await errorResponseWriter.Write(
+    context,
+    StatusCodes.Status429TooManyRequests,
+    CommonErrorCodes.TooManyRequests,
+    defaultMessage: "Too many requests. Try again later.",
+    eventName: "request_rate_limited");
+```
+
+It writes the same body as the middleware and describes the failure on `IRequestErrorFeature`
+under `eventName`. With localization on, the message comes from the catalog in the request's
+language, and a code the catalog does not know is kept and gets the `FallbackResponseCode`
+message. With localization off, `defaultMessage` is written.
 
 ## Request error feature
 
