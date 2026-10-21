@@ -65,7 +65,7 @@
 
     <!-- Push (Pinqponq.Push.Fcm). FirebaseAdmin's Google.Apis.Auth dependency resolves to the
          1.77.0 pinned above for SSO Google. -->
-    <PackageVersion Include="FirebaseAdmin" Version="3.4.0" />
+    <PackageVersion Include="FirebaseAdmin" Version="3.7.0" />
 
     <!-- Test stack. Assertions are xunit's own Assert: no assertion library is referenced. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
