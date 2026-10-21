@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   standard error body for a failure answered without an exception (localized when error localization is on) and
   describes it on `IRequestErrorFeature`. The catalogs ship `too_many_requests` in every language.
 - `Pinqponq.Contracts` 1.1.0: `CommonErrorCodes.TooManyRequests` (`too_many_requests`).
+- `Pinqponq.Hosting.Periodic` 1.0.0: periodic background jobs. `AddPinqponqPeriodicJob<TJob>(configure)` and
+  `AddPinqponqPeriodicJob<TJob>(section)` register an `IPeriodicJob` as a scoped service and one hosted service
+  that runs it. The options are `IsEnabled` (default `true`), `StartupDelay` (default zero), `RunImmediately`
+  (default `true`) and `Interval` (required, no default). Every run gets a new DI scope that is disposed after
+  the run. A failed run is logged with the job name, and the next run still starts. Stopping the host ends the
+  job without an error log. Options are validated on startup. `IPeriodicJobObserver` receives started,
+  succeeded (with duration) and failed (with exception) calls. `IPeriodicJobGate` can skip a run, for example
+  while another replica runs the job. `AddHealthChecks().AddPinqponqPeriodicJob<TJob>()` reports a job that has
+  not finished a run successfully for two intervals (or `staleAfter`), and a job that was never registered.
+  Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Push.Fcm` 1.1.0: `FcmOptions.IsSendFailureLoggingEnabled` (default `true`) lets an application that logs the
   returned `FcmSendResult` list itself turn off the package's own send-failure log records. 1.0.0 stays valid.
 - `Pinqponq.Push.Fcm` 1.0.0: the Firebase Cloud Messaging sender extracted from a product backend.
