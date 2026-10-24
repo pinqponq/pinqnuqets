@@ -14,6 +14,8 @@ internal sealed class SecuritySchemeTransformer(
     IOptions<PinqponqOpenApiOptions> openApiOptions,
     IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer, IOpenApiOperationTransformer
 {
+    private const string HttpBearerScheme = "bearer";
+
     public async Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
         var options = openApiOptions.Value;
@@ -23,7 +25,7 @@ internal sealed class SecuritySchemeTransformer(
             AddSecurityScheme(document, options.BearerAuthentication.SchemeName, new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
+                Scheme = HttpBearerScheme,
                 BearerFormat = options.BearerAuthentication.BearerFormat,
                 Description = options.BearerAuthentication.Description,
             });
