@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.OpenApi` 1.0.0: OpenAPI and the Scalar reference in one call. `AddPinqponqOpenApi(configure)` or
+  `AddPinqponqOpenApi(section, configure)` registers the document `v1`, and `MapPinqponqOpenApi()` serves it at
+  `/openapi/{documentName}.json` with the Scalar reference at `/scalar/v1` (both routes are options). The document is
+  served only in Development unless `ExposeIn` says otherwise (`Always`, `Never`), and `AuthorizationPolicy` can require
+  a policy or a signed-in user. The Bearer scheme is on by default and is published only when the `Bearer`
+  authentication scheme is registered. An API key scheme is off by default and needs a `HeaderName`. A security
+  requirement is added only to operations with `[Authorize]` or `RequireAuthorization()` and no `[AllowAnonymous]`
+  (`SecurityRequirementScope.AllOperations` changes that), and each published scheme is its own alternative requirement.
+  `ServerUrlFromRequest` (default on) sets `servers` to the request's scheme, host and path base. `SchemaIdNaming.FullName`
+  builds schema ids from the full type name. `IPinqponqOpenApiCustomizer` changes the document or an operation after the
+  package has built it. Options are validated on startup. Targets `net10.0` only, because it is written against
+  Microsoft.OpenApi 2.x. Pins Microsoft.OpenApi 2.7.5, because the 2.0.0 that Microsoft.AspNetCore.OpenApi 10.0.10
+  asks for has a known vulnerability.
 - `Pinqponq.RateLimiting` 1.0.0: ASP.NET Core rate limiting in one call. `AddPinqponqRateLimiting(configure)` or
   `AddPinqponqRateLimiting(section, configure)` registers named fixed-window `Policies` (for `[EnableRateLimiting]` and
   `RequireRateLimiting`) and `GlobalLimits` (chained when there are several, so a request must pass each one).
