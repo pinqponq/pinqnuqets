@@ -114,9 +114,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.RateLimiting", "src\Pinqponq.RateLimiting\Pinqponq.RateLimiting.csproj", "{0F89B358-3BDA-42A8-86C6-6BF3628B654D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.RateLimiting.Tests", "tests\Pinqponq.RateLimiting.Tests\Pinqponq.RateLimiting.Tests.csproj", "{2C3DC04E-F664-4E04-A541-9D506D0B1163}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Periodic", "src\Pinqponq.Hosting.Periodic\Pinqponq.Hosting.Periodic.csproj", "{EEF12D75-9805-44D9-AA02-26110496189D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Periodic.Tests", "tests\Pinqponq.Hosting.Periodic.Tests\Pinqponq.Hosting.Periodic.Tests.csproj", "{691A851D-F24F-4DA9-A632-E8F7EFC510AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.OpenApi", "src\Pinqponq.OpenApi\Pinqponq.OpenApi.csproj", "{FBDE46E5-53BA-4A15-9C54-970062D83BD0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.OpenApi.Tests", "tests\Pinqponq.OpenApi.Tests\Pinqponq.OpenApi.Tests.csproj", "{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -788,6 +793,30 @@ Global
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x64.Build.0 = Release|Any CPU
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x86.ActiveCfg = Release|Any CPU
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x86.Build.0 = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|x64.Build.0 = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Debug|x86.Build.0 = Debug|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|x64.ActiveCfg = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|x64.Build.0 = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|x86.ActiveCfg = Release|Any CPU
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0}.Release|x86.Build.0 = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|x64.Build.0 = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Debug|x86.Build.0 = Debug|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|x64.ActiveCfg = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|x64.Build.0 = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|x86.ActiveCfg = Release|Any CPU
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -848,5 +877,7 @@ Global
 		{2C3DC04E-F664-4E04-A541-9D506D0B1163} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{EEF12D75-9805-44D9-AA02-26110496189D} = {34D61E78-8C73-5320-8E9D-66571DD05681}
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC} = {6680480A-6991-59BE-B5B7-2EA328F05698}
+		{FBDE46E5-53BA-4A15-9C54-970062D83BD0} = {34D61E78-8C73-5320-8E9D-66571DD05681}
+		{6179641E-F0C6-4CB6-A6A0-1E7AF0906593} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 	EndGlobalSection
 EndGlobal
