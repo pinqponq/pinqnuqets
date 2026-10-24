@@ -50,6 +50,15 @@
     <!-- Object storage: S3 and S3-compatible stores (Cloudflare R2, MinIO) -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.20.2" />
 
+    <!-- OpenAPI (Pinqponq.OpenApi, net10.0 only). Microsoft.AspNetCore.OpenApi 10.x brings
+         Microsoft.OpenApi 2.x. Scalar.AspNetCore 2.13.16 is the lowest version the package is
+         tested with; an application may use a newer one. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Microsoft.AspNetCore.OpenApi 10.0.10 asks for Microsoft.OpenApi 2.0.0, which has a known
+         high severity vulnerability (GHSA-v5pm-xwqc-g5wc). 2.7.5 is the first fixed 2.x version. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.13.16" />
+
     <!-- Messaging (PIN-388): async v7 API, matches consumers -->
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
 
