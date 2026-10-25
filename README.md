@@ -70,6 +70,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Billing.RevenueCat.Mail** | Subscription event mails on top of Billing.RevenueCat and Mail: enabled events, recipient lookup via `IRevenueCatMailRecipientResolver`, branded HTML + plain text, per-language copy | [README](src/Pinqponq.Billing.RevenueCat.Mail/README.md) |
 | **Pinqponq.Storage.S3** | S3 and S3-compatible object storage (Cloudflare R2, MinIO): upload, download, presigned URLs, metadata, copy, delete, bucket health check | [README](src/Pinqponq.Storage.S3/README.md) |
 | **Pinqponq.Hosting.Periodic** | Periodic background jobs: on/off switch, startup delay, a new DI scope per run, failures logged without stopping the host, observer hook, optional gate against overlapping runs across replicas, health check for the last successful run | [README](src/Pinqponq.Hosting.Periodic/README.md) |
+| **Pinqponq.Hosting.Cors** | CORS policy from a configured origin allowlist: no default origins, optional credentials, Development-only switch for an empty list, startup validation of the origins | [README](src/Pinqponq.Hosting.Cors/README.md) |
 
 Each package exposes an `AddPinqponqXxx(...)` DI extension (where applicable) and an options class. Install from nuget.org once published, or reference the project under `src/`.
 
