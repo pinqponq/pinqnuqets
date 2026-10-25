@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Hosting.Cors</PackageId>
+    <Title>Pinqponq Hosting CORS</Title>
+    <Description>ASP.NET Core CORS policy built from a configured origin allowlist: no default origins, optional credentials, a Development-only switch for an empty list, and startup validation of the origins.</Description>
+    <PackageTags>$(PackageTags);cors;allowlist;aspnetcore;security</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.Hosting.Cors.Tests" />
+  </ItemGroup>
+
+</Project>

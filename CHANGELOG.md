@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
+  `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
+  `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
+  the default policy, or a named one when `PolicyName` is set. There is no default origin list. The options are
+  validated at startup: an empty list, an origin with a path, a trailing slash or a scheme other than http or
+  https, `*` next to another origin, `*` together with `AllowCredentials`, and a `PreflightMaxAge` of zero or less
+  stop the host. `AllowAnyOriginInDevelopmentWhenEmpty` (default `false`) allows every origin in the Development
+  environment when the list is empty. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.RateLimiting` 1.0.0: ASP.NET Core rate limiting in one call. `AddPinqponqRateLimiting(configure)` or
   `AddPinqponqRateLimiting(section, configure)` registers named fixed-window `Policies` (for `[EnableRateLimiting]` and
   `RequireRateLimiting`) and `GlobalLimits` (chained when there are several, so a request must pass each one).

@@ -114,9 +114,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.RateLimiting", "src\Pinqponq.RateLimiting\Pinqponq.RateLimiting.csproj", "{0F89B358-3BDA-42A8-86C6-6BF3628B654D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.RateLimiting.Tests", "tests\Pinqponq.RateLimiting.Tests\Pinqponq.RateLimiting.Tests.csproj", "{2C3DC04E-F664-4E04-A541-9D506D0B1163}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Periodic", "src\Pinqponq.Hosting.Periodic\Pinqponq.Hosting.Periodic.csproj", "{EEF12D75-9805-44D9-AA02-26110496189D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Periodic.Tests", "tests\Pinqponq.Hosting.Periodic.Tests\Pinqponq.Hosting.Periodic.Tests.csproj", "{691A851D-F24F-4DA9-A632-E8F7EFC510AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Cors", "src\Pinqponq.Hosting.Cors\Pinqponq.Hosting.Cors.csproj", "{86A51348-B257-421B-AD92-F3DA8123F659}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pinqponq.Hosting.Cors.Tests", "tests\Pinqponq.Hosting.Cors.Tests\Pinqponq.Hosting.Cors.Tests.csproj", "{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -788,6 +793,30 @@ Global
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x64.Build.0 = Release|Any CPU
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x86.ActiveCfg = Release|Any CPU
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC}.Release|x86.Build.0 = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|x64.Build.0 = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Debug|x86.Build.0 = Debug|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|x64.ActiveCfg = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|x64.Build.0 = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|x86.ActiveCfg = Release|Any CPU
+		{86A51348-B257-421B-AD92-F3DA8123F659}.Release|x86.Build.0 = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|x64.Build.0 = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Debug|x86.Build.0 = Debug|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|x64.ActiveCfg = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|x64.Build.0 = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|x86.ActiveCfg = Release|Any CPU
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -848,5 +877,7 @@ Global
 		{2C3DC04E-F664-4E04-A541-9D506D0B1163} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 		{EEF12D75-9805-44D9-AA02-26110496189D} = {34D61E78-8C73-5320-8E9D-66571DD05681}
 		{691A851D-F24F-4DA9-A632-E8F7EFC510AC} = {6680480A-6991-59BE-B5B7-2EA328F05698}
+		{86A51348-B257-421B-AD92-F3DA8123F659} = {34D61E78-8C73-5320-8E9D-66571DD05681}
+		{59C93B99-DC2E-46B7-A76A-C997CBD6FC28} = {6680480A-6991-59BE-B5B7-2EA328F05698}
 	EndGlobalSection
 EndGlobal
