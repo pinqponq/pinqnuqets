@@ -27,7 +27,7 @@ internal sealed class PinqponqCorsPolicySetup(
     {
         var builder = new CorsPolicyBuilder();
 
-        if (AllowsEveryOrigin(settings))
+        if (PinqponqCorsOriginRules.AllowsEveryOrigin(settings, hostEnvironment))
         {
             builder.AllowAnyOrigin();
         }
@@ -70,15 +70,5 @@ internal sealed class PinqponqCorsPolicySetup(
         }
 
         return builder.Build();
-    }
-
-    private bool AllowsEveryOrigin(PinqponqCorsOptions settings)
-    {
-        if (settings.AllowedOrigins.Length == 0)
-        {
-            return settings.AllowAnyOriginInDevelopmentWhenEmpty && hostEnvironment.IsDevelopment();
-        }
-
-        return settings.AllowedOrigins.Contains(PinqponqCorsOptionsValidator.AnyOrigin);
     }
 }

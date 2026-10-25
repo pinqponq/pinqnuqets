@@ -5,24 +5,22 @@ namespace Pinqponq.Hosting.Cors;
 
 internal sealed class PinqponqCorsOptionsValidator(IHostEnvironment hostEnvironment) : IValidateOptions<PinqponqCorsOptions>
 {
-    internal const string AnyOrigin = "*";
-
     public ValidateOptionsResult Validate(string? name, PinqponqCorsOptions options)
     {
         var failures = new List<string>();
-        var origins = options.AllowedOrigins ?? [];
+        var origins = options.AllowedOrigins;
 
-        if (origins.Length == 0 && !UsesDevelopmentFallback(options))
+        if (origins.Length == 0 && !PinqponqCorsOriginRules.UsesDevelopmentFallback(options, hostEnvironment))
         {
             failures.Add($"{nameof(PinqponqCorsOptions.AllowedOrigins)} must contain at least one origin.");
         }
 
-        if (origins.Contains(AnyOrigin) && origins.Length > 1)
+        if (origins.Contains(PinqponqCorsOriginRules.AnyOrigin) && origins.Length > 1)
         {
-            failures.Add($"{nameof(PinqponqCorsOptions.AllowedOrigins)} must contain only '{AnyOrigin}' when it allows every origin.");
+            failures.Add($"{nameof(PinqponqCorsOptions.AllowedOrigins)} must contain only '{PinqponqCorsOriginRules.AnyOrigin}' when it allows every origin.");
         }
 
-        foreach (var origin in origins.Where(origin => origin != AnyOrigin))
+        foreach (var origin in origins.Where(origin => origin != PinqponqCorsOriginRules.AnyOrigin))
         {
             if (!IsOrigin(origin))
             {
@@ -30,7 +28,7 @@ internal sealed class PinqponqCorsOptionsValidator(IHostEnvironment hostEnvironm
             }
         }
 
-        if (options.AllowCredentials && AllowsEveryOrigin(options))
+        if (options.AllowCredentials && PinqponqCorsOriginRules.AllowsEveryOrigin(options, hostEnvironment))
         {
             failures.Add($"{nameof(PinqponqCorsOptions.AllowCredentials)} cannot be combined with an origin list that allows every origin.");
         }
@@ -48,17 +46,6 @@ internal sealed class PinqponqCorsOptionsValidator(IHostEnvironment hostEnvironm
         return failures.Count == 0
             ? ValidateOptionsResult.Success
             : ValidateOptionsResult.Fail(failures);
-    }
-
-    private bool UsesDevelopmentFallback(PinqponqCorsOptions options)
-    {
-        return options.AllowAnyOriginInDevelopmentWhenEmpty && hostEnvironment.IsDevelopment();
-    }
-
-    private bool AllowsEveryOrigin(PinqponqCorsOptions options)
-    {
-        var origins = options.AllowedOrigins ?? [];
-        return origins.Contains(AnyOrigin) || (origins.Length == 0 && UsesDevelopmentFallback(options));
     }
 
     private static bool IsOrigin(string origin)
