@@ -40,7 +40,7 @@
          line so the packages ask for the lowest version a consumer can have; an application on
          EF Core 9 or 10 resolves to its own version. Npgsql.EntityFrameworkCore.PostgreSQL
          8.0.10 is the last 8.0 release that accepts the Npgsql 8.0.5 pinned above. -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.31" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.22" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.31" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
 
