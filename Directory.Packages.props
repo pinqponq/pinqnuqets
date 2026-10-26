@@ -48,7 +48,7 @@
     <PackageVersion Include="pinqloq" Version="4.3.0" />
 
     <!-- Object storage: S3 and S3-compatible stores (Cloudflare R2, MinIO) -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.20.2" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.6" />
 
     <!-- Messaging (PIN-388): async v7 API, matches consumers -->
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
