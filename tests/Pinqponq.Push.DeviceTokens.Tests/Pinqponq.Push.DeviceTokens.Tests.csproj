@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <ProjectReference Include="../../src/Pinqponq.Push.DeviceTokens/Pinqponq.Push.DeviceTokens.csproj" />
+    <ProjectReference Include="../Pinqponq.TestSupport/Pinqponq.TestSupport.csproj" />
+  </ItemGroup>
+
+</Project>
