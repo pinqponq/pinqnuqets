@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.Push.DeviceTokens</PackageId>
+    <Title>Pinqponq Push Device Tokens</Title>
+    <Description>Device token store for push notifications on EF Core: register, move to the latest user, replace a rotated token on a known device, unregister, and remove tokens the push provider rejected. Optional minimal API endpoints and a handler that removes tokens FCM reports as invalid.</Description>
+    <PackageTags>$(PackageTags);push;device-token;fcm;notification;entity-framework-core;efcore</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.Push.DeviceTokens.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pinqponq.Push.Fcm\Pinqponq.Push.Fcm.csproj" />
+  </ItemGroup>
+
+</Project>
