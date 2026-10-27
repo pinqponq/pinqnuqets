@@ -63,7 +63,8 @@ public sealed class DeviceService(IDeviceTokenRegistry registry)
 
 `AddPinqponqDeviceTokens` registers an `IFcmInvalidTokenHandler` that calls `RemoveTokens`, so tokens that
 `IFcmSender` reports as invalid leave the store without extra code. Set `RemoveTokensFcmReportsInvalid` to
-`false`, or register your own handler after the call, to do something else.
+`false`, or register your own handler after the call, to do something else. The call replaces an
+`IFcmInvalidTokenHandler` registered before it: `IFcmSender` takes one handler, so register yours after.
 
 ## After a registration
 

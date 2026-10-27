@@ -23,17 +23,17 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(options);
         if (options.MaxTokenLength < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(configure), "MaxTokenLength must be at least 1.");
+            throw new ArgumentOutOfRangeException(nameof(DeviceTokenOptions.MaxTokenLength), "MaxTokenLength must be at least 1.");
         }
 
         if (options.MaxDeviceIdentifierLength < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(configure), "MaxDeviceIdentifierLength must be at least 1.");
+            throw new ArgumentOutOfRangeException(nameof(DeviceTokenOptions.MaxDeviceIdentifierLength), "MaxDeviceIdentifierLength must be at least 1.");
         }
 
         if (options.Platforms.Count == 0 || options.Platforms.Any(string.IsNullOrWhiteSpace))
         {
-            throw new ArgumentException("Platforms must list at least one non-empty name.", nameof(configure));
+            throw new ArgumentException("Platforms must list at least one non-empty name.", nameof(DeviceTokenOptions.Platforms));
         }
 
         services.AddOptions<DeviceTokenOptions>().Configure(configure ?? (_ => { }));

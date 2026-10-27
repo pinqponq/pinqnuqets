@@ -33,12 +33,20 @@ internal sealed class DeviceTokenRegistry<TContext>(
             registration = await Save(userId, token, storedPlatform, storedDeviceIdentifier, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException first)
         {
             // Two requests registered the same new token at once: the unique index rejected the second.
+            // The retry finds the stored row; a failure that is not that race fails again and the first error is thrown.
             context.ChangeTracker.Clear();
-            registration = await Save(userId, token, storedPlatform, storedDeviceIdentifier, cancellationToken)
-                .ConfigureAwait(false);
+            try
+            {
+                registration = await Save(userId, token, storedPlatform, storedDeviceIdentifier, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (DbUpdateException)
+            {
+                throw first;
+            }
         }
 
         foreach (var handler in handlers)
