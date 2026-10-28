@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Auth.ApiKey` 1.1.0: the sending side of the key check. `AddInternalApiKeyClient<TClient, TImplementation>(configuration, sectionName)`
+  and `AddInternalApiKeyClient(name, configuration, sectionName)` register a typed or named `HttpClient` with the
+  base address (trailing slash added), `Timeout` and the key header taken from `InternalClientOptions` (`BaseUrl`,
+  `ApiKey`, `HeaderName`, `TimeoutSeconds`, default 5). The section is validated at startup: `BaseUrl` must be an
+  absolute http or https URL, `ApiKey` and `HeaderName` must not be empty, `TimeoutSeconds` must be positive, and the
+  message names the section and the property. Several clients can share one section. Both overloads return the
+  `IHttpClientBuilder`. There is no default header name or section name.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is

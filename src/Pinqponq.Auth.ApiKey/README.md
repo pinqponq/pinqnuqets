@@ -2,7 +2,8 @@
 
 A shared-secret check for service-to-service endpoints. One service calls another with a key in
 a request header; the `[RequireApiKey]` action filter lets the request through only when the
-header carries the configured key, and returns 401 otherwise.
+header carries the configured key, and returns 401 otherwise. The package also registers the
+calling side: an `HttpClient` that sends the key.
 
 ## Install
 
@@ -66,3 +67,58 @@ keeps the key in its own configuration.
 The key is compared in constant time: both values are hashed with SHA-256 and the digests are
 compared with `CryptographicOperations.FixedTimeEquals`, so the time taken does not depend on
 how many characters match or on the length of the sent key. The comparison is case-sensitive.
+
+## Calling a guarded service
+
+`AddInternalApiKeyClient` registers an `HttpClient` that already has the other service's base
+address, timeout and key header. Both sides use the same header name and key.
+
+Receiver (the service that owns the endpoints):
+
+```csharp
+builder.Services.AddPinqponqApiKey("internal", options =>
+{
+    options.HeaderName = "X-Internal-Key";
+    options.ApiKey = builder.Configuration["Internal:ApiKey"];
+});
+```
+
+Sender (the service that calls them):
+
+```csharp
+builder.Services.AddInternalApiKeyClient<IUsersClient, HttpUsersClient>(
+    builder.Configuration, sectionName: "UsersClient");
+```
+
+```json
+{
+  "UsersClient": {
+    "BaseUrl": "https://users.internal",
+    "HeaderName": "X-Internal-Key",
+    "TimeoutSeconds": 5
+  }
+}
+```
+
+Keep `ApiKey` out of `appsettings*.json`: set `UsersClient:ApiKey` from Vault or an environment
+variable.
+
+| Option | Default | Notes |
+|---|---|---|
+| `BaseUrl` | none | Absolute http or https address of the other service. A trailing slash is added when it is missing. |
+| `ApiKey` | none | The shared secret. Never logged. |
+| `HeaderName` | none | The request header that carries the key. |
+| `TimeoutSeconds` | `5` | Must be positive. |
+
+Startup fails when the section is missing or a value is invalid; the message names the section
+and the property. Every problem is listed in one message.
+
+- Several typed clients can share one section: call `AddInternalApiKeyClient` for each with the
+  same `sectionName`.
+- `AddInternalApiKeyClient(name, configuration, sectionName)` registers a named client for
+  `IHttpClientFactory.CreateClient(name)`.
+- Both overloads return the `IHttpClientBuilder`, so a product can add its own handlers:
+  `.AddHttpMessageHandler<MyHandler>()`.
+
+The package has no default header name, section name or key. Section names, header names, client
+interfaces and implementations stay in each product.
