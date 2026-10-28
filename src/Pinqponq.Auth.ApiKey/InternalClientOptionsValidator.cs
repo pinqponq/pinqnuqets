@@ -19,11 +19,16 @@ internal sealed class InternalClientOptionsValidator : IValidateOptions<Internal
             failures.Add($"{nameof(InternalClientOptions.ApiKey)} is required in section '{name}'.");
         }
 
+        if (!string.IsNullOrWhiteSpace(options.ApiKey) && !IsValidHeader("X-Check", options.ApiKey))
+        {
+            failures.Add($"{nameof(InternalClientOptions.ApiKey)} is not a valid HTTP header value in section '{name}'.");
+        }
+
         if (string.IsNullOrWhiteSpace(options.HeaderName))
         {
             failures.Add($"{nameof(InternalClientOptions.HeaderName)} is required in section '{name}'.");
         }
-        else if (!IsValidHeaderName(options.HeaderName))
+        else if (!IsValidHeader(options.HeaderName, "value"))
         {
             failures.Add($"{nameof(InternalClientOptions.HeaderName)} is not a valid HTTP header name in section '{name}'.");
         }
@@ -36,9 +41,17 @@ internal sealed class InternalClientOptionsValidator : IValidateOptions<Internal
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 
-    private static bool IsValidHeaderName(string headerName)
+    private static bool IsValidHeader(string headerName, string value)
     {
         using var request = new HttpRequestMessage();
-        return request.Headers.TryAddWithoutValidation(headerName, "value");
+        try
+        {
+            request.Headers.Add(headerName, value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 }
