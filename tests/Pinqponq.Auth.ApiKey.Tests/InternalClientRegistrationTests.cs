@@ -10,9 +10,9 @@ public sealed class InternalClientRegistrationTests
 {
     private const string Section = "UsersClient";
 
-    private static IConfiguration Config(params (string Key, string? Value)[] values) =>
+    private static IConfiguration BuildConfiguration(params (string Key, string? Value)[] values) =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(values.Select(v => new KeyValuePair<string, string?>($"{Section}:{v.Key}", v.Value)))
+            .AddInMemoryCollection(values.Select(setting => new KeyValuePair<string, string?>($"{Section}:{setting.Key}", setting.Value)))
             .Build();
 
     private static (string Key, string? Value)[] Valid() =>
@@ -32,7 +32,7 @@ public sealed class InternalClientRegistrationTests
     [Fact]
     public void Sets_base_address_with_trailing_slash_timeout_and_key_header()
     {
-        using var provider = Build(Config([.. Valid(), ("TimeoutSeconds", "12")]));
+        using var provider = Build(BuildConfiguration([.. Valid(), ("TimeoutSeconds", "12")]));
 
         var http = ((UsersClient)provider.GetRequiredService<IUsersClient>()).Http;
 
@@ -44,7 +44,7 @@ public sealed class InternalClientRegistrationTests
     [Fact]
     public void Keeps_existing_trailing_slash_and_path()
     {
-        using var provider = Build(Config(
+        using var provider = Build(BuildConfiguration(
             ("BaseUrl", "https://users.internal/api/"), ("ApiKey", "k"), ("HeaderName", "X-K")));
 
         var http = ((UsersClient)provider.GetRequiredService<IUsersClient>()).Http;
@@ -55,7 +55,7 @@ public sealed class InternalClientRegistrationTests
     [Fact]
     public void Adds_trailing_slash_after_a_path_so_relative_requests_keep_it()
     {
-        using var provider = Build(Config(
+        using var provider = Build(BuildConfiguration(
             ("BaseUrl", "https://users.internal/api"), ("ApiKey", "k"), ("HeaderName", "X-K")));
 
         var http = ((UsersClient)provider.GetRequiredService<IUsersClient>()).Http;
@@ -67,7 +67,7 @@ public sealed class InternalClientRegistrationTests
     [Fact]
     public void Timeout_defaults_to_five_seconds()
     {
-        using var provider = Build(Config(Valid()));
+        using var provider = Build(BuildConfiguration(Valid()));
 
         var http = ((UsersClient)provider.GetRequiredService<IUsersClient>()).Http;
 
@@ -78,7 +78,7 @@ public sealed class InternalClientRegistrationTests
     public void Two_clients_share_one_section()
     {
         var services = new ServiceCollection();
-        var configuration = Config(Valid());
+        var configuration = BuildConfiguration(Valid());
         services.AddInternalApiKeyClient<IUsersClient, UsersClient>(configuration, Section);
         services.AddInternalApiKeyClient<IOrdersClient, OrdersClient>(configuration, Section);
         using var provider = services.BuildServiceProvider();
@@ -121,7 +121,7 @@ public sealed class InternalClientRegistrationTests
     public void Named_client_gets_the_same_settings()
     {
         var services = new ServiceCollection();
-        services.AddInternalApiKeyClient("users", Config(Valid()), Section);
+        services.AddInternalApiKeyClient("users", BuildConfiguration(Valid()), Section);
         using var provider = services.BuildServiceProvider();
 
         var http = provider.GetRequiredService<IHttpClientFactory>().CreateClient("users");
@@ -136,7 +136,7 @@ public sealed class InternalClientRegistrationTests
         var services = new ServiceCollection();
         var recorder = new RecordingHandler();
 
-        services.AddInternalApiKeyClient<IUsersClient, UsersClient>(Config(Valid()), Section)
+        services.AddInternalApiKeyClient<IUsersClient, UsersClient>(BuildConfiguration(Valid()), Section)
             .ConfigurePrimaryHttpMessageHandler(() => recorder);
         using var provider = services.BuildServiceProvider();
         var http = ((UsersClient)provider.GetRequiredService<IUsersClient>()).Http;
@@ -165,7 +165,7 @@ public sealed class InternalClientRegistrationTests
     [InlineData("BaseUrl", "ftp://users.internal")]
     public void Bad_base_url_fails_with_property_and_section(string property, string value)
     {
-        using var provider = Build(Config(Replace(property, value)));
+        using var provider = Build(BuildConfiguration(Replace(property, value)));
 
         var exception = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IUsersClient>());
@@ -180,7 +180,7 @@ public sealed class InternalClientRegistrationTests
     [InlineData("HeaderName", "  ")]
     public void Empty_key_or_header_name_fails_with_property_and_section(string property, string value)
     {
-        using var provider = Build(Config(Replace(property, value)));
+        using var provider = Build(BuildConfiguration(Replace(property, value)));
 
         var exception = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IUsersClient>());
@@ -189,9 +189,21 @@ public sealed class InternalClientRegistrationTests
     }
 
     [Fact]
+    public void Key_with_a_line_break_fails_without_printing_the_key()
+    {
+        using var provider = Build(BuildConfiguration(Replace("ApiKey", "bad\r\nkey")));
+
+        var exception = Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IUsersClient>());
+
+        Assert.Contains($"ApiKey is not a valid HTTP header value in section '{Section}'.", exception.Message);
+        Assert.DoesNotContain("bad", exception.Message);
+    }
+
+    [Fact]
     public void Header_name_that_is_not_a_header_fails()
     {
-        using var provider = Build(Config(Replace("HeaderName", "Bad Header")));
+        using var provider = Build(BuildConfiguration(Replace("HeaderName", "Bad Header")));
 
         var exception = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IUsersClient>());
@@ -204,7 +216,7 @@ public sealed class InternalClientRegistrationTests
     [InlineData("-3")]
     public void Non_positive_timeout_fails_with_property_and_section(string value)
     {
-        using var provider = Build(Config([.. Valid(), ("TimeoutSeconds", value)]));
+        using var provider = Build(BuildConfiguration([.. Valid(), ("TimeoutSeconds", value)]));
 
         var exception = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IUsersClient>());
@@ -227,7 +239,7 @@ public sealed class InternalClientRegistrationTests
     public void Invalid_section_stops_host_startup()
     {
         var services = new ServiceCollection();
-        services.AddInternalApiKeyClient<IUsersClient, UsersClient>(Config(("BaseUrl", "https://users.internal")), Section);
+        services.AddInternalApiKeyClient<IUsersClient, UsersClient>(BuildConfiguration(("BaseUrl", "https://users.internal")), Section);
         using var provider = services.BuildServiceProvider();
 
         Assert.Throws<OptionsValidationException>(provider.GetRequiredService<IStartupValidator>().Validate);
@@ -237,7 +249,7 @@ public sealed class InternalClientRegistrationTests
     public void Registration_arguments_are_checked()
     {
         var services = new ServiceCollection();
-        var configuration = Config(Valid());
+        var configuration = BuildConfiguration(Valid());
 
         Assert.Throws<ArgumentNullException>(
             () => InternalClientServiceCollectionExtensions.AddInternalApiKeyClient<IUsersClient, UsersClient>(null!, configuration, Section));
@@ -252,7 +264,7 @@ public sealed class InternalClientRegistrationTests
     [Fact]
     public void Key_is_not_part_of_the_failure_message()
     {
-        using var provider = Build(Config(Replace("BaseUrl", "")));
+        using var provider = Build(BuildConfiguration(Replace("BaseUrl", "")));
 
         var exception = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IUsersClient>());
@@ -261,7 +273,7 @@ public sealed class InternalClientRegistrationTests
     }
 
     private static (string Key, string? Value)[] Replace(string property, string value) =>
-        [.. Valid().Where(v => v.Key != property), (property, value)];
+        [.. Valid().Where(setting => setting.Key != property), (property, value)];
 
     private interface IUsersClient;
 
