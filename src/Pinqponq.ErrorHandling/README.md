@@ -143,8 +143,12 @@ gets the `ArgumentException` status unless it has its own mapping.
 | `ArgumentException`, `FormatException`, `InvalidOperationException` | 400 |
 
 `Map<TException>(status)` adds or replaces a mapping (status 400–599); `RemoveMapping<TException>()`
-leaves that type to the next resolver and the built-in table. An exception type without a mapping is
-not handled here either.
+leaves that type to the next resolver and the built-in table, unless a base type is still mapped. An
+exception type without a mapping is not handled here either.
+
+The whole message must be the code. `new ArgumentException(code, nameof(id))` has the message
+`code (Parameter 'id')`, which is not a registered code, so throw an `ArgumentException` code without a
+parameter name.
 
 A message that is not a registered code is answered by `UnknownMessageBehavior`:
 
