@@ -9,6 +9,8 @@ namespace Pinqponq.ErrorHandling;
 /// </summary>
 public sealed class ResponseCodeExceptionOptions
 {
+    private const int HighestErrorStatusCode = 599;
+
     private readonly HashSet<string> _responseCodes = new(StringComparer.Ordinal);
 
     private readonly Dictionary<Type, int> _statusCodes = new()
@@ -74,13 +76,16 @@ public sealed class ResponseCodeExceptionOptions
         where TException : Exception
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(statusCode, StatusCodes.Status400BadRequest);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(statusCode, 599);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(statusCode, HighestErrorStatusCode);
 
         _statusCodes[typeof(TException)] = statusCode;
         return this;
     }
 
-    /// <summary>Removes the mapping of <typeparamref name="TException"/>, so the next resolver or the built-in mapping answers it.</summary>
+    /// <summary>
+    /// Removes the mapping of <typeparamref name="TException"/>. Unless a base type is still mapped, the next resolver
+    /// or the built-in mapping then answers it.
+    /// </summary>
     public ResponseCodeExceptionOptions RemoveMapping<TException>()
         where TException : Exception
     {

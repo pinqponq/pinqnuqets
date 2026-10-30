@@ -53,6 +53,30 @@ public sealed class ResponseCodeExceptionTests
     }
 
     [Fact]
+    public async Task Code_with_a_parameter_name_is_not_a_registered_code()
+    {
+        var harness = CreateHarness(options => options.AddResponseCodes(typeof(SampleResponseCodes)));
+
+        var httpContext = await harness.InvokeAsync(_ => throw new ArgumentException(SampleResponseCodes.OrderLocked, "orderId"));
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(StatusCodes.Status500InternalServerError, httpContext.Response.StatusCode);
+        Assert.Equal(CommonErrorCodes.GeneralError, body.RootElement.GetProperty("responseCode").GetString());
+    }
+
+    [Fact]
+    public async Task Removing_a_subtype_mapping_keeps_the_base_type_mapping()
+    {
+        var harness = CreateHarness(options => options
+            .AddResponseCodes(typeof(SampleResponseCodes))
+            .RemoveMapping<ArgumentNullException>());
+
+        var httpContext = await harness.InvokeAsync(_ => throw new ArgumentNullException(paramName: null, SampleResponseCodes.OrderLocked));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task Unknown_message_keeps_the_status_and_the_message_when_passed_through()
     {
         var harness = CreateHarness(options => options.UnknownMessageBehavior = UnknownMessageBehavior.PassMessageThrough);
