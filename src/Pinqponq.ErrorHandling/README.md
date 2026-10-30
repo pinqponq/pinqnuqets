@@ -118,6 +118,46 @@ With localization on, a resolver code the catalog does not know becomes the reso
 `FallbackResponseCode`, or the options' one.
 [Pinqponq.ErrorHandling.Postgres](../Pinqponq.ErrorHandling.Postgres/README.md) is one.
 
+## Response codes thrown as exception messages
+
+Services that throw their response code as the exception message
+(`throw new InvalidOperationException(ErrorCodes.UserNotFound)`) register the codes once:
+
+```csharp
+builder.Services.AddPinqponqResponseCodeExceptions(options =>
+{
+    options.AddResponseCodes(typeof(ErrorCodes));             // the public const string fields
+    options.AddResponseCodes([CommonErrorCodes.ApiBodyRequired]);
+    options.Map<OrderLimitException>(StatusCodes.Status429TooManyRequests);
+});
+```
+
+A mapped exception is answered with the status of its type and its message as the response code. The
+mapping of the most specific type in the exception's type hierarchy is used, so `ArgumentNullException`
+gets the `ArgumentException` status unless it has its own mapping.
+
+| Exception type (and subtypes) | Status |
+|---|---|
+| `UnauthorizedAccessException` | 401 |
+| `KeyNotFoundException` | 404 |
+| `ArgumentException`, `FormatException`, `InvalidOperationException` | 400 |
+
+`Map<TException>(status)` adds or replaces a mapping (status 400–599); `RemoveMapping<TException>()`
+leaves that type to the next resolver and the built-in table. An exception type without a mapping is
+not handled here either.
+
+A message that is not a registered code is answered by `UnknownMessageBehavior`:
+
+| `UnknownMessageBehavior` | Answer |
+|---|---|
+| `AnswerInternalError` (default) | 500 with `general_error`, so a framework message never reaches the client as a code. |
+| `PassMessageThrough` | The mapped status with the message as the code. With localization on, a code the catalog does not know becomes `FallbackResponseCode`. |
+
+With `AnswerInternalError`, at least one code must be registered; otherwise the host stops on startup
+with an `OptionsValidationException`. The registration is an `IExceptionResolver`: a resolver
+registered before it wins, so a product exception that always answers one fixed code goes in the
+product's own resolver, registered first.
+
 ## Writing an error without an exception
 
 `AddPinqponqErrorHandling` also registers `IErrorResponseWriter`. Use it when code answers a
@@ -162,6 +202,8 @@ Pinqloq record that carries the error. Nothing is set when the response had alre
 - **`ErrorHandlingOptions`** — configuration described above.
 - **`ErrorResponse`** — the response contract, serialized camelCase:
   `status` (always `false`), `statusCode`, `message`, `responseCode`, `traceId`.
+- **`AddPinqponqResponseCodeExceptions`** / **`ResponseCodeExceptionOptions`** / **`UnknownMessageBehavior`** — response
+  codes thrown as exception messages, described above.
 - **`ExceptionStatusMapping`** — a `readonly record struct(int StatusCode, string ResponseCode)`
   returned by a custom `StatusMappingResolver`.
 - **`ExceptionMapping`** *(internal)* — the built-in exception → (status code,
