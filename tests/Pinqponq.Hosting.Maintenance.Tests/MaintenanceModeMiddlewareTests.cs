@@ -112,8 +112,8 @@ public sealed class MaintenanceModeMiddlewareTests
     {
         await using var host = await MaintenanceModeHost.Start(new Dictionary<string, string?>());
 
-        // The options monitor builds the new options inside the reload callback, so the in-memory reload throws here;
-        // a file reload runs that callback on a background task instead.
+        // The options monitor builds the new options inside the reload callback, so the in-memory reload throws here.
+        // A file reload runs that callback on a background task instead.
         var reloadException = Record.Exception(() => host.ReloadSetting("MaintenanceMode:StatusCode", "200"));
         var apiException = await Assert.ThrowsAsync<OptionsValidationException>(() => host.Send(MaintenanceModeHost.ApiPath));
         await Assert.ThrowsAsync<OptionsValidationException>(() => host.Send(MaintenanceModeHost.HealthPath));
