@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Push.DeviceTokens` 1.0.0: the device token store that every backend with push notifications wrote
+  again. `ApplyPinqponqDeviceTokens` maps a `DeviceToken` table (unique index on the token; table name and schema are
+  options) into the application's `DbContext`, and `AddPinqponqDeviceTokens<TContext>` registers
+  `IDeviceTokenRegistry`: `Register`, `Unregister`, `GetTokens`, `RemoveTokens`. A token moves to the latest user; with
+  a device identifier, the user's row for the device takes a rotated token. `MaxTokenLength` (4096), the accepted
+  `Platforms` (`android`, `ios`, `web`) and the identifier length are options. It registers an
+  `IFcmInvalidTokenHandler` that removes the tokens FCM reports as invalid, `IDeviceTokenRegisteredHandler` runs
+  product code after a registration, and `MapPinqponqDeviceTokenEndpoints` is an opt-in register/unregister API.
+  Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
