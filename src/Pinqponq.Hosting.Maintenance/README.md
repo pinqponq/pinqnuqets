@@ -111,4 +111,4 @@ every problem:
 - an `ExemptPathPrefixes` entry that does not start with `/`.
 
 An invalid reload makes every request fail until the configuration is valid again, because the options cannot
-be read.
+be read. This includes the exempt paths, such as `/health`.

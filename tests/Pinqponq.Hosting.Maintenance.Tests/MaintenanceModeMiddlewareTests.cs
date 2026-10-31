@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Pinqponq.Contracts;
 using Pinqponq.ErrorHandling.DependencyInjection;
 using Pinqponq.Hosting.Maintenance.DependencyInjection;
@@ -104,6 +105,24 @@ public sealed class MaintenanceModeMiddlewareTests
         Assert.Equal(HttpStatusCode.OK, beforeResponse.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, duringResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, afterResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Invalid_reload_fails_every_request_until_the_configuration_is_valid_again()
+    {
+        await using var host = await MaintenanceModeHost.Start(new Dictionary<string, string?>());
+
+        // The options monitor builds the new options inside the reload callback, so the in-memory reload throws here;
+        // a file reload runs that callback on a background task instead.
+        var reloadException = Record.Exception(() => host.ReloadSetting("MaintenanceMode:StatusCode", "200"));
+        var apiException = await Assert.ThrowsAsync<OptionsValidationException>(() => host.Send(MaintenanceModeHost.ApiPath));
+        await Assert.ThrowsAsync<OptionsValidationException>(() => host.Send(MaintenanceModeHost.HealthPath));
+        host.ReloadSetting("MaintenanceMode:StatusCode", "503");
+        using var validResponse = await host.Send(MaintenanceModeHost.ApiPath);
+
+        Assert.NotNull(reloadException);
+        Assert.Contains("StatusCode must be from 400 to 599.", apiException.Failures);
+        Assert.Equal(HttpStatusCode.OK, validResponse.StatusCode);
     }
 
     [Theory]
