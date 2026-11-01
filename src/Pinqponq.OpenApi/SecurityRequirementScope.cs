@@ -5,8 +5,9 @@ public enum SecurityRequirementScope
 {
     /// <summary>
     /// Operations whose endpoint has authorization metadata (<c>[Authorize]</c> or <c>RequireAuthorization()</c>)
-    /// and no <c>[AllowAnonymous]</c>. An operation without endpoint metadata also gets no requirement. A fallback authorization policy is not read, so an operation that is
-    /// protected only by the fallback policy gets no requirement.
+    /// and no <c>[AllowAnonymous]</c>. An operation without endpoint metadata gets no requirement.
+    /// A fallback authorization policy is not read, so an operation that is protected only by the fallback
+    /// policy gets no requirement.
     /// </summary>
     AuthorizedOperations = 0,
 
