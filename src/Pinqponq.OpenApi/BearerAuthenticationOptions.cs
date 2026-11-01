@@ -13,8 +13,8 @@ public sealed class BearerAuthenticationOptions
 
     /// <summary>
     /// Name of the ASP.NET Core authentication scheme that must be registered for the document to publish this
-    /// scheme. Default <c>Bearer</c>, the name <c>AddJwtBearer()</c> registers. Set to <c>null</c> to publish the
-    /// scheme without checking.
+    /// scheme. Default <c>Bearer</c>, the name <c>AddJwtBearer()</c> registers. Set to <c>null</c> or an empty string
+    /// to publish the scheme without checking. Configuration can only set the empty string.
     /// </summary>
     public string? AuthenticationScheme { get; set; } = BearerName;
 

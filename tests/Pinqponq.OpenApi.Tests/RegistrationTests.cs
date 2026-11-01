@@ -22,6 +22,8 @@ public sealed class RegistrationTests
                 ["OpenApi:ApiKeyAuthentication:Enabled"] = "true",
                 ["OpenApi:ApiKeyAuthentication:HeaderName"] = "X-Api-Key",
                 ["OpenApi:BearerAuthentication:BearerFormat"] = "opaque",
+                ["OpenApi:BearerAuthentication:AuthenticationScheme"] = "",
+                ["OpenApi:AuthorizationPolicy"] = "",
             })
             .Build()
             .GetSection(PinqponqOpenApiOptions.SectionName);
@@ -37,6 +39,8 @@ public sealed class RegistrationTests
         Assert.True(options.ApiKeyAuthentication.Enabled);
         Assert.Equal("X-Api-Key", options.ApiKeyAuthentication.HeaderName);
         Assert.Equal("opaque", options.BearerAuthentication.BearerFormat);
+        Assert.Equal(string.Empty, options.BearerAuthentication.AuthenticationScheme);
+        Assert.Equal(string.Empty, options.AuthorizationPolicy);
     }
 
     [Fact]

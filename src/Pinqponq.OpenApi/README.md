@@ -73,7 +73,7 @@ from a configuration section (for example `OpenApi`) and then runs `configure`.
 |---|---|---|
 | `Enabled` | `true` | |
 | `SchemeName` | `Bearer` | Key in `components.securitySchemes`. |
-| `AuthenticationScheme` | `Bearer` | The scheme is published only when this ASP.NET Core authentication scheme is registered. `null` publishes it without the check. |
+| `AuthenticationScheme` | `Bearer` | The scheme is published only when this ASP.NET Core authentication scheme is registered. `null` or an empty string publishes it without the check (configuration can only set the empty string). |
 | `BearerFormat` | `JWT` | |
 | `Description` | `Bearer access token.` | |
 

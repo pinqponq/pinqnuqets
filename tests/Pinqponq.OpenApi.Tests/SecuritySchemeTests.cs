@@ -30,11 +30,14 @@ public sealed class SecuritySchemeTests
         Assert.False(document.TryGetSecurity(OpenApiHost.SecurePath, out _));
     }
 
-    [Fact]
-    public async Task Bearer_scheme_is_published_without_the_check_when_no_authentication_scheme_is_named()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Bearer_scheme_is_published_without_the_check_when_no_authentication_scheme_is_named(
+        string? authenticationScheme)
     {
         await using var host = await OpenApiHost.Start(
-            options => options.BearerAuthentication.AuthenticationScheme = null,
+            options => options.BearerAuthentication.AuthenticationScheme = authenticationScheme,
             registerBearerAuthentication: false);
 
         using var document = await host.GetDocument();
