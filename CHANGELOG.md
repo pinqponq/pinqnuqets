@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Identity.Otp.Mail` 1.0.0: branded HTML email for the codes of `Pinqponq.Identity.Otp`.
+  `AddPinqponqOtpMail(configure)` makes `IOtpService` send its email codes through `OtpMailMessageComposer`:
+  the recipient's language comes from `IOtpMailLanguageResolver` (default: none, so `DefaultLanguage` is used),
+  the texts of that language get `{ProductName}`, `{Code}` and `{Minutes}` filled in, and `IOtpMailTemplate`
+  (default `OtpMailTemplate`: optional logo header, code panel with its lifetime, text, optional button,
+  footer, every value HTML-encoded) renders the body. A plain-text version is added. The lifetime in minutes
+  is `OtpOptions.Ttl` rounded up, at least 1. English is the only built-in language. `ProductName`,
+  `LogoUrl`, `CallToActionUrl`, the colors, the texts and a `DefaultLanguage` that has texts are validated at
+  startup. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
@@ -129,6 +138,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Pinqponq.Identity.Otp` 1.1.0: `IOtpService` builds its code emails through `IOtpMessageComposer`
+  (`ComposeEmailAsync(OtpMessageContext)` returns an `OtpEmailContent` with the subject, body, HTML flag and
+  optional plain-text version). The default `TemplateOtpMessageComposer`, registered by `AddPinqponqOtp`,
+  fills `EmailSubjectTemplate` and `EmailBodyTemplate` as before, so the sent email is unchanged. A composer
+  registered by the application or by `Pinqponq.Identity.Otp.Mail` replaces it. `OtpService` has a new
+  constructor that takes the composer; the old one keeps working.
 - `Pinqponq.ErrorHandling` 1.1.0: optional localized error responses (`AddPinqponqErrorLocalization`:
   the response code is looked up in a message catalog — embedded `general_error`/`api_*` messages
   in 12 languages plus the application's `Localization/*.json` — and the message is returned in the
