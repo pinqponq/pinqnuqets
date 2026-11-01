@@ -19,6 +19,11 @@ internal static class SchemaIdFactory
 
     private static string CreateTypeId(Type type)
     {
+        if (type.GetElementType() is { } elementType)
+        {
+            return $"ArrayOf{CreateTypeId(elementType)}";
+        }
+
         var qualifiedName = CreateQualifiedName(type).Replace('.', '_');
         if (!type.IsGenericType)
         {
@@ -40,18 +45,14 @@ internal static class SchemaIdFactory
         return type.Namespace is null ? name : $"{type.Namespace}.{name}";
     }
 
-    private static string RemoveGenericArity(string typeName)
-    {
-        var arityStart = typeName.IndexOf('`', StringComparison.Ordinal);
-        return arityStart < 0 ? typeName : typeName[..arityStart];
-    }
+    private static string RemoveGenericArity(string typeName) => typeName.Split('`')[0];
 
     private static string RemoveCharactersNotAllowedInIds(string id)
     {
         var allowed = new StringBuilder(id.Length);
         foreach (var character in id)
         {
-            if (char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '_')
+            if (char.IsAsciiLetterOrDigit(character) || character == '_')
             {
                 allowed.Append(character);
             }

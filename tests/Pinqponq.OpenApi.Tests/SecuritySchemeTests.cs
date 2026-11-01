@@ -126,6 +126,17 @@ public sealed class SecuritySchemeTests
     }
 
     [Fact]
+    public async Task Requirement_is_added_to_an_operation_authorized_with_a_policy_built_in_place()
+    {
+        await using var host = await OpenApiHost.Start();
+
+        using var document = await host.GetDocument();
+
+        Assert.True(document.TryGetSecurity(OpenApiHost.PolicyBuilderPath, out var security));
+        Assert.Equal(["Bearer"], security.RequirementSchemeNames());
+    }
+
+    [Fact]
     public async Task Requirement_is_not_added_to_an_operation_that_allows_anonymous_callers()
     {
         await using var host = await OpenApiHost.Start();

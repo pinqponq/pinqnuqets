@@ -20,8 +20,9 @@ using Xunit;
 namespace Pinqponq.OpenApi.Tests;
 
 /// <summary>
-/// A test server with Pinqponq OpenAPI and four endpoints: one needs authorization, one allows anonymous
-/// callers inside an authorized group, one has no authorization metadata, and one is a model-returning endpoint.
+/// A test server with Pinqponq OpenAPI and five endpoints: one needs authorization, one allows anonymous
+/// callers inside an authorized group, one has no authorization metadata, one is a model-returning endpoint,
+/// and one needs a policy built in place with <c>RequireAuthorization(builder)</c>.
 /// </summary>
 internal sealed class OpenApiHost : IAsyncDisposable
 {
@@ -31,6 +32,7 @@ internal sealed class OpenApiHost : IAsyncDisposable
     public const string AllowAnonymousPath = "/guarded/anonymous";
     public const string GuardedPath = "/guarded/private";
     public const string ModelPath = "/model";
+    public const string PolicyBuilderPath = "/policy-builder";
     public const string DefaultDocumentPath = "/openapi/v1.json";
     public const string DefaultScalarPath = "/scalar/v1";
 
@@ -129,6 +131,7 @@ internal sealed class OpenApiHost : IAsyncDisposable
         guarded.MapGet("/anonymous", () => "anonymous").AllowAnonymous();
 
         endpoints.MapGet(ModelPath, () => new Nested.OrderModel("id"));
+        endpoints.MapGet(PolicyBuilderPath, () => "policy").RequireAuthorization(policy => policy.RequireClaim("docs"));
     }
 
     public sealed class TestAuthenticationHandler(

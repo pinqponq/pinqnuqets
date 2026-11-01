@@ -63,7 +63,7 @@ from a configuration section (for example `OpenApi`) and then runs `configure`.
 | `ApiKeyAuthentication` | off | An API key scheme sent in a header. |
 | `SecurityRequirementScope` | `AuthorizedOperations` | `AllOperations` adds a requirement to every operation. |
 | `ServerUrlFromRequest` | `true` | `servers` is the scheme, host and path base of the request, without a trailing slash. When `false`, ASP.NET Core's own entry is kept, and it ends with a slash. |
-| `SchemaIdNaming` | `Default` | `FullName` builds schema ids from the namespace, the declaring types and the type name, joined with `_`. A generic type adds `Of` and its type arguments joined with `And` (`My_App_PageOfMy_App_Order`). Primitives, arrays, lists and dictionaries stay inline. |
+| `SchemaIdNaming` | `Default` | `FullName` builds schema ids from the namespace, the declaring types and the type name, joined with `_`. A generic type adds `Of` and its type arguments joined with `And` (`My_App_PageOfMy_App_Order`), and an array type argument adds `ArrayOf` before its element type. Primitives, arrays, lists and dictionaries stay inline. |
 | `ExposeIn` | `DevelopmentOnly` | `Always` or `Never` serve the document in every or in no environment. |
 | `AuthorizationPolicy` | none | Policy required to read the document and the reference. An empty string requires an authenticated user. |
 | `OpenApiRoutePattern` | `/openapi/{documentName}.json` | Must contain `{documentName}`. The document is named `v1`. |

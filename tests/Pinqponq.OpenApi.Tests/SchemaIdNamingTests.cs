@@ -43,6 +43,18 @@ public sealed class SchemaIdNamingTests
     }
 
     [Fact]
+    public void Full_name_id_of_an_array_type_argument_differs_from_the_id_of_its_element_type()
+    {
+        var arrayArgumentId = CreateFullNameId(typeof(Page<Nested.OrderModel[], int>));
+        var elementArgumentId = CreateFullNameId(typeof(Page<Nested.OrderModel, int>));
+
+        Assert.Equal(
+            "Pinqponq_OpenApi_Tests_PageOfArrayOfPinqponq_OpenApi_Tests_Nested_OrderModelAndSystem_Int32",
+            arrayArgumentId);
+        Assert.NotEqual(elementArgumentId, arrayArgumentId);
+    }
+
+    [Fact]
     public void Full_name_id_of_a_type_nested_in_a_generic_type_drops_the_generic_arity()
     {
         var id = CreateFullNameId(typeof(Page<int, int>.Item));
