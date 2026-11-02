@@ -81,12 +81,13 @@ internal sealed class FirebaseSigningKeyCache : IDisposable
         response.EnsureSuccessStatusCode();
 
         var keySetJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var keys = new JsonWebKeySet(keySetJson).GetSigningKeys();
+        var signingKeys = new JsonWebKeySet(keySetJson).GetSigningKeys().ToArray();
 
         var downloadedAt = _timeProvider.GetUtcNow();
         var cacheDuration = response.Headers.CacheControl?.MaxAge
             ?? _firebaseOptions.KeysCacheDurationWithoutMaxAge;
-        return new CachedKeys(keys.ToArray(), downloadedAt, downloadedAt + cacheDuration);
+        var expiresAt = downloadedAt + cacheDuration;
+        return new CachedKeys(signingKeys, downloadedAt, expiresAt);
     }
 
     private sealed record CachedKeys(

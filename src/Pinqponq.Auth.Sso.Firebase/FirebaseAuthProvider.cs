@@ -23,6 +23,7 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
     private const string IssuerPrefix = "https://securetoken.google.com/";
     private const string InvalidTokenError = "Invalid Firebase ID token.";
     private const string AuthTimeClaim = "auth_time";
+    private const string IssuedAtClaim = "iat";
     private const string EmailClaim = "email";
     private const string EmailVerifiedClaim = "email_verified";
     private const string NameClaim = "name";
@@ -105,8 +106,13 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
     /// </summary>
     public bool IsFirebaseIdToken(string idToken)
     {
-        return TryReadToken(idToken, out var unvalidatedToken, out _)
-            && string.Equals(unvalidatedToken.Issuer, _expectedIssuer, StringComparison.Ordinal);
+        if (!TryReadToken(idToken, out var unvalidatedToken, out var readException))
+        {
+            _logger.LogDebug(readException, "Firebase ID token could not be read to check its issuer.");
+            return false;
+        }
+
+        return string.Equals(unvalidatedToken.Issuer, _expectedIssuer, StringComparison.Ordinal);
     }
 
     private bool TryReadToken(
@@ -165,7 +171,7 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
         if (!AreTimeClaimsInThePast(token))
         {
-            return Rejected("auth_time is missing, or auth_time or iat is in the future");
+            return Rejected("auth_time or iat is missing or in the future");
         }
 
         token.TryGetPayloadValue<bool>(EmailVerifiedClaim, out var isEmailVerified);
@@ -197,14 +203,15 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
     private bool AreTimeClaimsInThePast(JsonWebToken token)
     {
-        var latestAcceptedTime = _timeProvider.GetUtcNow() + _firebaseOptions.ClockSkew;
-        if (!token.TryGetPayloadValue<long>(AuthTimeClaim, out var authTimeSeconds))
+        if (!token.TryGetPayloadValue<long>(AuthTimeClaim, out var authTimeSeconds)
+            || !token.TryGetPayloadValue<long>(IssuedAtClaim, out var issuedAtSeconds))
         {
             return false;
         }
 
+        var latestAcceptedTime = _timeProvider.GetUtcNow() + _firebaseOptions.ClockSkew;
         var authTime = DateTimeOffset.FromUnixTimeSeconds(authTimeSeconds);
-        var issuedAt = new DateTimeOffset(token.IssuedAt, TimeSpan.Zero);
+        var issuedAt = DateTimeOffset.FromUnixTimeSeconds(issuedAtSeconds);
         return authTime <= latestAcceptedTime && issuedAt <= latestAcceptedTime;
     }
 
