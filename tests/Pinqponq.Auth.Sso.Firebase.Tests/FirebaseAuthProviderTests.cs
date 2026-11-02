@@ -1,0 +1,472 @@
+using System.Net;
+using Pinqponq.Auth.Sso.Abstractions;
+using Xunit;
+
+namespace Pinqponq.Auth.Sso.Firebase.Tests;
+
+public sealed class FirebaseAuthProviderTests
+{
+    private const string InvalidTokenError = "Invalid Firebase ID token.";
+
+    [Fact]
+    public void ProviderName_is_Firebase()
+    {
+        using var server = new FirebaseTestServer();
+
+        Assert.Equal("Firebase", server.Provider.ProviderName);
+        Assert.Equal("Firebase", FirebaseAuthProvider.Name);
+    }
+
+    [Fact]
+    public async Task Valid_token_maps_the_user_and_the_sign_in_provider()
+    {
+        using var server = new FirebaseTestServer();
+
+        var firebaseResult = await server.Provider.AuthenticateFirebaseAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        Assert.True(firebaseResult.Result.Succeeded);
+        Assert.Null(firebaseResult.Result.Error);
+        Assert.Equal("apple.com", firebaseResult.SignInProvider);
+        var user = firebaseResult.Result.User!;
+        Assert.Equal("firebase-uid-1", user.Subject);
+        Assert.Equal("Firebase", user.Provider);
+        Assert.Equal("person@example.com", user.Email);
+        Assert.True(user.EmailVerified);
+        Assert.Equal("Sample Person", user.Name);
+        Assert.Equal("https://example.com/picture.png", user.Picture);
+        Assert.Null(user.GivenName);
+        Assert.Null(user.FamilyName);
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_returns_the_shared_result()
+    {
+        using var server = new FirebaseTestServer();
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("firebase-uid-1", result.User!.Subject);
+    }
+
+    [Fact]
+    public async Task Token_without_optional_claims_succeeds_with_empty_profile_fields()
+    {
+        using var server = new FirebaseTestServer();
+        var token = server.CreateToken(claims =>
+        {
+            claims.Remove("email");
+            claims.Remove("email_verified");
+            claims.Remove("name");
+            claims.Remove("picture");
+            claims.Remove("firebase");
+        });
+
+        var firebaseResult = await server.Provider.AuthenticateFirebaseAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(firebaseResult.Result.Succeeded);
+        var user = firebaseResult.Result.User!;
+        Assert.Null(user.Email);
+        Assert.False(user.EmailVerified);
+        Assert.Null(user.Name);
+        Assert.Null(user.Picture);
+        Assert.Null(firebaseResult.SignInProvider);
+    }
+
+    [Theory]
+    [InlineData("iss", "https://securetoken.google.com/other-project")]
+    [InlineData("iss", "https://accounts.google.com")]
+    [InlineData("aud", "other-project")]
+    [InlineData("sub", "")]
+    public async Task Token_with_wrong_claim_fails(string claimName, string claimValue)
+    {
+        using var server = new FirebaseTestServer();
+        var token = server.CreateToken(claims => claims[claimName] = claimValue);
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Fact]
+    public async Task Token_without_subject_fails()
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("sub")));
+    }
+
+    [Fact]
+    public async Task Expired_token_fails()
+    {
+        using var server = new FirebaseTestServer();
+        var token = server.CreateToken();
+        server.Time.Advance(TimeSpan.FromHours(1) + FirebaseAuthOptions.DefaultClockSkew + TimeSpan.FromSeconds(1));
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Fact]
+    public async Task Token_expired_within_the_clock_skew_succeeds()
+    {
+        using var server = new FirebaseTestServer();
+        var token = server.CreateToken();
+        server.Time.Advance(TimeSpan.FromHours(1) + FirebaseAuthOptions.DefaultClockSkew - TimeSpan.FromSeconds(1));
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Token_without_expiry_fails()
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("exp")));
+    }
+
+    [Fact]
+    public async Task Auth_time_in_the_future_fails()
+    {
+        using var server = new FirebaseTestServer();
+        var authTime = server.Time.GetUtcNow() + FirebaseAuthOptions.DefaultClockSkew + TimeSpan.FromSeconds(1);
+        var token = server.CreateToken(claims => claims["auth_time"] = authTime.ToUnixTimeSeconds());
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Fact]
+    public async Task Auth_time_within_the_clock_skew_succeeds()
+    {
+        using var server = new FirebaseTestServer();
+        var authTime = server.Time.GetUtcNow() + FirebaseAuthOptions.DefaultClockSkew;
+        var token = server.CreateToken(claims => claims["auth_time"] = authTime.ToUnixTimeSeconds());
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Missing_auth_time_fails()
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("auth_time")));
+    }
+
+    [Fact]
+    public async Task Issued_at_in_the_future_fails()
+    {
+        using var server = new FirebaseTestServer();
+        var issuedAt = server.Time.GetUtcNow() + FirebaseAuthOptions.DefaultClockSkew + TimeSpan.FromSeconds(1);
+        var token = server.CreateToken(claims => claims["iat"] = issuedAt.ToUnixTimeSeconds());
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Fact]
+    public async Task Configured_clock_skew_is_used()
+    {
+        using var server = new FirebaseTestServer(options => options.ClockSkew = TimeSpan.Zero);
+        var token = server.CreateToken();
+        server.Time.Advance(TimeSpan.FromHours(1) + TimeSpan.FromSeconds(1));
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Fact]
+    public async Task Token_signed_by_a_key_that_is_not_published_fails()
+    {
+        using var server = new FirebaseTestServer();
+        server.AddSigningKey("key-2");
+
+        await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
+    }
+
+    [Fact]
+    public async Task Token_with_a_tampered_payload_fails()
+    {
+        using var server = new FirebaseTestServer();
+        var parts = server.CreateToken().Split('.');
+        var otherPayload = server.CreateToken(claims => claims["sub"] = "someone-else").Split('.')[1];
+        var tamperedToken = string.Join('.', parts[0], otherPayload, parts[2]);
+
+        await AssertInvalidAsync(server, tamperedToken);
+    }
+
+    [Fact]
+    public async Task Unknown_key_id_downloads_the_keys_once_more()
+    {
+        using var server = new FirebaseTestServer();
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        server.AddSigningKey("key-2");
+        server.PublishedKeyIds = ["key-1", "key-2"];
+        server.Time.Advance(FirebaseAuthOptions.DefaultMinimumUnknownKeyRefreshInterval);
+
+        var result = await server.Provider.AuthenticateAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken(keyId: "key-2")));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, server.KeyEndpoint.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task Unknown_key_id_does_not_download_again_within_the_minimum_interval()
+    {
+        using var server = new FirebaseTestServer();
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        server.AddSigningKey("key-2");
+        server.Time.Advance(FirebaseAuthOptions.DefaultMinimumUnknownKeyRefreshInterval - TimeSpan.FromSeconds(1));
+
+        await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
+        await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
+
+        Assert.Single(server.KeyEndpoint.RequestedUris);
+    }
+
+    [Fact]
+    public async Task Unknown_key_id_downloads_only_once_when_the_key_stays_unknown()
+    {
+        using var server = new FirebaseTestServer();
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        server.AddSigningKey("key-2");
+        server.Time.Advance(FirebaseAuthOptions.DefaultMinimumUnknownKeyRefreshInterval);
+
+        await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
+        await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
+
+        Assert.Equal(2, server.KeyEndpoint.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task Keys_are_cached_between_calls()
+    {
+        using var server = new FirebaseTestServer();
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+            Assert.True(result.Succeeded);
+        }
+
+        var requestedUri = Assert.Single(server.KeyEndpoint.RequestedUris);
+        Assert.Equal(FirebaseAuthOptions.DefaultPublicKeysUri, requestedUri);
+    }
+
+    [Fact]
+    public async Task Keys_are_downloaded_again_when_max_age_has_passed()
+    {
+        using var server = new FirebaseTestServer();
+        server.KeyEndpoint.MaxAge = TimeSpan.FromMinutes(10);
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        server.Time.Advance(TimeSpan.FromMinutes(10) - TimeSpan.FromSeconds(1));
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        Assert.Single(server.KeyEndpoint.RequestedUris);
+
+        server.Time.Advance(TimeSpan.FromSeconds(1));
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        Assert.Equal(2, server.KeyEndpoint.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task Keys_without_max_age_are_kept_for_the_configured_duration()
+    {
+        using var server = new FirebaseTestServer(options =>
+            options.KeysCacheDurationWithoutMaxAge = TimeSpan.FromMinutes(30));
+        server.KeyEndpoint.MaxAge = null;
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        server.Time.Advance(TimeSpan.FromMinutes(30) - TimeSpan.FromSeconds(1));
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        Assert.Single(server.KeyEndpoint.RequestedUris);
+
+        server.Time.Advance(TimeSpan.FromSeconds(1));
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        Assert.Equal(2, server.KeyEndpoint.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task Configured_public_keys_uri_is_requested()
+    {
+        var keysUri = new Uri("https://keys.example.com/jwks");
+        using var server = new FirebaseTestServer(options => options.PublicKeysUri = keysUri);
+
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        Assert.Equal(keysUri, Assert.Single(server.KeyEndpoint.RequestedUris));
+    }
+
+    [Fact]
+    public async Task Failed_key_download_throws()
+    {
+        using var server = new FirebaseTestServer();
+        server.KeyEndpoint.StatusCode = HttpStatusCode.ServiceUnavailable;
+
+        var act = () => server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        await Assert.ThrowsAsync<HttpRequestException>(act);
+    }
+
+    [Fact]
+    public async Task RequireEmailVerified_rejects_an_unverified_email()
+    {
+        using var server = new FirebaseTestServer(options => options.RequireEmailVerified = true);
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims["email_verified"] = false));
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("email_verified")));
+    }
+
+    [Fact]
+    public async Task RequireEmailVerified_accepts_a_verified_email()
+    {
+        using var server = new FirebaseTestServer(options => options.RequireEmailVerified = true);
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Unverified_email_is_accepted_by_default()
+    {
+        using var server = new FirebaseTestServer();
+        var token = server.CreateToken(claims => claims["email_verified"] = false);
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.User!.EmailVerified);
+    }
+
+    [Fact]
+    public async Task AllowedSignInProviders_accepts_a_listed_provider()
+    {
+        using var server = new FirebaseTestServer(options =>
+        {
+            options.AllowedSignInProviders.Add("google.com");
+            options.AllowedSignInProviders.Add("apple.com");
+        });
+
+        var firebaseResult = await server.Provider.AuthenticateFirebaseAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        Assert.True(firebaseResult.Result.Succeeded);
+        Assert.Equal("apple.com", firebaseResult.SignInProvider);
+    }
+
+    [Fact]
+    public async Task AllowedSignInProviders_rejects_other_or_missing_providers()
+    {
+        using var server = new FirebaseTestServer(options => options.AllowedSignInProviders.Add("google.com"));
+
+        await AssertInvalidAsync(server, server.CreateToken());
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("firebase")));
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims["firebase"] = "google.com"));
+        await AssertInvalidAsync(server, server.CreateToken(claims =>
+            claims["firebase"] = new Dictionary<string, object> { ["sign_in_provider"] = 5 }));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task Empty_id_token_fails(string idToken)
+    {
+        using var server = new FirebaseTestServer();
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(idToken));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("An ID token is required for Firebase authentication.", result.Error);
+        Assert.Empty(server.KeyEndpoint.RequestedUris);
+    }
+
+    [Fact]
+    public async Task Authorization_code_without_id_token_fails()
+    {
+        using var server = new FirebaseTestServer();
+
+        var result = await server.Provider.AuthenticateAsync(
+            ExternalAuthRequest.FromAuthorizationCode("code", "https://app.example.com/callback"));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("An ID token is required for Firebase authentication.", result.Error);
+    }
+
+    [Theory]
+    [InlineData("not-a-token")]
+    [InlineData("not.a.valid.jwt")]
+    [InlineData("abc.def.ghi")]
+    public async Task Malformed_token_fails_without_downloading_keys(string idToken)
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, idToken);
+
+        Assert.Empty(server.KeyEndpoint.RequestedUris);
+    }
+
+    [Fact]
+    public async Task Null_request_throws()
+    {
+        using var server = new FirebaseTestServer();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => server.Provider.AuthenticateAsync(null!));
+    }
+
+    [Fact]
+    public async Task Cancelled_token_throws()
+    {
+        using var server = new FirebaseTestServer();
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        var act = () => server.Provider.AuthenticateAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken()),
+            cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
+    }
+
+    [Fact]
+    public void IsFirebaseIdToken_is_true_for_this_projects_issuer()
+    {
+        using var server = new FirebaseTestServer();
+
+        Assert.True(server.Provider.IsFirebaseIdToken(server.CreateToken()));
+        Assert.Empty(server.KeyEndpoint.RequestedUris);
+    }
+
+    [Theory]
+    [InlineData("https://accounts.google.com")]
+    [InlineData("https://securetoken.google.com/other-project")]
+    [InlineData("https://securetoken.google.com/sample-project/extra")]
+    public void IsFirebaseIdToken_is_false_for_other_issuers(string issuer)
+    {
+        using var server = new FirebaseTestServer();
+
+        Assert.False(server.Provider.IsFirebaseIdToken(server.CreateToken(claims => claims["iss"] = issuer)));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-token")]
+    [InlineData("abc.def.ghi")]
+    public void IsFirebaseIdToken_is_false_for_malformed_tokens(string idToken)
+    {
+        using var server = new FirebaseTestServer();
+
+        Assert.False(server.Provider.IsFirebaseIdToken(idToken));
+    }
+
+    private static async Task AssertInvalidAsync(FirebaseTestServer server, string idToken)
+    {
+        var firebaseResult = await server.Provider.AuthenticateFirebaseAsync(ExternalAuthRequest.FromIdToken(idToken));
+
+        Assert.False(firebaseResult.Result.Succeeded);
+        Assert.Null(firebaseResult.Result.User);
+        Assert.Equal(InvalidTokenError, firebaseResult.Result.Error);
+        Assert.Null(firebaseResult.SignInProvider);
+    }
+}
