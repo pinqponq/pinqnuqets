@@ -471,7 +471,7 @@ public sealed class FirebaseAuthProviderTests
         Assert.Contains(
             server.Logs.Entries,
             entry => entry.Level == LogLevel.Debug
-                && entry.Message == "Firebase sign-in rejected: the request has no ID token.");
+                && entry.Message == "Firebase ID token rejected: the request has no ID token.");
     }
 
     [Fact]
