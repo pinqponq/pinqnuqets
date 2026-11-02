@@ -9,10 +9,7 @@ public sealed class MaintenanceModeOptions
     public const string SectionName = "MaintenanceMode";
 
     /// <summary>Default of <see cref="Message"/>.</summary>
-    public const string DefaultMessage = "System is under maintenance";
-
-    /// <summary>Default of <see cref="ResponseCode"/>.</summary>
-    public const string DefaultResponseCode = "MAINTENANCE";
+    public const string DefaultMessage = "The service is temporarily unavailable because of maintenance.";
 
     /// <summary>Default entry of <see cref="ExemptPathPrefixes"/>.</summary>
     public const string DefaultExemptPathPrefix = "/health";
@@ -27,7 +24,7 @@ public sealed class MaintenanceModeOptions
     /// <summary>
     /// Message of the error body. With error localization on and <see cref="LocalizeMessage"/> on, the catalog
     /// message for <see cref="ResponseCode"/> is written instead. Defaults to <see cref="DefaultMessage"/>, also
-    /// when it is set to <see langword="null"/>.
+    /// when configuration sets it to <see langword="null"/>.
     /// </summary>
     public string Message { get; set; } = DefaultMessage;
 
@@ -38,8 +35,11 @@ public sealed class MaintenanceModeOptions
     /// </summary>
     public bool LocalizeMessage { get; set; } = true;
 
-    /// <summary>Response code of the error body. Defaults to <see cref="DefaultResponseCode"/>.</summary>
-    public string ResponseCode { get; set; } = DefaultResponseCode;
+    /// <summary>
+    /// Response code of the error body, such as <c>planned_maintenance</c>. Required: it has no default,
+    /// because each application has its own code.
+    /// </summary>
+    public string? ResponseCode { get; set; }
 
     /// <summary>
     /// Log event name of a blocked request on <c>Pinqponq.Contracts.IRequestErrorFeature</c>. Defaults to

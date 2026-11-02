@@ -35,7 +35,7 @@ public sealed class MaintenanceModeMiddlewareTests
     }
 
     [Fact]
-    public async Task Request_gets_503_with_the_default_code_and_message_when_maintenance_mode_is_on()
+    public async Task Request_gets_503_with_the_configured_code_and_the_default_message_when_maintenance_mode_is_on()
     {
         await using var host = await MaintenanceModeHost.Start(Enabled());
 
@@ -47,8 +47,8 @@ public sealed class MaintenanceModeMiddlewareTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.False(body.RootElement.GetProperty("status").GetBoolean());
         Assert.Equal(503, body.RootElement.GetProperty("statusCode").GetInt32());
-        Assert.Equal("MAINTENANCE", body.RootElement.GetProperty("responseCode").GetString());
-        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+        Assert.Equal(MaintenanceModeHost.ResponseCode, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("The service is temporarily unavailable because of maintenance.", body.RootElement.GetProperty("message").GetString());
         Assert.False(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("traceId").GetString()));
     }
 
@@ -244,7 +244,7 @@ public sealed class MaintenanceModeMiddlewareTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("request_blocked_planned_downtime", Assert.Single(response.Headers.GetValues(MaintenanceModeHost.ErrorEventNameHeader)));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+        Assert.Equal("The service is temporarily unavailable because of maintenance.", body.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -255,20 +255,7 @@ public sealed class MaintenanceModeMiddlewareTests
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
-    }
-
-    [Fact]
-    public async Task Null_message_set_in_code_keeps_the_default_message()
-    {
-        await using var host = await MaintenanceModeHost.Start(
-            Enabled(),
-            (services, configuration) => services.AddPinqponqMaintenanceMode(configuration, options => options.Message = null!));
-
-        using var response = await host.Send(MaintenanceModeHost.ApiPath);
-
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+        Assert.Equal("The service is temporarily unavailable because of maintenance.", body.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]

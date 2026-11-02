@@ -38,8 +38,10 @@ internal sealed class MaintenanceModeMiddleware(
             context.Response.Headers.RetryAfter = retryAfterSeconds.ToString(NumberFormatInfo.InvariantInfo);
         }
 
+        // The validator runs before the options can be read, so ResponseCode is never null here.
+        var responseCode = options.ResponseCode!;
         return options.LocalizeMessage
-            ? errorResponseWriter.Write(context, options.StatusCode, options.ResponseCode, options.Message, options.EventName)
-            : errorResponseWriter.WriteMessage(context, options.StatusCode, options.ResponseCode, options.Message, options.EventName);
+            ? errorResponseWriter.Write(context, options.StatusCode, responseCode, options.Message, options.EventName)
+            : errorResponseWriter.WriteMessage(context, options.StatusCode, responseCode, options.Message, options.EventName);
     }
 }

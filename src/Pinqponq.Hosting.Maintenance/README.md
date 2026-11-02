@@ -63,9 +63,9 @@ else that should not run during maintenance. When you use `UsePinqponqRequestLog
 | Option | Default | Meaning |
 |---|---|---|
 | `Enabled` | `false` | Turns maintenance mode on. Read through `IOptionsMonitor`, so a configuration reload takes effect on the next request. |
-| `Message` | `"System is under maintenance"` | Message of the error body. With error localization on and `LocalizeMessage` on, the catalog message for `ResponseCode` is written instead. A `null` value keeps the default. |
+| `Message` | `"The service is temporarily unavailable because of maintenance."` | Message of the error body. With error localization on and `LocalizeMessage` on, the catalog message for `ResponseCode` is written instead. A `null` value from configuration keeps the default. |
 | `LocalizeMessage` | `true` | Set it to `false` to always write `Message`, also when error localization is on. |
-| `ResponseCode` | `"MAINTENANCE"` | Response code of the error body. Set your own code here. |
+| `ResponseCode` | none, required | Response code of the error body, such as `planned_maintenance`. Each application sets its own code. |
 | `EventName` | `"request_blocked_by_maintenance"` | Log event name of a blocked request on `IRequestErrorFeature`. |
 | `StatusCode` | `503` | HTTP status code of a blocked request, from 400 to 599. |
 | `RetryAfterSeconds` | not set | When set, a blocked request gets a `Retry-After` header with this number of seconds. Must be greater than zero. |
@@ -109,7 +109,7 @@ The options are validated when the host starts and again when the configuration 
 every problem:
 
 - `StatusCode` outside 400 to 599,
-- a blank `ResponseCode`,
+- a missing or blank `ResponseCode`,
 - a blank `EventName`,
 - a `RetryAfterSeconds` of zero or less,
 - an `ExemptPathPrefixes` entry that does not start with `/`.

@@ -18,7 +18,7 @@ internal sealed class MaintenanceModeOptionsValidator : IValidateOptions<Mainten
 
         if (string.IsNullOrWhiteSpace(options.ResponseCode))
         {
-            failures.Add($"{nameof(MaintenanceModeOptions.ResponseCode)} must not be blank.");
+            failures.Add($"{nameof(MaintenanceModeOptions.ResponseCode)} must be set, such as 'planned_maintenance'.");
         }
 
         if (string.IsNullOrWhiteSpace(options.EventName))

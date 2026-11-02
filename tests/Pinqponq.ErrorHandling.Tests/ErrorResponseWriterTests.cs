@@ -201,6 +201,22 @@ public sealed class ErrorResponseWriterTests
     }
 
     [Fact]
+    public async Task Write_message_of_a_writer_that_does_not_implement_it_throws()
+    {
+        IErrorResponseWriter writer = new WriterWithoutWriteMessage();
+
+        var exception = await Assert.ThrowsAsync<NotSupportedException>(() => writer.WriteMessage(CreateContext(), StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName));
+
+        Assert.Equal("WriterWithoutWriteMessage does not implement WriteMessage. Implement it to write a message without the catalog.", exception.Message);
+    }
+
+    private sealed class WriterWithoutWriteMessage : IErrorResponseWriter
+    {
+        public Task Write(HttpContext context, int statusCode, string responseCode, string defaultMessage, string eventName) =>
+            Task.CompletedTask;
+    }
+
+    [Fact]
     public void Registering_error_handling_twice_keeps_one_writer()
     {
         var services = new ServiceCollection();

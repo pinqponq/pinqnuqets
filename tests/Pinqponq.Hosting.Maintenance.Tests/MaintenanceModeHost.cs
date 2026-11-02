@@ -18,6 +18,7 @@ namespace Pinqponq.Hosting.Maintenance.Tests;
 internal sealed class MaintenanceModeHost : IAsyncDisposable
 {
     public const string ApiPath = "/api/items";
+    public const string ResponseCode = "planned_maintenance";
     public const string HealthPath = "/health/ready";
     public const string EndpointBody = "ok";
     public const string ErrorEventNameHeader = "X-Test-Error-Event";
@@ -41,7 +42,10 @@ internal sealed class MaintenanceModeHost : IAsyncDisposable
         IDictionary<string, string?> settings,
         Action<IServiceCollection, IConfiguration>? configureServices = null)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["MaintenanceMode:ResponseCode"] = ResponseCode })
+            .AddInMemoryCollection(settings)
+            .Build();
         var loggerProvider = new CapturingLoggerProvider();
         var host = new HostBuilder()
             .ConfigureWebHost(web =>

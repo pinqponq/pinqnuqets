@@ -10,12 +10,22 @@ public sealed class MaintenanceModeOptionsValidatorTests
 {
     private readonly MaintenanceModeOptionsValidator _validator = new();
 
+    private static MaintenanceModeOptions ValidOptions() => new() { ResponseCode = "planned_maintenance" };
+
     [Fact]
-    public void Default_options_are_valid()
+    public void Default_options_with_a_response_code_are_valid()
+    {
+        var result = _validator.Validate(name: null, ValidOptions());
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Missing_response_code_fails()
     {
         var result = _validator.Validate(name: null, new MaintenanceModeOptions());
 
-        Assert.True(result.Succeeded);
+        Assert.Equal("ResponseCode must be set, such as 'planned_maintenance'.", Assert.Single(result.Failures!));
     }
 
     [Theory]
@@ -23,7 +33,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData(599)]
     public void Status_code_at_the_edges_of_the_range_is_valid(int statusCode)
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { StatusCode = statusCode });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = "planned_maintenance", StatusCode = statusCode });
 
         Assert.True(result.Succeeded);
     }
@@ -33,7 +43,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData(600)]
     public void Status_code_outside_the_range_fails(int statusCode)
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { StatusCode = statusCode });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = "planned_maintenance", StatusCode = statusCode });
 
         Assert.Equal("StatusCode must be from 400 to 599.", Assert.Single(result.Failures!));
     }
@@ -45,7 +55,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     {
         var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = responseCode });
 
-        Assert.Equal("ResponseCode must not be blank.", Assert.Single(result.Failures!));
+        Assert.Equal("ResponseCode must be set, such as 'planned_maintenance'.", Assert.Single(result.Failures!));
     }
 
     [Theory]
@@ -53,7 +63,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData(" ")]
     public void Blank_event_name_fails(string eventName)
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { EventName = eventName });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = "planned_maintenance", EventName = eventName });
 
         Assert.Equal("EventName must not be blank.", Assert.Single(result.Failures!));
     }
@@ -63,7 +73,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData(-1)]
     public void Retry_after_of_zero_or_less_fails(int retryAfterSeconds)
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { RetryAfterSeconds = retryAfterSeconds });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = "planned_maintenance", RetryAfterSeconds = retryAfterSeconds });
 
         Assert.Equal("RetryAfterSeconds must be greater than zero when set.", Assert.Single(result.Failures!));
     }
@@ -71,7 +81,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [Fact]
     public void Retry_after_of_one_second_is_valid()
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { RetryAfterSeconds = 1 });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { ResponseCode = "planned_maintenance", RetryAfterSeconds = 1 });
 
         Assert.True(result.Succeeded);
     }
@@ -81,7 +91,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData("")]
     public void Exempt_path_prefix_without_a_leading_slash_fails(string pathPrefix)
     {
-        var options = new MaintenanceModeOptions();
+        var options = ValidOptions();
         options.ExemptPathPrefixes.Add(pathPrefix);
 
         var result = _validator.Validate(name: null, options);
@@ -93,7 +103,11 @@ public sealed class MaintenanceModeOptionsValidatorTests
     public void Invalid_options_stop_the_host_at_startup()
     {
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["MaintenanceMode:StatusCode"] = "200" })
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MaintenanceMode:ResponseCode"] = "planned_maintenance",
+                ["MaintenanceMode:StatusCode"] = "200",
+            })
             .Build();
         using var serviceProvider = new ServiceCollection()
             .AddLogging()
