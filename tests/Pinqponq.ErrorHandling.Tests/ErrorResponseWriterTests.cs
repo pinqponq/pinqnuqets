@@ -153,6 +153,54 @@ public sealed class ErrorResponseWriterTests
     }
 
     [Fact]
+    public async Task Write_message_writes_the_given_message_when_localization_is_on()
+    {
+        var writer = CreateWriter(EnableLocalization);
+        var httpContext = CreateContext(language: "tr");
+        httpContext.Request.Headers["X-Request-Id"] = "request-42";
+
+        await writer.WriteMessage(httpContext, StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName);
+
+        using var body = ErrorResponseHarness.ReadBody(httpContext);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, httpContext.Response.StatusCode);
+        Assert.Equal("application/json", httpContext.Response.ContentType);
+        Assert.False(body.RootElement.GetProperty("status").GetBoolean());
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, body.RootElement.GetProperty("statusCode").GetInt32());
+        Assert.Equal(CommonErrorCodes.TooManyRequests, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal(DefaultMessage, body.RootElement.GetProperty("message").GetString());
+        Assert.Equal("request-42", body.RootElement.GetProperty("traceId").GetString());
+    }
+
+    [Fact]
+    public async Task Write_message_describes_the_failure_without_a_language()
+    {
+        var writer = CreateWriter(EnableLocalization);
+        var httpContext = CreateContext(language: "tr");
+
+        await writer.WriteMessage(httpContext, StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName);
+
+        var errorFeature = httpContext.Features.Get<IRequestErrorFeature>();
+        Assert.NotNull(errorFeature);
+        Assert.Equal(EventName, errorFeature.EventName);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, errorFeature.Detail["statusCode"]);
+        Assert.Equal(CommonErrorCodes.TooManyRequests, errorFeature.Detail["errorCode"]);
+        Assert.Equal(DefaultMessage, errorFeature.Detail["errorMessage"]);
+        Assert.False(errorFeature.Detail.ContainsKey("language"));
+    }
+
+    [Fact]
+    public async Task Write_message_rejects_missing_arguments()
+    {
+        var writer = CreateWriter();
+        var httpContext = CreateContext();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.WriteMessage(null!, StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, DefaultMessage, EventName));
+        await Assert.ThrowsAsync<ArgumentException>(() => writer.WriteMessage(httpContext, StatusCodes.Status503ServiceUnavailable, " ", DefaultMessage, EventName));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => writer.WriteMessage(httpContext, StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, null!, EventName));
+        await Assert.ThrowsAsync<ArgumentException>(() => writer.WriteMessage(httpContext, StatusCodes.Status503ServiceUnavailable, CommonErrorCodes.TooManyRequests, DefaultMessage, ""));
+    }
+
+    [Fact]
     public void Registering_error_handling_twice_keeps_one_writer()
     {
         var services = new ServiceCollection();

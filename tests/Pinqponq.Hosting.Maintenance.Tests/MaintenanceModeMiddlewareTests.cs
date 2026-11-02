@@ -201,6 +201,77 @@ public sealed class MaintenanceModeMiddlewareTests
     }
 
     [Fact]
+    public async Task Configured_message_is_written_when_localization_is_on_and_localize_message_is_off()
+    {
+        await using var host = await MaintenanceModeHost.Start(
+            Enabled(
+                ("MaintenanceMode:ResponseCode", CommonErrorCodes.TooManyRequests),
+                ("MaintenanceMode:Message", "Back at noon"),
+                ("MaintenanceMode:LocalizeMessage", "false")),
+            (services, configuration) =>
+            {
+                services.AddPinqponqErrorLocalization(options => options.CatalogDirectory = null);
+                services.AddPinqponqMaintenanceMode(configuration);
+            });
+
+        using var response = await host.Send(MaintenanceModeHost.ApiPath, language: "tr-TR");
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(CommonErrorCodes.TooManyRequests, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Back at noon", body.RootElement.GetProperty("message").GetString());
+        Assert.Equal(MaintenanceModeEvents.RequestBlockedByMaintenance, Assert.Single(response.Headers.GetValues(MaintenanceModeHost.ErrorEventNameHeader)));
+    }
+
+    [Fact]
+    public async Task Configured_event_name_describes_the_blocked_request()
+    {
+        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:EventName", "request_blocked_planned_downtime")));
+
+        using var response = await host.Send(MaintenanceModeHost.ApiPath);
+
+        Assert.Equal("request_blocked_planned_downtime", Assert.Single(response.Headers.GetValues(MaintenanceModeHost.ErrorEventNameHeader)));
+    }
+
+    [Fact]
+    public async Task Configured_event_name_is_used_when_localize_message_is_off()
+    {
+        await using var host = await MaintenanceModeHost.Start(Enabled(
+            ("MaintenanceMode:EventName", "request_blocked_planned_downtime"),
+            ("MaintenanceMode:LocalizeMessage", "false")));
+
+        using var response = await host.Send(MaintenanceModeHost.ApiPath);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("request_blocked_planned_downtime", Assert.Single(response.Headers.GetValues(MaintenanceModeHost.ErrorEventNameHeader)));
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Null_configured_message_keeps_the_default_message()
+    {
+        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:Message", null)));
+
+        using var response = await host.Send(MaintenanceModeHost.ApiPath);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Null_message_set_in_code_keeps_the_default_message()
+    {
+        await using var host = await MaintenanceModeHost.Start(
+            Enabled(),
+            (services, configuration) => services.AddPinqponqMaintenanceMode(configuration, options => options.Message = null!));
+
+        using var response = await host.Send(MaintenanceModeHost.ApiPath);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("System is under maintenance", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
     public async Task Configure_callback_runs_after_binding()
     {
         await using var host = await MaintenanceModeHost.Start(

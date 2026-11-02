@@ -5,7 +5,7 @@ answered with the standard error body and the status code you set (503 by defaul
 middleware runs:
 
 - the switch is read on every request, so a configuration reload turns maintenance mode on or off without a restart,
-- the error body comes from `Pinqponq.ErrorHandling`, so it has the same shape as every other error and is localized when error localization is on,
+- the error body comes from `Pinqponq.ErrorHandling`, so it has the same shape as every other error and is localized when error localization is on (unless you turn that off with `LocalizeMessage`),
 - paths such as health checks and webhooks can stay open,
 - a `Retry-After` header is sent when you set one,
 - every blocked request is logged as a warning with its method and path.
@@ -63,8 +63,10 @@ else that should not run during maintenance. When you use `UsePinqponqRequestLog
 | Option | Default | Meaning |
 |---|---|---|
 | `Enabled` | `false` | Turns maintenance mode on. Read through `IOptionsMonitor`, so a configuration reload takes effect on the next request. |
-| `Message` | `"System is under maintenance"` | Message of the error body while error localization is off. With localization on, the catalog message for `ResponseCode` is written. |
+| `Message` | `"System is under maintenance"` | Message of the error body. With error localization on and `LocalizeMessage` on, the catalog message for `ResponseCode` is written instead. A `null` value keeps the default. |
+| `LocalizeMessage` | `true` | Set it to `false` to always write `Message`, also when error localization is on. |
 | `ResponseCode` | `"MAINTENANCE"` | Response code of the error body. Set your own code here. |
+| `EventName` | `"request_blocked_by_maintenance"` | Log event name of a blocked request on `IRequestErrorFeature`. |
 | `StatusCode` | `503` | HTTP status code of a blocked request, from 400 to 599. |
 | `RetryAfterSeconds` | not set | When set, a blocked request gets a `Retry-After` header with this number of seconds. Must be greater than zero. |
 | `ExemptPathPrefixes` | `["/health"]` | Path prefixes that keep working during maintenance. See below. |
@@ -88,16 +90,18 @@ builder.Services.AddPinqponqMaintenanceMode(builder.Configuration, options =>
 ## Localized messages
 
 When `AddPinqponqErrorLocalization` from `Pinqponq.ErrorHandling` is on, the message comes from the error
-catalog for `ResponseCode`, in the language of the request. The package ships no catalog entry for a maintenance
+catalog for `ResponseCode`, in the language of the request. Set `LocalizeMessage` to `false` to write the
+configured `Message` instead. The package ships no catalog entry for a maintenance
 code, because each application chooses its own code. Add your code to your application's catalog files
 (`Localization/EN.json`, `Localization/TR.json`, …). A code the catalog does not know gets the message of the
 catalog's `FallbackResponseCode`.
 
 ## Request logs
 
-A blocked request is described on `IRequestErrorFeature` under the event name `request_blocked_by_maintenance`
-(`MaintenanceModeEvents.RequestBlockedByMaintenance`), so `Pinqponq.Observability` writes it into the request's
-log record.
+A blocked request is described on `IRequestErrorFeature` under `EventName`, by default
+`request_blocked_by_maintenance` (`MaintenanceModeEvents.RequestBlockedByMaintenance`), so
+`Pinqponq.Observability` writes it into the request's log record. Set `EventName` when your logs already use
+another name for this event.
 
 ## Startup validation
 
@@ -106,7 +110,7 @@ every problem:
 
 - `StatusCode` outside 400 to 599,
 - a blank `ResponseCode`,
-- a `Message` set to `null`,
+- a blank `EventName`,
 - a `RetryAfterSeconds` of zero or less,
 - an `ExemptPathPrefixes` entry that does not start with `/`.
 

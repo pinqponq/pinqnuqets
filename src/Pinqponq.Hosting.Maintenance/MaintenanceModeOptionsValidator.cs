@@ -21,9 +21,9 @@ internal sealed class MaintenanceModeOptionsValidator : IValidateOptions<Mainten
             failures.Add($"{nameof(MaintenanceModeOptions.ResponseCode)} must not be blank.");
         }
 
-        if (options.Message is null)
+        if (string.IsNullOrWhiteSpace(options.EventName))
         {
-            failures.Add($"{nameof(MaintenanceModeOptions.Message)} must not be null.");
+            failures.Add($"{nameof(MaintenanceModeOptions.EventName)} must not be blank.");
         }
 
         if (options.RetryAfterSeconds is <= 0)

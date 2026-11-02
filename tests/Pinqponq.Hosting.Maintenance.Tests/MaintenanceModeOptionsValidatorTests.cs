@@ -48,12 +48,14 @@ public sealed class MaintenanceModeOptionsValidatorTests
         Assert.Equal("ResponseCode must not be blank.", Assert.Single(result.Failures!));
     }
 
-    [Fact]
-    public void Null_message_fails()
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Blank_event_name_fails(string eventName)
     {
-        var result = _validator.Validate(name: null, new MaintenanceModeOptions { Message = null! });
+        var result = _validator.Validate(name: null, new MaintenanceModeOptions { EventName = eventName });
 
-        Assert.Equal("Message must not be null.", Assert.Single(result.Failures!));
+        Assert.Equal("EventName must not be blank.", Assert.Single(result.Failures!));
     }
 
     [Theory]

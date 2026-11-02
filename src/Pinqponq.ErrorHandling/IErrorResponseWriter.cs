@@ -17,4 +17,11 @@ public interface IErrorResponseWriter
     /// off, <paramref name="defaultMessage"/> is written.
     /// </summary>
     Task Write(HttpContext context, int statusCode, string responseCode, string defaultMessage, string eventName);
+
+    /// <summary>
+    /// Describes the failure on <c>Pinqponq.Contracts.IRequestErrorFeature</c> under
+    /// <paramref name="eventName"/> and writes the error body with <paramref name="statusCode"/> and
+    /// <paramref name="message"/> as it is. The catalog is not read, also when error localization is on.
+    /// </summary>
+    Task WriteMessage(HttpContext context, int statusCode, string responseCode, string message, string eventName);
 }

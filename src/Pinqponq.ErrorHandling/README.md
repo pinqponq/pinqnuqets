@@ -138,6 +138,19 @@ under `eventName`. With localization on, the message comes from the catalog in t
 language, and a code the catalog does not know is kept and gets the `FallbackResponseCode`
 message. With localization off, `defaultMessage` is written.
 
+`WriteMessage` takes the same arguments but writes `message` as it is and never reads the catalog,
+also when localization is on. Use it when the application chooses the text itself, for example a
+configured maintenance message:
+
+```csharp
+await errorResponseWriter.WriteMessage(
+    context,
+    StatusCodes.Status503ServiceUnavailable,
+    "planned_maintenance",
+    message: "We are updating the service. Please try again in a few minutes.",
+    eventName: "request_blocked_by_maintenance");
+```
+
 ## Request error feature
 
 Every answered failure — a handled exception or a request the client closed — is

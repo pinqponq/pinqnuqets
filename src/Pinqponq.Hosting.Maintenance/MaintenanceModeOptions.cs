@@ -25,13 +25,27 @@ public sealed class MaintenanceModeOptions
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// Message of the error body while error localization is off. With localization on, the catalog message
-    /// for <see cref="ResponseCode"/> is written instead. Defaults to <see cref="DefaultMessage"/>.
+    /// Message of the error body. With error localization on and <see cref="LocalizeMessage"/> on, the catalog
+    /// message for <see cref="ResponseCode"/> is written instead. Defaults to <see cref="DefaultMessage"/>, also
+    /// when it is set to <see langword="null"/>.
     /// </summary>
     public string Message { get; set; } = DefaultMessage;
 
+    /// <summary>
+    /// While <see langword="true"/> and error localization is on, the catalog message for
+    /// <see cref="ResponseCode"/> replaces <see cref="Message"/>. Set it to <see langword="false"/> to always
+    /// write <see cref="Message"/>. Defaults to <see langword="true"/>.
+    /// </summary>
+    public bool LocalizeMessage { get; set; } = true;
+
     /// <summary>Response code of the error body. Defaults to <see cref="DefaultResponseCode"/>.</summary>
     public string ResponseCode { get; set; } = DefaultResponseCode;
+
+    /// <summary>
+    /// Log event name of a blocked request on <c>Pinqponq.Contracts.IRequestErrorFeature</c>. Defaults to
+    /// <see cref="MaintenanceModeEvents.RequestBlockedByMaintenance"/>.
+    /// </summary>
+    public string EventName { get; set; } = MaintenanceModeEvents.RequestBlockedByMaintenance;
 
     /// <summary>HTTP status code of a blocked request, from 400 to 599. Defaults to 503.</summary>
     public int StatusCode { get; set; } = StatusCodes.Status503ServiceUnavailable;

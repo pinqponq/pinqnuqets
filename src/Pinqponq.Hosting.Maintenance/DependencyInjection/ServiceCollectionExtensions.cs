@@ -32,6 +32,8 @@ public static class ServiceCollectionExtensions
             optionsBuilder.Configure(configure);
         }
 
+        optionsBuilder.PostConfigure(options => options.Message ??= MaintenanceModeOptions.DefaultMessage);
+
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<MaintenanceModeOptions>, MaintenanceModeOptionsValidator>());
         services.AddPinqponqErrorHandling();

@@ -38,11 +38,8 @@ internal sealed class MaintenanceModeMiddleware(
             context.Response.Headers.RetryAfter = retryAfterSeconds.ToString(NumberFormatInfo.InvariantInfo);
         }
 
-        return errorResponseWriter.Write(
-            context,
-            options.StatusCode,
-            options.ResponseCode,
-            options.Message,
-            MaintenanceModeEvents.RequestBlockedByMaintenance);
+        return options.LocalizeMessage
+            ? errorResponseWriter.Write(context, options.StatusCode, options.ResponseCode, options.Message, options.EventName)
+            : errorResponseWriter.WriteMessage(context, options.StatusCode, options.ResponseCode, options.Message, options.EventName);
     }
 }

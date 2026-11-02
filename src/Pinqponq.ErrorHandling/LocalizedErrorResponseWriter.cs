@@ -37,4 +37,15 @@ internal sealed class LocalizedErrorResponseWriter : IErrorResponseWriter
         RequestErrorDetail.Describe(context, eventName, statusCode, responseCode, message, language);
         await ErrorResponseWriter.Write(context, _options, statusCode, responseCode, message).ConfigureAwait(false);
     }
+
+    public async Task WriteMessage(HttpContext context, int statusCode, string responseCode, string message, string eventName)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrWhiteSpace(responseCode);
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+
+        RequestErrorDetail.Describe(context, eventName, statusCode, responseCode, message);
+        await ErrorResponseWriter.Write(context, _options, statusCode, responseCode, message).ConfigureAwait(false);
+    }
 }

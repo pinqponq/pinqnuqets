@@ -17,8 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   takes effect without a restart. `RetryAfterSeconds` (not set by default) adds a `Retry-After` header.
   `ExemptPathPrefixes` (default `/health`, matched by whole path segments without regard to case) stay open;
   configured entries are added to the default one. A blocked request is logged as a warning with its method and
-  path and described on `IRequestErrorFeature` as `request_blocked_by_maintenance`. The options are validated at
-  startup. Targets `net8.0`, `net9.0` and `net10.0`.
+  path and described on `IRequestErrorFeature` under `EventName` (default `request_blocked_by_maintenance`).
+  `LocalizeMessage` (default `true`) set to `false` writes `Message` also when error localization is on. A `null`
+  `Message` keeps the default. The options are validated at startup. Requires
+  `Pinqponq.ErrorHandling` 1.3.0. Targets `net8.0`, `net9.0` and `net10.0`.
+- `Pinqponq.ErrorHandling` 1.3.0: `IErrorResponseWriter.WriteMessage` writes the error body with the given message
+  as it is and never reads the catalog, also when error localization is on. It describes the failure on
+  `IRequestErrorFeature` like `Write`, without a language. A custom `IErrorResponseWriter` must add this method.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
