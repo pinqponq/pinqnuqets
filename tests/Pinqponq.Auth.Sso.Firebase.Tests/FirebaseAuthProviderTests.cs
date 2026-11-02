@@ -97,6 +97,18 @@ public sealed class FirebaseAuthProviderTests
         using var server = new FirebaseTestServer();
 
         await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("sub")));
+
+        AssertRejectionLogged(server, "the sub claim is missing");
+    }
+
+    [Fact]
+    public async Task Missing_issued_at_fails()
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("iat")));
+
+        AssertRejectionLogged(server, "auth_time or iat is missing or in the future");
     }
 
     [Fact]
@@ -194,6 +206,8 @@ public sealed class FirebaseAuthProviderTests
         using var server = new FirebaseTestServer();
 
         await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("auth_time")));
+
+        AssertRejectionLogged(server, "auth_time or iat is missing or in the future");
     }
 
     [Fact]
@@ -373,6 +387,8 @@ public sealed class FirebaseAuthProviderTests
 
         await AssertInvalidAsync(server, server.CreateToken(claims => claims["email_verified"] = false));
         await AssertInvalidAsync(server, server.CreateToken(claims => claims.Remove("email_verified")));
+
+        AssertRejectionLogged(server, "the email is not verified");
     }
 
     [Fact]
@@ -423,6 +439,8 @@ public sealed class FirebaseAuthProviderTests
         await AssertInvalidAsync(server, server.CreateToken(claims => claims["firebase"] = "google.com"));
         await AssertInvalidAsync(server, server.CreateToken(claims =>
             claims["firebase"] = new Dictionary<string, object> { ["sign_in_provider"] = 5 }));
+
+        AssertRejectionLogged(server, "the sign-in provider is not allowed");
     }
 
     [Theory]
@@ -462,6 +480,7 @@ public sealed class FirebaseAuthProviderTests
         await AssertInvalidAsync(server, idToken);
 
         Assert.Empty(server.KeyEndpoint.RequestedUris);
+        AssertRejectionLogged(server, "the token could not be read");
     }
 
     [Fact]
@@ -562,6 +581,11 @@ public sealed class FirebaseAuthProviderTests
         using var server = new FirebaseTestServer();
 
         Assert.False(server.Provider.IsFirebaseIdToken(idToken));
+
+        Assert.Contains(
+            server.Logs.Entries,
+            entry => entry.Level == LogLevel.Debug
+                && entry.Message == "Firebase ID token could not be read to check its issuer.");
     }
 
     private static async Task AssertInvalidAsync(FirebaseTestServer server, string idToken)
@@ -576,6 +600,11 @@ public sealed class FirebaseAuthProviderTests
             server.Logs.Entries,
             entry => entry.Level == LogLevel.Debug && entry.Message.StartsWith("Firebase ID token rejected: "));
     }
+
+    private static void AssertRejectionLogged(FirebaseTestServer server, string reason) =>
+        Assert.Contains(
+            server.Logs.Entries,
+            entry => entry.Level == LogLevel.Debug && entry.Message == $"Firebase ID token rejected: {reason}.");
 
     private sealed class StubHttpClientFactory : IHttpClientFactory, IDisposable
     {

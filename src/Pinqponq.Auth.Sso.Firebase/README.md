@@ -20,7 +20,7 @@ dotnet add package Pinqponq.Auth.Sso.Firebase
 - .NET 8.0, 9.0, or 10.0
 - The Firebase project id of the app (Firebase console, Project settings)
 - The client sends the Firebase ID token it received after sign-in. This package only validates
-  that token; it does not sign anyone in.
+  that token. It does not sign anyone in.
 
 ## Quick start
 
@@ -89,8 +89,8 @@ app.MapPost("/auth/google", async (
 });
 ```
 
-`IsFirebaseIdToken` reads the issuer without validating the token. It only chooses the provider;
-the chosen provider still validates the token in full.
+`IsFirebaseIdToken` reads the issuer without validating the token. It only chooses the provider.
+The chosen provider still validates the token in full.
 
 `AddPinqponqFirebaseSso` registers `FirebaseAuthProvider` as itself, not as
 `IExternalAuthProvider`. So `IExternalAuthProvider` still resolves to the Google provider when
@@ -114,8 +114,8 @@ both packages are registered, in either order.
 
 - The signature (RS256) with Google's published keys.
 - The issuer `https://securetoken.google.com/<ProjectId>` and the audience `<ProjectId>`.
-- The lifetime: `exp` is required and must not have passed; `nbf`, when present, must have passed.
-- `iat` and `auth_time` must not be in the future. `auth_time` is required.
+- The lifetime: `exp` is required and must not have passed. `nbf`, when present, must have passed.
+- `iat` and `auth_time` are required and must not be in the future.
 - `sub` must be present and not empty.
 - `email_verified` when `RequireEmailVerified` is on, and the sign-in method when
   `AllowedSignInProviders` is not empty.
