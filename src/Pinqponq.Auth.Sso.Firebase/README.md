@@ -7,7 +7,8 @@ on a client that signs into Firebase after Google returns. The package implement
 same `ExternalUserInfo` shape as [Pinqponq.Auth.Sso.Google](../Pinqponq.Auth.Sso.Google/README.md).
 
 The public keys that sign Firebase ID tokens are downloaded through a named `HttpClient` and kept
-for the `max-age` the key response sends, so a sign-in does not download them again.
+for the `max-age` the key response sends. While the cached keys are valid, a sign-in does not
+download them again. "Key downloads" below lists the cases where it does.
 
 ## Install
 
@@ -127,10 +128,15 @@ saying which check failed. A request without an ID token returns a separate fail
 
 - **Key downloads.** The keys are downloaded on the first sign-in and again when the cached keys
   expire. A token whose key id is not in the cache causes one extra download, at most once per
-  `MinimumUnknownKeyRefreshInterval`, so tokens with made-up key ids cannot cause a download per
-  request.
+  `MinimumUnknownKeyRefreshInterval`. So tokens with made-up key ids cannot cause a download per
+  request, unless that interval is set to zero.
+- **When every sign-in downloads the keys.** A failed download stores nothing, so the next sign-in
+  tries again. A key response with `max-age=0` expires as soon as it is stored. A
+  `MinimumUnknownKeyRefreshInterval` of zero lets every unknown key id cause a download. In these
+  cases each sign-in makes one request to the key endpoint.
 - **A failed key download throws.** When the key endpoint does not answer with a success status,
-  `AuthenticateAsync` throws `HttpRequestException` instead of returning a failure, because the
+  or its body is not a JSON Web Key Set, `AuthenticateAsync` throws `HttpRequestException` instead
+  of returning a failure, because the
   token itself may be valid. Let your error handling turn it into a server error.
 - **Profile fields.** `ExternalUserInfo` gets `sub`, `email`, `email_verified`, `name` and
   `picture`. Firebase ID tokens do not carry a given or family name, so those stay `null`.
