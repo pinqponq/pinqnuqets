@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Auth.Sso.Firebase.DependencyInjection;
@@ -37,7 +38,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(serviceProvider => new FirebaseAuthProvider(
             serviceProvider.GetRequiredService<IOptions<FirebaseAuthOptions>>(),
             serviceProvider.GetRequiredService<FirebaseSigningKeyCache>(),
-            serviceProvider.GetRequiredService<TimeProvider>()));
+            serviceProvider.GetRequiredService<TimeProvider>(),
+            serviceProvider.GetRequiredService<ILogger<FirebaseAuthProvider>>()));
         return services;
     }
 }
