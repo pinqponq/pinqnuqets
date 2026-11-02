@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -31,18 +33,21 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
     private readonly FirebaseAuthOptions _firebaseOptions;
     private readonly FirebaseSigningKeyCache _signingKeyCache;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<FirebaseAuthProvider> _logger;
     private readonly JsonWebTokenHandler _tokenHandler = new();
     private readonly string _expectedIssuer;
 
     internal FirebaseAuthProvider(
         IOptions<FirebaseAuthOptions> firebaseOptions,
         FirebaseSigningKeyCache signingKeyCache,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<FirebaseAuthProvider> logger)
     {
         ArgumentNullException.ThrowIfNull(firebaseOptions);
         _firebaseOptions = firebaseOptions.Value;
         _signingKeyCache = signingKeyCache ?? throw new ArgumentNullException(nameof(signingKeyCache));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _expectedIssuer = IssuerPrefix + _firebaseOptions.ProjectId;
     }
 
@@ -75,10 +80,9 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
             return Failure("An ID token is required for Firebase authentication.");
         }
 
-        var unvalidatedToken = ReadToken(request.IdToken);
-        if (unvalidatedToken is null)
+        if (!TryReadToken(request.IdToken, out var unvalidatedToken, out var readException))
         {
-            return Failure(InvalidTokenError);
+            return Rejected("the token could not be read", readException);
         }
 
         var signingKeys = await _signingKeyCache.GetKeysAsync(unvalidatedToken.Kid, cancellationToken)
@@ -88,7 +92,7 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
             .ConfigureAwait(false);
         if (!validation.IsValid || validation.SecurityToken is not JsonWebToken token)
         {
-            return Failure(InvalidTokenError);
+            return Rejected("signature, issuer, audience or lifetime check failed", validation.Exception);
         }
 
         return CreateResult(token);
@@ -101,25 +105,26 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
     /// </summary>
     public bool IsFirebaseIdToken(string idToken)
     {
-        var unvalidatedToken = ReadToken(idToken);
-        return unvalidatedToken is not null
+        return TryReadToken(idToken, out var unvalidatedToken, out _)
             && string.Equals(unvalidatedToken.Issuer, _expectedIssuer, StringComparison.Ordinal);
     }
 
-    private JsonWebToken? ReadToken(string? idToken)
+    private bool TryReadToken(
+        string idToken,
+        [NotNullWhen(true)] out JsonWebToken? token,
+        out ArgumentException? readException)
     {
-        if (string.IsNullOrWhiteSpace(idToken) || !_tokenHandler.CanReadToken(idToken))
-        {
-            return null;
-        }
-
         try
         {
-            return _tokenHandler.ReadJsonWebToken(idToken);
+            token = _tokenHandler.ReadJsonWebToken(idToken);
+            readException = null;
+            return true;
         }
-        catch (ArgumentException)
+        catch (ArgumentException exception)
         {
-            return null;
+            token = null;
+            readException = exception;
+            return false;
         }
     }
 
@@ -129,9 +134,6 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
         ValidAudience = _firebaseOptions.ProjectId,
         IssuerSigningKeys = signingKeys,
         ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
-        RequireSignedTokens = true,
-        RequireExpirationTime = true,
-        ValidateLifetime = true,
         ClockSkew = _firebaseOptions.ClockSkew,
         LifetimeValidator = IsWithinLifetime,
     };
@@ -156,31 +158,39 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
     private FirebaseAuthResult CreateResult(JsonWebToken token)
     {
-        if (string.IsNullOrWhiteSpace(token.Subject) || !AreTimeClaimsInThePast(token))
+        if (string.IsNullOrWhiteSpace(token.Subject))
         {
-            return Failure(InvalidTokenError);
+            return Rejected("the sub claim is missing");
+        }
+
+        if (!AreTimeClaimsInThePast(token))
+        {
+            return Rejected("auth_time is missing, or auth_time or iat is in the future");
         }
 
         token.TryGetPayloadValue<bool>(EmailVerifiedClaim, out var isEmailVerified);
         if (_firebaseOptions.RequireEmailVerified && !isEmailVerified)
         {
-            return Failure(InvalidTokenError);
+            return Rejected("the email is not verified");
         }
 
         var signInProvider = ReadSignInProvider(token);
         if (!IsSignInProviderAllowed(signInProvider))
         {
-            return Failure(InvalidTokenError);
+            return Rejected("the sign-in provider is not allowed");
         }
 
+        var email = ReadStringClaim(token, EmailClaim);
+        var name = ReadStringClaim(token, NameClaim);
+        var picture = ReadStringClaim(token, PictureClaim);
         var user = new ExternalUserInfo
         {
             Subject = token.Subject,
             Provider = Name,
-            Email = ReadStringClaim(token, EmailClaim),
+            Email = email,
             EmailVerified = isEmailVerified,
-            Name = ReadStringClaim(token, NameClaim),
-            Picture = ReadStringClaim(token, PictureClaim),
+            Name = name,
+            Picture = picture,
         };
         return new FirebaseAuthResult(ExternalAuthResult.Success(user), signInProvider);
     }
@@ -218,6 +228,12 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
     private static string? ReadStringClaim(JsonWebToken token, string claimName) =>
         token.TryGetPayloadValue<string>(claimName, out var value) ? value : null;
+
+    private FirebaseAuthResult Rejected(string reason, Exception? exception = null)
+    {
+        _logger.LogDebug(exception, "Firebase ID token rejected: {Reason}.", reason);
+        return Failure(InvalidTokenError);
+    }
 
     private static FirebaseAuthResult Failure(string error) => new(ExternalAuthResult.Failure(error), null);
 }

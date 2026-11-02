@@ -1,4 +1,8 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Pinqponq.Auth.Sso.Abstractions;
 using Xunit;
 
@@ -106,11 +110,48 @@ public sealed class FirebaseAuthProviderTests
     }
 
     [Fact]
-    public async Task Token_expired_within_the_clock_skew_succeeds()
+    public async Task Token_expired_exactly_by_the_clock_skew_succeeds()
     {
         using var server = new FirebaseTestServer();
         var token = server.CreateToken();
-        server.Time.Advance(TimeSpan.FromHours(1) + FirebaseAuthOptions.DefaultClockSkew - TimeSpan.FromSeconds(1));
+        server.Time.Advance(TimeSpan.FromHours(1) + FirebaseAuthOptions.DefaultClockSkew);
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Not_before_later_than_the_clock_skew_fails()
+    {
+        using var server = new FirebaseTestServer();
+        var notBefore = server.Time.GetUtcNow() + FirebaseAuthOptions.DefaultClockSkew + TimeSpan.FromSeconds(1);
+        var token = server.CreateToken(claims => claims["nbf"] = notBefore.ToUnixTimeSeconds());
+
+        await AssertInvalidAsync(server, token);
+    }
+
+    [Theory]
+    [InlineData(-60)]
+    [InlineData(60)]
+    [InlineData(300)]
+    public async Task Not_before_up_to_the_clock_skew_succeeds(int secondsFromNow)
+    {
+        using var server = new FirebaseTestServer();
+        var notBefore = server.Time.GetUtcNow().AddSeconds(secondsFromNow);
+        var token = server.CreateToken(claims => claims["nbf"] = notBefore.ToUnixTimeSeconds());
+
+        var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Issued_at_exactly_at_the_clock_skew_succeeds()
+    {
+        using var server = new FirebaseTestServer();
+        var issuedAt = server.Time.GetUtcNow() + FirebaseAuthOptions.DefaultClockSkew;
+        var token = server.CreateToken(claims => claims["iat"] = issuedAt.ToUnixTimeSeconds());
 
         var result = await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(token));
 
@@ -237,6 +278,22 @@ public sealed class FirebaseAuthProviderTests
         await AssertInvalidAsync(server, server.CreateToken(keyId: "key-2"));
 
         Assert.Equal(2, server.KeyEndpoint.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task Every_published_key_is_found_in_the_cache()
+    {
+        using var server = new FirebaseTestServer();
+        server.AddSigningKey("key-2");
+        server.PublishedKeyIds = ["key-1", "key-2"];
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        server.Time.Advance(FirebaseAuthOptions.DefaultMinimumUnknownKeyRefreshInterval);
+
+        var result = await server.Provider.AuthenticateAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken(keyId: "key-2")));
+
+        Assert.True(result.Succeeded);
+        Assert.Single(server.KeyEndpoint.RequestedUris);
     }
 
     [Fact]
@@ -430,6 +487,53 @@ public sealed class FirebaseAuthProviderTests
     }
 
     [Fact]
+    public async Task Cancelled_token_throws_when_the_keys_are_cached()
+    {
+        using var server = new FirebaseTestServer();
+        await server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        var act = () => server.Provider.AuthenticateAsync(
+            ExternalAuthRequest.FromIdToken(server.CreateToken()),
+            cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
+    }
+
+    [Fact]
+    public async Task Rejection_reason_and_validation_exception_are_logged()
+    {
+        using var server = new FirebaseTestServer();
+
+        await AssertInvalidAsync(server, server.CreateToken(claims => claims["aud"] = "other-project"));
+
+        var entry = Assert.Single(server.Logs.Entries, logEntry => logEntry.Level == LogLevel.Debug);
+        Assert.Equal(
+            "Firebase ID token rejected: signature, issuer, audience or lifetime check failed.",
+            entry.Message);
+        Assert.NotNull(entry.Exception);
+    }
+
+    [Fact]
+    public void Constructors_reject_null_arguments()
+    {
+        var firebaseOptions = Options.Create(new FirebaseAuthOptions { ProjectId = FirebaseTestServer.ProjectId });
+        var timeProvider = new FakeTimeProvider();
+        using var httpClientFactory = new StubHttpClientFactory();
+        using var signingKeyCache = new FirebaseSigningKeyCache(httpClientFactory, firebaseOptions, timeProvider);
+        var logger = NullLogger<FirebaseAuthProvider>.Instance;
+
+        Assert.Throws<ArgumentNullException>(() => new FirebaseAuthProvider(null!, signingKeyCache, timeProvider, logger));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseAuthProvider(firebaseOptions, null!, timeProvider, logger));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseAuthProvider(firebaseOptions, signingKeyCache, null!, logger));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseAuthProvider(firebaseOptions, signingKeyCache, timeProvider, null!));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseSigningKeyCache(null!, firebaseOptions, timeProvider));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseSigningKeyCache(httpClientFactory, null!, timeProvider));
+        Assert.Throws<ArgumentNullException>(() => new FirebaseSigningKeyCache(httpClientFactory, firebaseOptions, null!));
+    }
+
+    [Fact]
     public void IsFirebaseIdToken_is_true_for_this_projects_issuer()
     {
         using var server = new FirebaseTestServer();
@@ -468,5 +572,17 @@ public sealed class FirebaseAuthProviderTests
         Assert.Null(firebaseResult.Result.User);
         Assert.Equal(InvalidTokenError, firebaseResult.Result.Error);
         Assert.Null(firebaseResult.SignInProvider);
+        Assert.Contains(
+            server.Logs.Entries,
+            entry => entry.Level == LogLevel.Debug && entry.Message.StartsWith("Firebase ID token rejected: "));
+    }
+
+    private sealed class StubHttpClientFactory : IHttpClientFactory, IDisposable
+    {
+        private readonly HttpClient _httpClient = new();
+
+        public HttpClient CreateClient(string name) => _httpClient;
+
+        public void Dispose() => _httpClient.Dispose();
     }
 }

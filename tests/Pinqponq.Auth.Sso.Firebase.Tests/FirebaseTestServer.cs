@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +30,7 @@ internal sealed class FirebaseTestServer : IDisposable
 
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(Time);
+        services.AddLogging(logging => logging.AddProvider(Logs).SetMinimumLevel(LogLevel.Debug));
         services.AddPinqponqFirebaseSso(options =>
         {
             options.ProjectId = ProjectId;
@@ -42,6 +44,8 @@ internal sealed class FirebaseTestServer : IDisposable
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero));
 
     public KeyEndpointHandler KeyEndpoint { get; } = new();
+
+    public CapturingLoggerProvider Logs { get; } = new();
 
     /// <summary>The key ids the fake endpoint returns.</summary>
     public IList<string> PublishedKeyIds { get; set; }
