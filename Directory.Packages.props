@@ -61,7 +61,7 @@
          net8.0 leg references it. Livekit.Server.Sdk.Dotnet is used only by
          Pinqponq.LiveKit.Server.Tests, to assert wire-compatibility with the official client. -->
     <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.12" />
-    <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.3" />
+    <PackageVersion Include="Livekit.Server.Sdk.Dotnet" Version="1.2.5" />
 
     <!-- Push (Pinqponq.Push.Fcm). FirebaseAdmin's Google.Apis.Auth dependency resolves to the
          1.77.0 pinned above for SSO Google. -->
