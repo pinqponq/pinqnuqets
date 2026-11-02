@@ -22,6 +22,7 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
     private const string IssuerPrefix = "https://securetoken.google.com/";
     private const string InvalidTokenError = "Invalid Firebase ID token.";
+    private const string MissingIdTokenError = "An ID token is required for Firebase authentication.";
     private const string AuthTimeClaim = "auth_time";
     private const string IssuedAtClaim = "iat";
     private const string EmailClaim = "email";
@@ -80,8 +81,8 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
-            _logger.LogDebug("Firebase sign-in rejected: the request has no ID token.");
-            return Failure("An ID token is required for Firebase authentication.");
+            _logger.LogDebug("Firebase ID token rejected: the request has no ID token.");
+            return Failure(MissingIdTokenError);
         }
 
         if (!TryReadToken(request.IdToken, out var unvalidatedToken, out var readException))

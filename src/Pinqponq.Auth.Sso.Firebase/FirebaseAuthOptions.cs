@@ -52,7 +52,7 @@ public sealed class FirebaseAuthOptions
 
     /// <summary>
     /// The shortest time between two key downloads caused by a token whose key id is not in the cache.
-    /// Tokens with made-up key ids therefore cannot cause a download per request.
+    /// Tokens with made-up key ids therefore cannot cause a download per request, unless this interval is zero.
     /// </summary>
     public TimeSpan MinimumUnknownKeyRefreshInterval { get; set; } = DefaultMinimumUnknownKeyRefreshInterval;
 
