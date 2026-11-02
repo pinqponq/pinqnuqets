@@ -90,11 +90,14 @@ builder.Services.AddPinqponqMaintenanceMode(builder.Configuration, options =>
 ## Localized messages
 
 When `AddPinqponqErrorLocalization` from `Pinqponq.ErrorHandling` is on, the message comes from the error
-catalog for `ResponseCode`, in the language of the request. Set `LocalizeMessage` to `false` to write the
-configured `Message` instead. The package ships no catalog entry for a maintenance
-code, because each application chooses its own code. Add your code to your application's catalog files
+catalog for `ResponseCode`, in the language of the request. The package ships no catalog entry for a
+maintenance code, because each application chooses its own code. Add your code to your application's catalog files
 (`Localization/EN.json`, `Localization/TR.json`, …). A code the catalog does not know gets the message of the
 catalog's `FallbackResponseCode`.
+
+Set `LocalizeMessage` to `false` to write the configured `Message` instead. That uses
+`IErrorResponseWriter.WriteMessage`. If your application registers its own `IErrorResponseWriter`, it must
+implement that method, or every blocked request fails with `NotSupportedException`.
 
 ## Request logs
 

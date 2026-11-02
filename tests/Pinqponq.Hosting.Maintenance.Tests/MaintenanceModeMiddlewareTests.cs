@@ -11,7 +11,7 @@ namespace Pinqponq.Hosting.Maintenance.Tests;
 
 public sealed class MaintenanceModeMiddlewareTests
 {
-    private static Dictionary<string, string?> Enabled(params (string Key, string? Value)[] extraSettings)
+    private static Dictionary<string, string?> CreateEnabledSettings(params (string Key, string? Value)[] extraSettings)
     {
         var settings = new Dictionary<string, string?> { ["MaintenanceMode:Enabled"] = "true" };
         foreach (var (key, value) in extraSettings)
@@ -37,7 +37,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Request_gets_503_with_the_configured_code_and_the_default_message_when_maintenance_mode_is_on()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled());
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings());
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
@@ -55,7 +55,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Request_gets_the_configured_status_code_response_code_and_message()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(
             ("MaintenanceMode:StatusCode", "502"),
             ("MaintenanceMode:ResponseCode", "planned_downtime"),
             ("MaintenanceMode:Message", "Back at noon")));
@@ -72,7 +72,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Empty_configured_message_is_written_as_it_is()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:Message", "")));
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(("MaintenanceMode:Message", "")));
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
@@ -83,7 +83,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Blocked_request_is_logged_once_as_a_warning_with_method_and_path()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled());
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings());
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
@@ -131,7 +131,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [InlineData("/HEALTH/ready")]
     public async Task Default_exempt_path_passes_while_maintenance_mode_is_on(string path)
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled());
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings());
 
         using var response = await host.Send(path);
 
@@ -141,7 +141,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Path_that_only_starts_with_the_same_letters_as_an_exempt_prefix_is_blocked()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled());
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings());
 
         using var response = await host.Send("/healthz");
 
@@ -151,7 +151,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Configured_exempt_path_is_added_to_the_default_one()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:ExemptPathPrefixes:0", "/api")));
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(("MaintenanceMode:ExemptPathPrefixes:0", "/api")));
 
         using var apiResponse = await host.Send(MaintenanceModeHost.ApiPath);
         using var healthResponse = await host.Send(MaintenanceModeHost.HealthPath);
@@ -164,7 +164,7 @@ public sealed class MaintenanceModeMiddlewareTests
     public async Task Default_exempt_path_is_blocked_when_the_list_is_cleared_in_code()
     {
         await using var host = await MaintenanceModeHost.Start(
-            Enabled(),
+            CreateEnabledSettings(),
             (services, configuration) => services.AddPinqponqMaintenanceMode(configuration, options => options.ExemptPathPrefixes.Clear()));
 
         using var response = await host.Send(MaintenanceModeHost.HealthPath);
@@ -175,7 +175,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Retry_after_header_is_sent_when_configured()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:RetryAfterSeconds", "120")));
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(("MaintenanceMode:RetryAfterSeconds", "120")));
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
@@ -186,7 +186,7 @@ public sealed class MaintenanceModeMiddlewareTests
     public async Task Message_comes_from_the_catalog_when_error_localization_is_on()
     {
         await using var host = await MaintenanceModeHost.Start(
-            Enabled(("MaintenanceMode:ResponseCode", CommonErrorCodes.TooManyRequests)),
+            CreateEnabledSettings(("MaintenanceMode:ResponseCode", CommonErrorCodes.TooManyRequests)),
             (services, configuration) =>
             {
                 services.AddPinqponqErrorLocalization(options => options.CatalogDirectory = null);
@@ -204,7 +204,7 @@ public sealed class MaintenanceModeMiddlewareTests
     public async Task Configured_message_is_written_when_localization_is_on_and_localize_message_is_off()
     {
         await using var host = await MaintenanceModeHost.Start(
-            Enabled(
+            CreateEnabledSettings(
                 ("MaintenanceMode:ResponseCode", CommonErrorCodes.TooManyRequests),
                 ("MaintenanceMode:Message", "Back at noon"),
                 ("MaintenanceMode:LocalizeMessage", "false")),
@@ -225,7 +225,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Configured_event_name_describes_the_blocked_request()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:EventName", "request_blocked_planned_downtime")));
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(("MaintenanceMode:EventName", "request_blocked_planned_downtime")));
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 
@@ -235,7 +235,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Configured_event_name_is_used_when_localize_message_is_off()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(
             ("MaintenanceMode:EventName", "request_blocked_planned_downtime"),
             ("MaintenanceMode:LocalizeMessage", "false")));
 
@@ -250,7 +250,7 @@ public sealed class MaintenanceModeMiddlewareTests
     [Fact]
     public async Task Null_configured_message_keeps_the_default_message()
     {
-        await using var host = await MaintenanceModeHost.Start(Enabled(("MaintenanceMode:Message", null)));
+        await using var host = await MaintenanceModeHost.Start(CreateEnabledSettings(("MaintenanceMode:Message", null)));
 
         using var response = await host.Send(MaintenanceModeHost.ApiPath);
 

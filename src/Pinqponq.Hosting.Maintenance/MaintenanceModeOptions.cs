@@ -31,7 +31,8 @@ public sealed class MaintenanceModeOptions
     /// <summary>
     /// While <see langword="true"/> and error localization is on, the catalog message for
     /// <see cref="ResponseCode"/> replaces <see cref="Message"/>. Set it to <see langword="false"/> to always
-    /// write <see cref="Message"/>. Defaults to <see langword="true"/>.
+    /// write <see cref="Message"/>. Defaults to <see langword="true"/>. While it is <see langword="false"/>, a custom
+    /// <c>IErrorResponseWriter</c> must implement <c>WriteMessage</c>; otherwise every blocked request fails.
     /// </summary>
     public bool LocalizeMessage { get; set; } = true;
 

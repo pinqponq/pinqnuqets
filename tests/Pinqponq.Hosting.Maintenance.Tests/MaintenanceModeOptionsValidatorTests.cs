@@ -10,12 +10,12 @@ public sealed class MaintenanceModeOptionsValidatorTests
 {
     private readonly MaintenanceModeOptionsValidator _validator = new();
 
-    private static MaintenanceModeOptions ValidOptions() => new() { ResponseCode = "planned_maintenance" };
+    private static MaintenanceModeOptions CreateValidOptions() => new() { ResponseCode = "planned_maintenance" };
 
     [Fact]
     public void Default_options_with_a_response_code_are_valid()
     {
-        var result = _validator.Validate(name: null, ValidOptions());
+        var result = _validator.Validate(name: null, CreateValidOptions());
 
         Assert.True(result.Succeeded);
     }
@@ -91,7 +91,7 @@ public sealed class MaintenanceModeOptionsValidatorTests
     [InlineData("")]
     public void Exempt_path_prefix_without_a_leading_slash_fails(string pathPrefix)
     {
-        var options = ValidOptions();
+        var options = CreateValidOptions();
         options.ExemptPathPrefixes.Add(pathPrefix);
 
         var result = _validator.Validate(name: null, options);
