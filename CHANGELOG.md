@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `UnknownMessageBehavior` decides a message that is not a registered code: `AnswerInternalError` (default) answers 500
   `general_error`, `PassMessageThrough` keeps the status and the message. With `AnswerInternalError` and no code
   registered the host stops on startup. It runs as an `IExceptionResolver`, so a resolver registered earlier wins.
+- `Pinqponq.Auth.Sso.Firebase` 1.0.0: validates Firebase ID tokens, for example after Sign in with Apple or
+  Google sign-in through Firebase. `AddPinqponqFirebaseSso(configure)` registers `FirebaseAuthProvider`, an
+  `IExternalAuthProvider` named `Firebase`. It checks the RS256 signature, the issuer
+  `https://securetoken.google.com/<ProjectId>`, the audience `<ProjectId>`, the lifetime, `sub`, and that `iat` and
+  `auth_time` are not in the future, with `ClockSkew` (default 5 minutes). The public keys come through a named
+  `HttpClient` and are kept for the response's `max-age` (`KeysCacheDurationWithoutMaxAge`, default 1 hour, when it
+  has none); an unknown key id causes one extra download, at most once per `MinimumUnknownKeyRefreshInterval`
+  (default 1 minute). `AuthenticateFirebaseAsync` also returns `firebase.sign_in_provider` as `SignInProvider`.
+  `RequireEmailVerified` (default `false`) and `AllowedSignInProviders` (empty accepts every method) are optional.
+  `IsFirebaseIdToken` reads the issuer of a token without validating it, to choose between this provider and the
+  Google provider. A missing `ProjectId` stops the host. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
