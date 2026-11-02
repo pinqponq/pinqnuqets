@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Pinqponq.Auth.Sso.Firebase;
 
-/// <summary>Validates <see cref="FirebaseAuthOptions"/> at options bind / startup.</summary>
+/// <summary>Validates <see cref="FirebaseAuthOptions"/> when the host starts.</summary>
 internal sealed class FirebaseAuthOptionsValidator : IValidateOptions<FirebaseAuthOptions>
 {
     public ValidateOptionsResult Validate(string? name, FirebaseAuthOptions options)

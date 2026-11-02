@@ -81,13 +81,25 @@ internal sealed class FirebaseSigningKeyCache : IDisposable
         response.EnsureSuccessStatusCode();
 
         var keySetJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var signingKeys = new JsonWebKeySet(keySetJson).GetSigningKeys().ToArray();
+        var signingKeys = ReadSigningKeys(keySetJson);
 
         var downloadedAt = _timeProvider.GetUtcNow();
         var cacheDuration = response.Headers.CacheControl?.MaxAge
             ?? _firebaseOptions.KeysCacheDurationWithoutMaxAge;
         var expiresAt = downloadedAt + cacheDuration;
         return new CachedKeys(signingKeys, downloadedAt, expiresAt);
+    }
+
+    private static SecurityKey[] ReadSigningKeys(string keySetJson)
+    {
+        try
+        {
+            return new JsonWebKeySet(keySetJson).GetSigningKeys().ToArray();
+        }
+        catch (ArgumentException exception)
+        {
+            throw new HttpRequestException("The public key response is not a JSON Web Key Set.", exception);
+        }
     }
 
     private sealed record CachedKeys(

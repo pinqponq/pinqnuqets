@@ -68,7 +68,9 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
     /// Authenticates the request like <see cref="AuthenticateAsync"/> and also returns the sign-in method
     /// Firebase reports (<see cref="FirebaseAuthResult.SignInProvider"/>).
     /// </summary>
-    /// <exception cref="HttpRequestException">The public keys could not be downloaded.</exception>
+    /// <exception cref="HttpRequestException">
+    /// The public keys could not be downloaded, or the key response is not a JSON Web Key Set.
+    /// </exception>
     public async Task<FirebaseAuthResult> AuthenticateFirebaseAsync(
         ExternalAuthRequest request,
         CancellationToken cancellationToken = default)
@@ -78,6 +80,7 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
 
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
+            _logger.LogDebug("Firebase sign-in rejected: the request has no ID token.");
             return Failure("An ID token is required for Firebase authentication.");
         }
 
@@ -96,7 +99,15 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
             return Rejected("signature, issuer, audience or lifetime check failed", validation.Exception);
         }
 
-        return CreateResult(token);
+        token.TryGetPayloadValue<bool>(EmailVerifiedClaim, out var isEmailVerified);
+        var signInProvider = ReadSignInProvider(token);
+        var rejectionReason = FindClaimRejectionReason(token, isEmailVerified, signInProvider);
+        if (rejectionReason is not null)
+        {
+            return Rejected(rejectionReason);
+        }
+
+        return CreateResult(token, isEmailVerified, signInProvider);
     }
 
     /// <summary>
@@ -162,30 +173,33 @@ public sealed class FirebaseAuthProvider : IExternalAuthProvider
         return hasStarted && hasNotExpired;
     }
 
-    private FirebaseAuthResult CreateResult(JsonWebToken token)
+    private string? FindClaimRejectionReason(JsonWebToken token, bool isEmailVerified, string? signInProvider)
     {
         if (string.IsNullOrWhiteSpace(token.Subject))
         {
-            return Rejected("the sub claim is missing");
+            return "the sub claim is missing";
         }
 
         if (!AreTimeClaimsInThePast(token))
         {
-            return Rejected("auth_time or iat is missing or in the future");
+            return "auth_time or iat is missing or in the future";
         }
 
-        token.TryGetPayloadValue<bool>(EmailVerifiedClaim, out var isEmailVerified);
         if (_firebaseOptions.RequireEmailVerified && !isEmailVerified)
         {
-            return Rejected("the email is not verified");
+            return "the email is not verified";
         }
 
-        var signInProvider = ReadSignInProvider(token);
         if (!IsSignInProviderAllowed(signInProvider))
         {
-            return Rejected("the sign-in provider is not allowed");
+            return "the sign-in provider is not allowed";
         }
 
+        return null;
+    }
+
+    private static FirebaseAuthResult CreateResult(JsonWebToken token, bool isEmailVerified, string? signInProvider)
+    {
         var email = ReadStringClaim(token, EmailClaim);
         var name = ReadStringClaim(token, NameClaim);
         var picture = ReadStringClaim(token, PictureClaim);

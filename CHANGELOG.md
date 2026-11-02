@@ -20,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (default 1 minute). `AuthenticateFirebaseAsync` also returns `firebase.sign_in_provider` as `SignInProvider`.
   `RequireEmailVerified` (default `false`) and `AllowedSignInProviders` (empty accepts every method) are optional.
   `IsFirebaseIdToken` reads the issuer of a token without validating it, to choose between this provider and the
-  Google provider. Each rejected token is logged at Debug level with the reason. The caller gets
-  one generic error. A missing `ProjectId` stops the host. Targets `net8.0`, `net9.0` and `net10.0`.
+  Google provider. Each rejected sign-in is logged at Debug level with the reason. A rejected token gives
+  the caller one generic error. A request without an ID token gets its own error message. A failed key download, or
+  a key response that is not a JSON Web Key Set, throws `HttpRequestException`. A missing `ProjectId` stops the host. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is

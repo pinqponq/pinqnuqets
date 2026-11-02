@@ -381,6 +381,19 @@ public sealed class FirebaseAuthProviderTests
     }
 
     [Fact]
+    public async Task Key_response_that_is_not_a_key_set_throws()
+    {
+        using var server = new FirebaseTestServer();
+        server.KeyEndpoint.KeySetJson = () => "not json";
+
+        var act = () => server.Provider.AuthenticateAsync(ExternalAuthRequest.FromIdToken(server.CreateToken()));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(act);
+        Assert.Equal("The public key response is not a JSON Web Key Set.", exception.Message);
+        Assert.IsAssignableFrom<ArgumentException>(exception.InnerException);
+    }
+
+    [Fact]
     public async Task RequireEmailVerified_rejects_an_unverified_email()
     {
         using var server = new FirebaseTestServer(options => options.RequireEmailVerified = true);
@@ -455,6 +468,10 @@ public sealed class FirebaseAuthProviderTests
         Assert.False(result.Succeeded);
         Assert.Equal("An ID token is required for Firebase authentication.", result.Error);
         Assert.Empty(server.KeyEndpoint.RequestedUris);
+        Assert.Contains(
+            server.Logs.Entries,
+            entry => entry.Level == LogLevel.Debug
+                && entry.Message == "Firebase sign-in rejected: the request has no ID token.");
     }
 
     [Fact]
