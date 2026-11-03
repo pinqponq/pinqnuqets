@@ -160,7 +160,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `Pinqponq.ErrorHandling` 1.3.0: on .NET 8, `UsePinqponqErrorHandling()` built the middleware without the registered
-  `IExceptionResolver`s, so no resolver ran. The middleware now always gets them.
+  `IExceptionResolver`s and the error localization options, so no resolver ran and no message was localized. The
+  middleware now always gets both.
 - `Pinqponq.Database.Mssql` 1.0.3: `Microsoft.Data.SqlClient` 7.1.1 pulled
   `System.Security.Cryptography.Pkcs` 8.0.1 (`net8.0`) and 9.0.18 (`net9.0`, `net10.0`), which
   carry GHSA-2fmv-rv2c-59x7 (moderate) and GHSA-846f-f764-76mx (high); restore failed with

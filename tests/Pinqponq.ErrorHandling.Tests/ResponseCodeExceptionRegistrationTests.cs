@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Pinqponq.Contracts;
 using Pinqponq.ErrorHandling.DependencyInjection;
 using Xunit;
 
@@ -37,6 +38,20 @@ public sealed class ResponseCodeExceptionRegistrationTests
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("order_conflict", await ReadResponseCode(response));
+    }
+
+    [Fact]
+    public async Task Localization_reaches_the_middleware_added_by_UsePinqponqErrorHandling()
+    {
+        using var host = await StartHost(services => services
+            .AddPinqponqErrorLocalization(options => options.CatalogDirectory = null)
+            .AddPinqponqExceptionResolver<PageNumberExceptionResolver>());
+
+        var response = await host.GetTestClient().GetAsync("/orders");
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(CommonErrorCodes.ApiPageNumberInvalid, body.RootElement.GetProperty("responseCode").GetString());
+        Assert.Equal("Page number must be greater than 0.", body.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -114,5 +129,11 @@ public sealed class ResponseCodeExceptionRegistrationTests
     {
         public ExceptionResolution? Resolve(Exception exception) =>
             new(StatusCodes.Status409Conflict, "order_conflict");
+    }
+
+    private sealed class PageNumberExceptionResolver : IExceptionResolver
+    {
+        public ExceptionResolution? Resolve(Exception exception) =>
+            new(StatusCodes.Status400BadRequest, CommonErrorCodes.ApiPageNumberInvalid);
     }
 }

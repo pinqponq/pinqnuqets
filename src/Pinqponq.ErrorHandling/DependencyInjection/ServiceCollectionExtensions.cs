@@ -87,12 +87,17 @@ public static class ServiceCollectionExtensions
         // The middleware is built here instead of with UseMiddleware: on .NET 8, UseMiddleware ignores
         // [ActivatorUtilitiesConstructor] and picks the constructor without exception resolvers.
         var services = app.ApplicationServices;
+        var options = services.GetRequiredService<IOptions<ErrorHandlingOptions>>();
+        var localizationOptions = services.GetRequiredService<IOptions<ErrorLocalizationOptions>>();
+        var exceptionResolvers = services.GetServices<IExceptionResolver>();
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var logger = services.GetRequiredService<ILogger<ExceptionHandlingMiddleware>>();
         return app.Use(next => new ExceptionHandlingMiddleware(
             next,
-            services.GetRequiredService<IOptions<ErrorHandlingOptions>>(),
-            services.GetRequiredService<IOptions<ErrorLocalizationOptions>>(),
-            services.GetServices<IExceptionResolver>(),
-            services.GetRequiredService<ILoggerFactory>(),
-            services.GetRequiredService<ILogger<ExceptionHandlingMiddleware>>()).InvokeAsync);
+            options,
+            localizationOptions,
+            exceptionResolvers,
+            loggerFactory,
+            logger).InvokeAsync);
     }
 }
