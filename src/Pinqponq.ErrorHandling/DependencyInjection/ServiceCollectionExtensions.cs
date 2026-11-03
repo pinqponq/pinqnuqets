@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Pinqponq.ErrorHandling.DependencyInjection;
@@ -82,6 +83,16 @@ public static class ServiceCollectionExtensions
     public static IApplicationBuilder UsePinqponqErrorHandling(this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        return app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+        // The middleware is built here instead of with UseMiddleware: on .NET 8, UseMiddleware ignores
+        // [ActivatorUtilitiesConstructor] and picks the constructor without exception resolvers.
+        var services = app.ApplicationServices;
+        return app.Use(next => new ExceptionHandlingMiddleware(
+            next,
+            services.GetRequiredService<IOptions<ErrorHandlingOptions>>(),
+            services.GetRequiredService<IOptions<ErrorLocalizationOptions>>(),
+            services.GetServices<IExceptionResolver>(),
+            services.GetRequiredService<ILoggerFactory>(),
+            services.GetRequiredService<ILogger<ExceptionHandlingMiddleware>>()).InvokeAsync);
     }
 }

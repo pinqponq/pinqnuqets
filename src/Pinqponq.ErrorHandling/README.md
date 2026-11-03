@@ -58,7 +58,7 @@ A request to the endpoint above returns HTTP 404 with:
 
 `AddPinqponqErrorHandling(Action<ErrorHandlingOptions>? configure = null)` registers
 `ErrorHandlingOptions` (unvalidated — there's no required field). `UsePinqponqErrorHandling()`
-adds `ExceptionHandlingMiddleware` to the pipeline via `app.UseMiddleware<...>()`.
+adds `ExceptionHandlingMiddleware` to the pipeline with the registered `IExceptionResolver`s.
 **Call `UsePinqponqErrorHandling()` as early as possible in the pipeline** — ideally
 the very first `app.Use...` call — so it wraps everything else and can catch
 exceptions from routing, authentication, and every other middleware/endpoint
