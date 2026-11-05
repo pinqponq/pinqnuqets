@@ -4,10 +4,6 @@ using Npgsql;
 
 namespace Pinqponq.Identity.EntityFrameworkCore.Tests;
 
-/// <summary>
-/// One empty PostgreSQL database per test, created from <see cref="TestRefreshTokenDbContext"/>'s
-/// model. Every context it hands out is disposed with it.
-/// </summary>
 public sealed class TestDatabase : IAsyncDisposable
 {
     private readonly DbContextOptions<TestRefreshTokenDbContext> _contextOptions;

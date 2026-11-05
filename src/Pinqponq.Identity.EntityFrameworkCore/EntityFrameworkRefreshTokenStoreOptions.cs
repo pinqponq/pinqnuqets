@@ -2,10 +2,6 @@ using Pinqponq.Identity.RefreshTokens;
 
 namespace Pinqponq.Identity.EntityFrameworkCore;
 
-/// <summary>
-/// Options for <see cref="EntityFrameworkRefreshTokenStore{TDbContext, TRecord}"/>.
-/// </summary>
-/// <typeparam name="TRecord">The application's refresh token entity.</typeparam>
 public sealed class EntityFrameworkRefreshTokenStoreOptions<TRecord>
     where TRecord : class, IRefreshTokenRecord, new()
 {

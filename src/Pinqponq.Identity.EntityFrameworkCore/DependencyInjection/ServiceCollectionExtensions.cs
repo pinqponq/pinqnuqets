@@ -5,9 +5,6 @@ using Pinqponq.Identity.RefreshTokens;
 
 namespace Pinqponq.Identity.EntityFrameworkCore.DependencyInjection;
 
-/// <summary>
-/// Registration helpers for the EF Core refresh token store.
-/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>

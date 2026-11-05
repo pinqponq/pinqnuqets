@@ -326,6 +326,22 @@ public abstract class EntityFrameworkRefreshTokenStoreTests<TRecord> : IAsyncLif
         Assert.Equal(0, await CountRecords());
     }
 
+    [Fact]
+    public async Task Continuations_do_not_return_to_the_caller_context()
+    {
+        await CreateStore().AddAsync(CreateToken("hash-1"));
+        var callerContext = new RecordingSynchronizationContext();
+
+        await RunInContext(callerContext, () => CreateStore().AddAsync(CreateToken("hash-2")));
+        await RunInContext(callerContext, () => CreateStore().FindByHashAsync("hash-1"));
+        await RunInContext(callerContext, () => CreateStore().UpdateAsync(CreateToken("hash-1")));
+        await RunInContext(callerContext, () => CreateStore().TryRevokeActiveAsync("hash-1", Now.AddMinutes(1)));
+        await RunInContext(callerContext, () => CreateStore().CompleteRotationAsync("hash-1", CreateToken("hash-3")));
+        await RunInContext(callerContext, () => CreateStore().RevokeAllForSubjectAsync("user-1"));
+
+        Assert.Equal(0, callerContext.PostCount);
+    }
+
     protected EntityFrameworkRefreshTokenStore<TestRefreshTokenDbContext, TRecord> CreateStore() =>
         Database.CreateStore(StoreOptions, _timeProvider);
 
@@ -340,4 +356,31 @@ public abstract class EntityFrameworkRefreshTokenStoreTests<TRecord> : IAsyncLif
     private Task<RefreshToken?> Find(string tokenHash) => CreateStore().FindByHashAsync(tokenHash);
 
     private Task<int> CountRecords() => Database.CreateContext().Set<TRecord>().CountAsync();
+
+    private static Task RunInContext(SynchronizationContext callerContext, Func<Task> operation)
+    {
+        var originalContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(callerContext);
+        try
+        {
+            return operation();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(originalContext);
+        }
+    }
+
+    private sealed class RecordingSynchronizationContext : SynchronizationContext
+    {
+        private int _postCount;
+
+        public int PostCount => Volatile.Read(ref _postCount);
+
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            Interlocked.Increment(ref _postCount);
+            ThreadPool.QueueUserWorkItem(_ => callback(state));
+        }
+    }
 }

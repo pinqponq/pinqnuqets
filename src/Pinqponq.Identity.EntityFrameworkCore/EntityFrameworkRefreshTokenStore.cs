@@ -4,13 +4,6 @@ using Pinqponq.Identity.RefreshTokens;
 
 namespace Pinqponq.Identity.EntityFrameworkCore;
 
-/// <summary>
-/// <see cref="IRefreshTokenStore"/> over the application's <typeparamref name="TDbContext"/>.
-/// Records are read and written through <c>dbContext.Set&lt;TRecord&gt;()</c>, so
-/// <typeparamref name="TRecord"/> must be part of the context's model.
-/// </summary>
-/// <typeparam name="TDbContext">The application's context.</typeparam>
-/// <typeparam name="TRecord">The application's refresh token entity.</typeparam>
 public sealed class EntityFrameworkRefreshTokenStore<TDbContext, TRecord> : IRefreshTokenStore
     where TDbContext : DbContext
     where TRecord : class, IRefreshTokenRecord, new()

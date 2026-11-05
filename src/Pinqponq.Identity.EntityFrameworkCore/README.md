@@ -80,7 +80,9 @@ builder.Services.AddPinqponqEntityFrameworkRefreshTokenStore<AppDbContext, UserR
 
 - The entity, its table, its column configuration (`IEntityTypeConfiguration`) and its migrations.
 - The foreign key and how `Subject` maps to it (`OnRecordCreated`).
-- A unique index on `TokenHash`, because every query of the store filters on it.
+- A unique index on `TokenHash`, because every query of the store except `RevokeAllForSubjectAsync`
+  filters on it, and an index on `Subject` for `RevokeAllForSubjectAsync`. The package cannot add
+  them, because it has no part in the application's model.
 
 Because the package adds no table and no column, moving an existing store onto it needs no
 migration. When the entity's property names differ from `IRefreshTokenRecord` (for example
