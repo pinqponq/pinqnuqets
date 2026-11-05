@@ -6,10 +6,10 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <PackageId>Pinqponq.Auth.ApiKey</PackageId>
     <Title>Pinqponq API Key</Title>
-    <Description>Shared-secret request header check for service-to-service endpoints: a [RequireApiKey] action filter with named key settings, constant-time comparison and startup validation.</Description>
+    <Description>Shared-secret request header check for service-to-service endpoints: a [RequireApiKey] action filter with named key settings, constant-time comparison and startup validation, plus the sending side: a typed or named HttpClient that carries the key header.</Description>
     <PackageTags>$(PackageTags);api-key;shared-secret;service-to-service;action-filter;aspnetcore;auth;security</PackageTags>
   </PropertyGroup>
 
