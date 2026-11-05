@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Identity.EntityFrameworkCore` 1.0.0: EF Core implementation of `IRefreshTokenStore` from
+  `Pinqponq.Identity`. `AddPinqponqEntityFrameworkRefreshTokenStore<TDbContext, TRecord>(configure)` registers
+  `EntityFrameworkRefreshTokenStore<TDbContext, TRecord>` as the scoped store and `TimeProvider.System` when no
+  `TimeProvider` is registered. The application's entity implements `IRefreshTokenRecord` and keeps its table,
+  columns and migrations. The revoke is one compare-and-set `UPDATE`, rotation runs in one transaction and
+  revoke-all is one bulk `UPDATE`. `OnRecordCreated` (default: does nothing) sets the application's own
+  columns on new records; its exception propagates. Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(PinqponqTargetFrameworks)</TargetFrameworks>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <ProjectReference Include="../../src/Pinqponq.Identity.EntityFrameworkCore/Pinqponq.Identity.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="../Pinqponq.TestSupport/Pinqponq.TestSupport.csproj" />
+  </ItemGroup>
+
+  <!-- The RefreshTokenService scenarios are compiled into this project as well, so the EF Core
+       store runs the same scenarios as the in-memory store in Pinqponq.Identity.Tests. -->
+  <ItemGroup>
+    <Compile Include="../Pinqponq.Identity.Tests/RefreshTokens/RefreshTokenServiceContractTests.cs" Link="RefreshTokens/RefreshTokenServiceContractTests.cs" />
+  </ItemGroup>
+
+</Project>
