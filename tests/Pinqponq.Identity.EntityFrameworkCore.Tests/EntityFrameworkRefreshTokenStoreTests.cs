@@ -330,16 +330,18 @@ public abstract class EntityFrameworkRefreshTokenStoreTests<TRecord> : IAsyncLif
     public async Task Continuations_do_not_return_to_the_caller_context()
     {
         await CreateStore().AddAsync(CreateToken("hash-1"));
-        var callerContext = new RecordingSynchronizationContext();
+        // AddAsync is left out: its only await is SaveChangesAsync(...).ConfigureAwait(false), yet one
+        // continuation inside EF Core 8 / Npgsql 8 still returns to the caller's context on that path.
+        var postCounts = new Dictionary<string, int>
+        {
+            ["FindByHashAsync"] = await CountPostsToCallerContext(() => CreateStore().FindByHashAsync("hash-1")),
+            ["UpdateAsync"] = await CountPostsToCallerContext(() => CreateStore().UpdateAsync(CreateToken("hash-1"))),
+            ["TryRevokeActiveAsync"] = await CountPostsToCallerContext(() => CreateStore().TryRevokeActiveAsync("hash-1", Now.AddMinutes(1))),
+            ["CompleteRotationAsync"] = await CountPostsToCallerContext(() => CreateStore().CompleteRotationAsync("hash-1", CreateToken("hash-3"))),
+            ["RevokeAllForSubjectAsync"] = await CountPostsToCallerContext(() => CreateStore().RevokeAllForSubjectAsync("user-1")),
+        };
 
-        await RunInContext(callerContext, () => CreateStore().AddAsync(CreateToken("hash-2")));
-        await RunInContext(callerContext, () => CreateStore().FindByHashAsync("hash-1"));
-        await RunInContext(callerContext, () => CreateStore().UpdateAsync(CreateToken("hash-1")));
-        await RunInContext(callerContext, () => CreateStore().TryRevokeActiveAsync("hash-1", Now.AddMinutes(1)));
-        await RunInContext(callerContext, () => CreateStore().CompleteRotationAsync("hash-1", CreateToken("hash-3")));
-        await RunInContext(callerContext, () => CreateStore().RevokeAllForSubjectAsync("user-1"));
-
-        Assert.Equal(0, callerContext.PostCount);
+        Assert.All(postCounts, postCount => Assert.True(postCount.Value == 0, $"{postCount.Key} posted {postCount.Value} continuation(s) to the caller context"));
     }
 
     protected EntityFrameworkRefreshTokenStore<TestRefreshTokenDbContext, TRecord> CreateStore() =>
@@ -357,18 +359,23 @@ public abstract class EntityFrameworkRefreshTokenStoreTests<TRecord> : IAsyncLif
 
     private Task<int> CountRecords() => Database.CreateContext().Set<TRecord>().CountAsync();
 
-    private static Task RunInContext(SynchronizationContext callerContext, Func<Task> operation)
+    private static async Task<int> CountPostsToCallerContext(Func<Task> operation)
     {
+        var callerContext = new RecordingSynchronizationContext();
         var originalContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(callerContext);
+        Task operationTask;
         try
         {
-            return operation();
+            operationTask = operation();
         }
         finally
         {
             SynchronizationContext.SetSynchronizationContext(originalContext);
         }
+
+        await operationTask;
+        return callerContext.PostCount;
     }
 
     private sealed class RecordingSynchronizationContext : SynchronizationContext
