@@ -12,8 +12,6 @@ public static class ServiceCollectionExtensions
     /// <see cref="IRefreshTokenStore"/>. <typeparamref name="TDbContext"/> must be registered by the
     /// application, and <typeparamref name="TRecord"/> must be part of its model.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configure">Optionally configures <see cref="EntityFrameworkRefreshTokenStoreOptions{TRecord}"/>.</param>
     public static IServiceCollection AddPinqponqEntityFrameworkRefreshTokenStore<TDbContext, TRecord>(
         this IServiceCollection services,
         Action<EntityFrameworkRefreshTokenStoreOptions<TRecord>>? configure = null)

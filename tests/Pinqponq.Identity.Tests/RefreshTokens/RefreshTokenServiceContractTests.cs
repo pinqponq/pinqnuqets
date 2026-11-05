@@ -27,8 +27,7 @@ public abstract class RefreshTokenServiceContractTests
 
     protected abstract Task<int> CountActiveTokens();
 
-    /// <summary>Makes the next <see cref="IRefreshTokenStore.CompleteRotationAsync"/> throw.</summary>
-    protected abstract void FailNextRotation(Exception failure);
+    protected abstract void ThrowOnNextCompleteRotation(Exception failure);
 
     private RefreshTokenService CreateService(RefreshTokenOptions? options = null) =>
         new(CreateStore(), Options.Create(options ?? DefaultOptions));
@@ -210,7 +209,7 @@ public abstract class RefreshTokenServiceContractTests
     {
         var service = CreateService();
         var original = await service.IssueAsync("user-1");
-        FailNextRotation(new InvalidOperationException("crash"));
+        ThrowOnNextCompleteRotation(new InvalidOperationException("crash"));
 
         var act = () => service.RotateAsync(original.Token);
         await Assert.ThrowsAnyAsync<InvalidOperationException>(act);

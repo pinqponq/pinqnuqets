@@ -34,8 +34,8 @@ public class UserRefreshToken : IRefreshTokenRecord
 }
 ```
 
-2. Register the store next to `AddPinqponqIdentity`. The `DbContext` is registered by the
-   application, as before.
+2. Register the store next to `AddPinqponqIdentity`. The application registers its own
+   `DbContext`.
 
 ```csharp
 using Pinqponq.Identity.EntityFrameworkCore.DependencyInjection;
@@ -65,6 +65,9 @@ builder.Services.AddPinqponqEntityFrameworkRefreshTokenStore<AppDbContext, UserR
 - `RevokeAllForSubjectAsync` takes the time from `TimeProvider`. The registration adds
   `TimeProvider.System` when the application has not registered a `TimeProvider`.
 - The store is registered as a scoped `IRefreshTokenStore`, so it shares the request's `DbContext`.
+  Its `SaveChangesAsync` calls (in `AddAsync`, `UpdateAsync` and `CompleteRotationAsync`) therefore
+  also save any other changes pending in that context, inside the rotation transaction for
+  `CompleteRotationAsync`.
 - `CompleteRotationAsync` starts its own transaction. It cannot run inside a transaction that the
   application already opened on the same context. A context that uses a retrying execution
   strategy (`EnableRetryOnFailure`) also rejects it, because EF Core does not retry a transaction

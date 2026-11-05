@@ -12,7 +12,7 @@ public sealed class RefreshTokenServiceTests : RefreshTokenServiceContractTests
 
     protected override Task<int> CountActiveTokens() => Task.FromResult(_store.ActiveCount);
 
-    protected override void FailNextRotation(Exception failure)
+    protected override void ThrowOnNextCompleteRotation(Exception failure)
     {
         _store.FailAfterAddBeforeLink = true;
         _store.ThrowOnCompleteRotation = failure;

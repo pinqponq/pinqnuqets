@@ -35,7 +35,7 @@ public sealed class EntityFrameworkRefreshTokenServiceTests(PostgresCollectionFi
             .CountAsync(record => record.RevokedAt == null && record.ExpiresAt > now);
     }
 
-    protected override void FailNextRotation(Exception failure) => _nextRotationFailure = failure;
+    protected override void ThrowOnNextCompleteRotation(Exception failure) => _nextRotationFailure = failure;
 
     private void ThrowNextRotationFailure()
     {
