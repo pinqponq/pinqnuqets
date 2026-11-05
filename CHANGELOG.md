@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TimeProvider` is registered. The application's entity implements `IRefreshTokenRecord` and keeps its table,
   columns and migrations. The revoke is one compare-and-set `UPDATE`, rotation runs in one transaction and
   revoke-all is one bulk `UPDATE`. `OnRecordCreated` (default: does nothing) sets the application's own
-  columns on new records; its exception propagates. Targets `net8.0`, `net9.0` and `net10.0`.
+  columns on new records; its exception propagates. Targets `net8.0`, `net9.0` and `net10.0`,
+  each built against its own EF Core major (8.0.31, 9.0.1, 10.0.4), because a package built against EF Core 8
+  throws `TypeLoadException` in `ExecuteUpdateAsync` at run time in an application on EF Core 10.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is

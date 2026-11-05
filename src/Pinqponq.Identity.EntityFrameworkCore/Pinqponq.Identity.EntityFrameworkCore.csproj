@@ -14,9 +14,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IdentityEntityFrameworkCoreVersion)' == ''">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IdentityEntityFrameworkCoreVersion)' != ''">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="$(IdentityEntityFrameworkCoreVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="$(IdentityEntityFrameworkCoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,6 +9,23 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
+  <!-- Pinqponq.Identity.EntityFrameworkCore calls ExecuteUpdateAsync, whose setter parameter
+       changed type in EF Core 10 (SetPropertyCalls<T> became UpdateSettersBuilder<T>). A build
+       against EF Core 8.0 throws TypeLoadException in an application on EF Core 10, so that
+       package and its tests compile each target framework against its own EF Core major through
+       VersionOverride. net8.0 keeps the central 8.0 versions below. The 9.0 and 10.0 versions are
+       the lowest that Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4 and 10.0.3 accept. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <IdentityEntityFrameworkCoreVersion>9.0.1</IdentityEntityFrameworkCoreVersion>
+    <IdentityNpgsqlEntityFrameworkCoreVersion>9.0.4</IdentityNpgsqlEntityFrameworkCoreVersion>
+    <IdentityNpgsqlVersion>9.0.3</IdentityNpgsqlVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <IdentityEntityFrameworkCoreVersion>10.0.4</IdentityEntityFrameworkCoreVersion>
+    <IdentityNpgsqlEntityFrameworkCoreVersion>10.0.3</IdentityNpgsqlEntityFrameworkCoreVersion>
+    <IdentityNpgsqlVersion>10.0.3</IdentityNpgsqlVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Identity (PIN-389) -->
     <!-- 8.19.2: floor raised by Microsoft.AspNetCore.Authentication.JwtBearer 9/10, referenced by

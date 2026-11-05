@@ -97,8 +97,11 @@ entity.Property(record => record.ExpiresAt).HasColumnName("ExpiresAtUtc");
 
 ## Dependencies
 
-`Pinqponq.Identity` and `Microsoft.EntityFrameworkCore.Relational` 8.0.31 or later. An application
-on EF Core 9 or 10 resolves to its own version.
+`Pinqponq.Identity` and `Microsoft.EntityFrameworkCore.Relational` of the application's own EF Core
+major: 8.0.31 or later on net8.0, 9.0.1 or later on net9.0, 10.0.4 or later on net10.0. Each target
+framework is built against its own major because `ExecuteUpdateAsync` changed its setter parameter
+type in EF Core 10: a package built against EF Core 8 throws `TypeLoadException` at run time in an
+application on EF Core 10. An application on net10.0 therefore needs EF Core 10.
 
 ## Repository
 

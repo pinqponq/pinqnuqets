@@ -6,10 +6,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <ProjectReference Include="../../src/Pinqponq.Identity.EntityFrameworkCore/Pinqponq.Identity.EntityFrameworkCore.csproj" />
     <ProjectReference Include="../Pinqponq.TestSupport/Pinqponq.TestSupport.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IdentityEntityFrameworkCoreVersion)' == ''">
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IdentityEntityFrameworkCoreVersion)' != ''">
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(IdentityNpgsqlEntityFrameworkCoreVersion)" />
+    <PackageReference Include="Npgsql" VersionOverride="$(IdentityNpgsqlVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="$(IdentityEntityFrameworkCoreVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="$(IdentityEntityFrameworkCoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>

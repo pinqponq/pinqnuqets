@@ -331,7 +331,8 @@ public abstract class EntityFrameworkRefreshTokenStoreTests<TRecord> : IAsyncLif
     {
         await CreateStore().AddAsync(CreateToken("hash-1"));
         // AddAsync is left out: its only await is SaveChangesAsync(...).ConfigureAwait(false), yet one
-        // continuation inside EF Core 8 / Npgsql 8 still returns to the caller's context on that path.
+        // continuation inside EF Core and Npgsql still returns to the caller's context on that path.
+        // It does so on EF Core 8 and on EF Core 10 with Npgsql 10.
         var postCounts = new Dictionary<string, int>
         {
             ["FindByHashAsync"] = await CountPostsToCallerContext(() => CreateStore().FindByHashAsync("hash-1")),
