@@ -61,6 +61,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.ErrorHandling.Postgres** | PostgreSQL error mapping (`database_*` codes, SQLSTATE log detail) for Pinqponq.ErrorHandling | [README](src/Pinqponq.ErrorHandling.Postgres/README.md) |
 | **Pinqponq.RateLimiting** | Rate limiting in one call: fixed-window policies by client address, user or a caller-supplied key (hashed when secret), chained global limits, 429 with `Retry-After` and the standard error body | [README](src/Pinqponq.RateLimiting/README.md) |
 | **Pinqponq.Observability** | Pinqloq request logging, `ILogService` for app/job logs | [README](src/Pinqponq.Observability/README.md) |
+| **Pinqponq.Observability.ClientLogs** | Server end of `pinqloq-kmp`: client log endpoints (one per request and batch) written as Pinqloq device logs, optional size and count limits, key redaction, `IClientLogEnricher` for product fields | [README](src/Pinqponq.Observability.ClientLogs/README.md) |
 | **Pinqponq.Observability.Abstractions** | `ILogService` without dependencies, for domain/application layers | [README](src/Pinqponq.Observability.Abstractions/README.md) |
 | **Pinqponq.Contracts** | Response envelope (deveng-networking-kmp compatible), paging models, common error codes, request error feature | [README](src/Pinqponq.Contracts/README.md) |
 | **Pinqponq.LiveKit.Server** | LiveKit access token issuing, RoomService over Twirp JSON (rooms, participants), webhook signature verification | [README](src/Pinqponq.LiveKit.Server/README.md) |

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.Observability.ClientLogs` 1.0.0: the server end of `pinqloq-kmp`. `AddPinqponqClientLogs(section)`
+  registers the relay; `MapPinqponqClientLogs(pattern)` takes one log per request and `MapPinqponqClientLogBatch(pattern)`
+  takes `{"logs": [...]}`. Both return a `RouteHandlerBuilder` (authorization and rate limiting stay with the caller)
+  and answer 204. Entries are written as Pinqloq device logs in `CollectionName` (required, validated at startup);
+  a `collectionName` in the body is ignored. The device identifier comes from
+  `ObservabilityOptions.DeviceIdentifierHeader` and the correlation id from the Pinqloq correlation header or the
+  trace identifier. `MaxEntriesPerBatch`, `MaxBodyBytes`, `MaxFieldsPerEntry` and `MaxValueLength` are off unless set;
+  a request is checked as a whole before anything is written, and a refused one throws `ClientLogRejectedException`
+  (`Reason`, `StatusCode` 400 or 413). Keys in `ObservabilityOptions.RedactedKeys` and keys containing a
+  `RedactedKeyParts` entry are redacted. `IClientLogEnricher` changes each record before it is written.
+  Targets `net8.0`, `net9.0` and `net10.0`.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
