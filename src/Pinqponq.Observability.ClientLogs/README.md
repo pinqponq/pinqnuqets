@@ -73,7 +73,7 @@ Pinqloq correlation header, or the request's `TraceIdentifier` when that header 
 |---|---|---|
 | `CollectionName` | none, required | Pinqloq collection of the client logs. A missing value stops the host at startup. |
 | `MaxEntriesPerBatch` | not set | Most entries in one batch. |
-| `MaxBodyBytes` | not set | Most bytes in one request body. The body is not read past the limit. |
+| `MaxBodyBytes` | not set | Most bytes in one request body. The server reads at most 8 KiB past the limit, then refuses. |
 | `MaxFieldsPerEntry` | not set | Most `metadata` and `detail` fields of one entry, counted together. |
 | `MaxValueLength` | not set | Longest event name (longer is refused), field value and device identifier (longer is cut). |
 | `RedactedKeyParts` | empty | Keys that contain one of these parts (any case) get the value `***REDACTED***`. |
@@ -82,8 +82,9 @@ A limit that is not set is not checked. Set the limits for an endpoint that take
 limit is set, the whole request is checked before anything is written, so a refused batch writes nothing.
 
 Keys listed in `ObservabilityOptions.RedactedKeys` are always redacted, compared case-insensitively. The keys that
-request logging always hides (`Authorization`, `Cookie`, `ApiKey`, and keys containing `secret`, `token` or `password`)
-are not hidden here unless you list them, so add `RedactedKeyParts` for the ones your app may send.
+request logging always hides (`Authorization`, `Cookie`, `Set-Cookie`, `ApiKey`, `X-Api-Key`, and keys containing
+`secret`, `token` or `password`) are not hidden here unless you list them: exact keys in `RedactedKeys`, parts in
+`RedactedKeyParts`.
 
 ## Refused requests
 

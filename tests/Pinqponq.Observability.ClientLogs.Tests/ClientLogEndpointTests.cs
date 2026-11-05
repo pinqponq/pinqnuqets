@@ -320,7 +320,8 @@ public sealed class ClientLogEndpointTests
     public async Task A_body_one_byte_over_a_limit_of_one_read_buffer_is_refused()
     {
         var limit = ClientLogBodyReader.StreamBufferSize;
-        var json = $$"""{"event":"{{new string('e', limit + 1 - 12)}}"}""";
+        var wrapperLength = """{"event":""}""".Length;
+        var json = $$"""{"event":"{{new string('e', limit + 1 - wrapperLength)}}"}""";
         using var host = await ClientLogTestHost.Start(_pinqloqLogger, new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = limit.ToString() });
 
         var response = await Post(host, ClientLogTestHost.EntryPath, json);
