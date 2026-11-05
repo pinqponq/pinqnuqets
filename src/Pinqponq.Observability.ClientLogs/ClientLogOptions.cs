@@ -1,24 +1,25 @@
 namespace Pinqponq.Observability.ClientLogs;
 
 /// <summary>
-/// Settings of the client log endpoints. A limit that is not set is not checked.
+/// Settings of the client log endpoints. A limit that is not set is not checked. A refused request throws
+/// <see cref="ClientLogRejectedException"/>.
 /// </summary>
 public sealed class ClientLogOptions
 {
     /// <summary>Required. Pinqloq collection the client logs are written to. The client cannot choose it.</summary>
     public string CollectionName { get; set; } = string.Empty;
 
-    /// <summary>Most entries one batch may hold. A larger batch is refused with 400.</summary>
+    /// <summary>Most entries one batch may hold. A larger batch is refused (<see cref="ClientLogRejectionReason.TooManyEntries"/>).</summary>
     public int? MaxEntriesPerBatch { get; set; }
 
-    /// <summary>Most bytes one request body may hold. A larger body is refused with 413 and is not read further.</summary>
+    /// <summary>Most bytes one request body may hold. A larger body is refused (<see cref="ClientLogRejectionReason.BodyTooLarge"/>) and is not read further.</summary>
     public int? MaxBodyBytes { get; set; }
 
-    /// <summary>Most metadata and detail fields one entry may hold, counted together. A larger entry is refused with 400.</summary>
+    /// <summary>Most metadata and detail fields one entry may hold, counted together. A larger entry is refused (<see cref="ClientLogRejectionReason.TooManyFields"/>).</summary>
     public int? MaxFieldsPerEntry { get; set; }
 
     /// <summary>
-    /// Longest event name, field value and device identifier. A longer event name is refused with 400;
+    /// Longest event name, field value and device identifier. A longer event name is refused (<see cref="ClientLogRejectionReason.EventTooLong"/>);
     /// a longer field value or device identifier is cut to this length.
     /// </summary>
     public int? MaxValueLength { get; set; }

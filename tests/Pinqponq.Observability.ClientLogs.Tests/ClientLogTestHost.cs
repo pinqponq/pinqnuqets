@@ -57,9 +57,12 @@ internal static class ClientLogTestHost
                     services.AddRouting();
                     services.AddLogging();
                     services.AddPinqponqErrorHandling(errorHandlingOptions =>
+                    {
+                        errorHandlingOptions.IncludeExceptionMessage = true;
                         errorHandlingOptions.StatusMappingResolver = exception => exception is ClientLogRejectedException rejected
                             ? new ExceptionStatusMapping(rejected.StatusCode, RejectedResponseCodePrefix + rejected.Reason)
-                            : null);
+                            : null;
+                    });
                     services.AddSingleton<IPinqloqLogger>(pinqloqLogger);
                     services.Configure<ObservabilityOptions>(observabilityOptions =>
                     {

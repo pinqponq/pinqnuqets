@@ -60,12 +60,12 @@ internal sealed class ClientLogRelay
 
     private void Relay(HttpContext httpContext, IReadOnlyList<ClientLogEntryRequest?> entryRequests)
     {
-        var validEntryRequests = entryRequests.Select(ValidateEntry).ToList();
+        var validEntries = entryRequests.Select(ValidateEntry).ToList();
 
         var deviceIdentifier = CutToMaxValueLength(ReadDeviceIdentifier(httpContext));
         var correlationId = ResolveCorrelationId(httpContext);
-        var entries = validEntryRequests
-            .Select(entryRequest => BuildEntry(entryRequest, deviceIdentifier, correlationId))
+        var entries = validEntries
+            .Select(validEntry => BuildEntry(validEntry, deviceIdentifier, correlationId))
             .ToList();
 
         var enrichers = httpContext.RequestServices.GetServices<IClientLogEnricher>().ToList();
@@ -83,14 +83,14 @@ internal sealed class ClientLogRelay
         }
     }
 
-    private ClientLogEntryRequest ValidateEntry(ClientLogEntryRequest? entryRequest)
+    private ValidClientLogEntry ValidateEntry(ClientLogEntryRequest? entryRequest)
     {
-        if (entryRequest is null || string.IsNullOrWhiteSpace(entryRequest.Event))
+        if (entryRequest?.Event is not { } eventName || string.IsNullOrWhiteSpace(eventName))
         {
             throw new ClientLogRejectedException(ClientLogRejectionReason.InvalidRequest, "A client log entry has no event name.");
         }
 
-        if (entryRequest.Event.Length > _clientLogOptions.MaxValueLength)
+        if (eventName.Length > _clientLogOptions.MaxValueLength)
         {
             throw new ClientLogRejectedException(
                 ClientLogRejectionReason.EventTooLong,
@@ -105,17 +105,18 @@ internal sealed class ClientLogRelay
                 $"A client log entry has more than {_clientLogOptions.MaxFieldsPerEntry} fields.");
         }
 
-        return entryRequest;
+        return new ValidClientLogEntry(eventName, entryRequest);
     }
 
-    private PinqloqLogEntry BuildEntry(ClientLogEntryRequest entryRequest, string deviceIdentifier, string correlationId)
+    private PinqloqLogEntry BuildEntry(ValidClientLogEntry validEntry, string deviceIdentifier, string correlationId)
     {
+        var entryRequest = validEntry.Request;
         var logLevel = ClientLogLevels.Parse(entryRequest.LogLevel);
         var metadata = SanitizeFields(entryRequest.Metadata);
         var detail = SanitizeFields(entryRequest.Detail);
         return new PinqloqLogEntry
         {
-            Event = entryRequest.Event!,
+            Event = validEntry.EventName,
             DeviceIdentifier = deviceIdentifier,
             LogLevel = logLevel,
             LogSourceType = PinqloqLogSourceType.Device,
@@ -160,4 +161,6 @@ internal sealed class ClientLogRelay
         var correlationIdHeader = httpContext.Request.Headers[PinqloqRequestLoggingMiddleware.CorrelationIdHeaderName].ToString();
         return string.IsNullOrWhiteSpace(correlationIdHeader) ? httpContext.TraceIdentifier : correlationIdHeader;
     }
+
+    private sealed record ValidClientLogEntry(string EventName, ClientLogEntryRequest Request);
 }

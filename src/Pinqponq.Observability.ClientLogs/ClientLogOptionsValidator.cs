@@ -4,6 +4,8 @@ namespace Pinqponq.Observability.ClientLogs;
 
 internal sealed class ClientLogOptionsValidator : IValidateOptions<ClientLogOptions>
 {
+    private static readonly int LargestBodyLimit = Array.MaxLength - ClientLogBodyReader.StreamBufferSize;
+
     public ValidateOptionsResult Validate(string? name, ClientLogOptions options)
     {
         var failures = new List<string>();
@@ -18,10 +20,10 @@ internal sealed class ClientLogOptionsValidator : IValidateOptions<ClientLogOpti
         AddFailureWhenNotPositive(failures, nameof(ClientLogOptions.MaxFieldsPerEntry), options.MaxFieldsPerEntry);
         AddFailureWhenNotPositive(failures, nameof(ClientLogOptions.MaxValueLength), options.MaxValueLength);
 
-        // The body reader buffers one byte past the limit to detect a longer body.
-        if (options.MaxBodyBytes >= Array.MaxLength)
+        // The body is kept in one array, and the reader reads up to one buffer past the limit to detect a longer body.
+        if (options.MaxBodyBytes > LargestBodyLimit)
         {
-            failures.Add($"{nameof(ClientLogOptions)}.{nameof(ClientLogOptions.MaxBodyBytes)} must be less than {Array.MaxLength}.");
+            failures.Add($"{nameof(ClientLogOptions)}.{nameof(ClientLogOptions.MaxBodyBytes)} must be at most {LargestBodyLimit}.");
         }
 
         // An empty part is contained in every key, so it would redact every field.

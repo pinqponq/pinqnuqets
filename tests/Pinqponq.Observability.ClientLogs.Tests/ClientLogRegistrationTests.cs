@@ -35,22 +35,49 @@ public sealed class ClientLogRegistrationTests
     }
 
     [Fact]
-    public async Task A_body_limit_at_the_largest_array_length_stops_the_host_at_startup()
+    public async Task A_body_limit_that_does_not_fit_in_one_array_with_a_read_buffer_stops_the_host_at_startup()
     {
-        var exception = await Assert.ThrowsAsync<OptionsValidationException>(() =>
-            ClientLogTestHost.Start(new CapturingPinqloqLogger(), new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = Array.MaxLength.ToString() }));
+        var largestBodyLimit = Array.MaxLength - ClientLogBodyReader.StreamBufferSize;
 
-        Assert.Equal([$"ClientLogOptions.MaxBodyBytes must be less than {Array.MaxLength}."], exception.Failures);
+        var exception = await Assert.ThrowsAsync<OptionsValidationException>(() =>
+            ClientLogTestHost.Start(new CapturingPinqloqLogger(), new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = (largestBodyLimit + 1).ToString() }));
+
+        Assert.Equal([$"ClientLogOptions.MaxBodyBytes must be at most {largestBodyLimit}."], exception.Failures);
     }
 
     [Fact]
-    public async Task A_body_limit_below_the_largest_array_length_is_accepted()
+    public async Task The_largest_body_limit_is_accepted()
     {
         using var host = await ClientLogTestHost.Start(
             new CapturingPinqloqLogger(),
-            new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = (Array.MaxLength - 1).ToString() });
+            new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = (Array.MaxLength - ClientLogBodyReader.StreamBufferSize).ToString() });
 
         Assert.NotNull(host);
+    }
+
+    [Fact]
+    public void Default_options_fail_only_for_the_missing_collection_name()
+    {
+        var result = new ClientLogOptionsValidator().Validate(null, new ClientLogOptions());
+
+        Assert.True(result.Failed);
+        Assert.Equal(["ClientLogOptions.CollectionName is required."], result.Failures);
+    }
+
+    [Fact]
+    public void Options_with_a_collection_name_and_positive_limits_are_valid()
+    {
+        var clientLogOptions = new ClientLogOptions
+        {
+            CollectionName = "app_client",
+            MaxEntriesPerBatch = 1,
+            MaxBodyBytes = 1,
+            MaxFieldsPerEntry = 1,
+            MaxValueLength = 1,
+            RedactedKeyParts = ["token"]
+        };
+
+        Assert.True(new ClientLogOptionsValidator().Validate(null, clientLogOptions).Succeeded);
     }
 
     [Fact]

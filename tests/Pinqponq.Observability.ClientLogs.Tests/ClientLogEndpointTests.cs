@@ -19,11 +19,16 @@ public sealed class ClientLogEndpointTests
         return await host.GetTestClient().SendAsync(request);
     }
 
-    private static async Task AssertRejected(HttpResponseMessage response, HttpStatusCode expectedStatus, ClientLogRejectionReason expectedReason)
+    private static async Task AssertRejected(
+        HttpResponseMessage response, HttpStatusCode expectedStatus, ClientLogRejectionReason expectedReason, string? expectedMessage = null)
     {
         Assert.Equal(expectedStatus, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(ClientLogTestHost.RejectedResponseCodePrefix + expectedReason, body.RootElement.GetProperty("responseCode").GetString());
+        if (expectedMessage is not null)
+        {
+            Assert.Equal(expectedMessage, body.RootElement.GetProperty("message").GetString());
+        }
     }
 
     [Fact]
@@ -197,8 +202,32 @@ public sealed class ClientLogEndpointTests
 
         var response = await Post(host, ClientLogTestHost.BatchPath, """{"logs":[{"event":"one"},{"event":"two"},{"event":"three"}]}""");
 
-        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.TooManyEntries);
+        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.TooManyEntries, "The client log batch has more than 2 entries.");
         Assert.Empty(_pinqloqLogger.Entries);
+    }
+
+    [Fact]
+    public async Task An_entry_with_fewer_fields_than_the_limit_is_written()
+    {
+        using var host = await ClientLogTestHost.Start(_pinqloqLogger, new Dictionary<string, string?> { ["ClientLogs:MaxFieldsPerEntry"] = "3" });
+
+        var response = await Post(host, ClientLogTestHost.EntryPath, """{"event":"light","metadata":{"a":"1"}}""");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Single(_pinqloqLogger.Entries);
+    }
+
+    [Theory]
+    [InlineData("""{"logs":[]}""", "The client log batch has no entries.")]
+    [InlineData("""{"logs":[{"event":" "}]}""", "A client log entry has no event name.")]
+    [InlineData("""{"logs":[""", "The client log body is not valid JSON.")]
+    public async Task A_refused_request_says_why(string json, string expectedMessage)
+    {
+        using var host = await ClientLogTestHost.Start(_pinqloqLogger);
+
+        var response = await Post(host, ClientLogTestHost.BatchPath, json);
+
+        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.InvalidRequest, expectedMessage);
     }
 
     [Fact]
@@ -222,7 +251,7 @@ public sealed class ClientLogEndpointTests
 
         var response = await Post(host, ClientLogTestHost.BatchPath, $$"""{"logs":[{"event":"fine"},{{crowdedEntry}}]}""");
 
-        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.TooManyFields);
+        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.TooManyFields, "A client log entry has more than 3 fields.");
         Assert.Empty(_pinqloqLogger.Entries);
     }
 
@@ -243,7 +272,7 @@ public sealed class ClientLogEndpointTests
 
         var response = await Post(host, ClientLogTestHost.BatchPath, """{"logs":[{"event":"fine"},{"event":"abcdef"}]}""");
 
-        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.EventTooLong);
+        await AssertRejected(response, HttpStatusCode.BadRequest, ClientLogRejectionReason.EventTooLong, "A client log event name is longer than 5 characters.");
         Assert.Empty(_pinqloqLogger.Entries);
     }
 
@@ -282,8 +311,35 @@ public sealed class ClientLogEndpointTests
 
         var response = await Post(host, ClientLogTestHost.BatchPath, $$"""{"logs":[{{json}}]}""");
 
+        await AssertRejected(response, HttpStatusCode.RequestEntityTooLarge, ClientLogRejectionReason.BodyTooLarge,
+            $"The client log body is longer than {json.Length - 1} bytes.");
+        Assert.Empty(_pinqloqLogger.Entries);
+    }
+
+    [Fact]
+    public async Task A_body_one_byte_over_a_limit_of_one_read_buffer_is_refused()
+    {
+        var limit = ClientLogBodyReader.StreamBufferSize;
+        var json = $$"""{"event":"{{new string('e', limit + 1 - 12)}}"}""";
+        using var host = await ClientLogTestHost.Start(_pinqloqLogger, new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = limit.ToString() });
+
+        var response = await Post(host, ClientLogTestHost.EntryPath, json);
+
+        Assert.Equal(limit + 1, System.Text.Encoding.UTF8.GetByteCount(json));
         await AssertRejected(response, HttpStatusCode.RequestEntityTooLarge, ClientLogRejectionReason.BodyTooLarge);
         Assert.Empty(_pinqloqLogger.Entries);
+    }
+
+    [Fact]
+    public async Task A_body_longer_than_one_read_buffer_within_the_limit_is_written()
+    {
+        var longEvent = new string('e', ClientLogBodyReader.StreamBufferSize * 3);
+        using var host = await ClientLogTestHost.Start(_pinqloqLogger, new Dictionary<string, string?> { ["ClientLogs:MaxBodyBytes"] = (ClientLogBodyReader.StreamBufferSize * 4).ToString() });
+
+        var response = await Post(host, ClientLogTestHost.EntryPath, $$"""{"event":"{{longEvent}}"}""");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(longEvent, Assert.Single(_pinqloqLogger.Entries).Event);
     }
 
     [Fact]

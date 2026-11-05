@@ -25,9 +25,9 @@ builder.Services.AddPinqponqClientLogs(builder.Configuration.GetSection("ClientL
 // optional: builder.Services.AddScoped<IClientLogEnricher, MyClientLogEnricher>();
 
 var app = builder.Build();
-app.MapPinqponqClientLogs("/api/user/client-logs")            // one log per request (pinqloq-kmp endpoint)
+app.MapPinqponqClientLogs("/client-logs")              // one log per request (pinqloq-kmp endpoint)
    .AllowAnonymous();
-app.MapPinqponqClientLogBatch("/api/user/client-logs/batch")  // {"logs": [...]} (pinqloq-kmp batchEndpoint)
+app.MapPinqponqClientLogBatch("/client-logs/batch")    // {"logs": [...]} (pinqloq-kmp batchEndpoint)
    .RequireRateLimiting("my-policy");
 ```
 
@@ -81,7 +81,9 @@ Pinqloq correlation header, or the request's `TraceIdentifier` when that header 
 A limit that is not set is not checked. Set the limits for an endpoint that takes anonymous calls. When a
 limit is set, the whole request is checked before anything is written, so a refused batch writes nothing.
 
-Keys listed in `ObservabilityOptions.RedactedKeys` are always redacted, compared case-insensitively.
+Keys listed in `ObservabilityOptions.RedactedKeys` are always redacted, compared case-insensitively. The keys that
+request logging always hides (`Authorization`, `Cookie`, `ApiKey`, and keys containing `secret`, `token` or `password`)
+are not hidden here unless you list them, so add `RedactedKeyParts` for the ones your app may send.
 
 ## Refused requests
 

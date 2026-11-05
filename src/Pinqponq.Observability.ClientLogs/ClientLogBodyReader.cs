@@ -5,7 +5,7 @@ namespace Pinqponq.Observability.ClientLogs;
 
 internal static class ClientLogBodyReader
 {
-    private const int StreamBufferSize = 8192;
+    public const int StreamBufferSize = 8192;
 
     public static async Task<TRequest?> Read<TRequest>(
         HttpRequest request,
@@ -31,18 +31,11 @@ internal static class ClientLogBodyReader
 
     private static async Task<byte[]> ReadLimitedBody(HttpRequest request, int bodyLimit, CancellationToken cancellationToken)
     {
-        if (request.ContentLength > bodyLimit)
-        {
-            throw BodyTooLarge(bodyLimit);
-        }
-
-        var bytesToRead = bodyLimit + 1;
         using var bodyStream = new MemoryStream();
-        var buffer = new byte[Math.Min(StreamBufferSize, bytesToRead)];
-        while (bodyStream.Length < bytesToRead)
+        var buffer = new byte[StreamBufferSize];
+        while (bodyStream.Length <= bodyLimit)
         {
-            var remainingBytes = (int)(bytesToRead - bodyStream.Length);
-            var bytesRead = await request.Body.ReadAsync(buffer.AsMemory(0, Math.Min(buffer.Length, remainingBytes)), cancellationToken);
+            var bytesRead = await request.Body.ReadAsync(buffer, cancellationToken);
             if (bytesRead is 0)
             {
                 break;
