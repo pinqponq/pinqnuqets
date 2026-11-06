@@ -18,9 +18,13 @@ public sealed class OtpService : IOtpService
     private readonly ISmsSender? _smsSender;
     private readonly IEmailSender? _emailSender;
     private readonly IOtpSendRateLimiter _rateLimiter;
+    private readonly IOtpMessageComposer _messageComposer;
     private readonly OtpOptions _options;
 
-    /// <summary>Creates the service from its store, channel senders and options.</summary>
+    /// <summary>
+    /// Creates the service from its store, channel senders and options. Code emails are built by
+    /// <see cref="TemplateOtpMessageComposer"/> from the templates in <paramref name="options"/>.
+    /// </summary>
     /// <remarks>
     /// A sender is only needed for the channel the application actually uses, so either
     /// one may be <see langword="null"/>. Routing a code to a channel whose sender is
@@ -32,11 +36,32 @@ public sealed class OtpService : IOtpService
         IEmailSender? emailSender,
         IOtpSendRateLimiter rateLimiter,
         IOptions<OtpOptions> options)
+        : this(store, smsSender, emailSender, rateLimiter, new TemplateOtpMessageComposer(options), options)
+    {
+    }
+
+    /// <summary>
+    /// Creates the service from its store, channel senders, options and the composer that
+    /// builds code emails.
+    /// </summary>
+    /// <remarks>
+    /// A sender is only needed for the channel the application actually uses, so either
+    /// one may be <see langword="null"/>. Routing a code to a channel whose sender is
+    /// missing throws at that point rather than at registration.
+    /// </remarks>
+    public OtpService(
+        IOtpStore store,
+        ISmsSender? smsSender,
+        IEmailSender? emailSender,
+        IOtpSendRateLimiter rateLimiter,
+        IOtpMessageComposer messageComposer,
+        IOptions<OtpOptions> options)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _smsSender = smsSender;
         _emailSender = emailSender;
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
+        _messageComposer = messageComposer ?? throw new ArgumentNullException(nameof(messageComposer));
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
     }
@@ -80,7 +105,7 @@ public sealed class OtpService : IOtpService
 
         try
         {
-            await SendAsync(recipient, code, channel, cancellationToken).ConfigureAwait(false);
+            await SendAsync(recipient, code, purpose, channel, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -115,24 +140,40 @@ public sealed class OtpService : IOtpService
             cancellationToken);
     }
 
-    private Task SendAsync(string recipient, string code, OtpChannel channel, CancellationToken cancellationToken)
+    private Task SendAsync(
+        string recipient,
+        string code,
+        string purpose,
+        OtpChannel channel,
+        CancellationToken cancellationToken)
     {
         var resolved = channel == OtpChannel.Auto
             ? (IsEmail(recipient) ? OtpChannel.Email : OtpChannel.Sms)
             : channel;
 
         return resolved == OtpChannel.Email
-            ? Required(_emailSender, nameof(IEmailSender), "AddPinqponqMail").SendAsync(
-                new EmailMessage
-                {
-                    To = recipient,
-                    Subject = Format(_options.EmailSubjectTemplate, code),
-                    Body = Format(_options.EmailBodyTemplate, code),
-                },
-                cancellationToken)
+            ? SendEmailAsync(recipient, code, purpose, cancellationToken)
             : Required(_smsSender, nameof(ISmsSender), "AddPinqponqSms").SendAsync(
                 new SmsMessage { To = recipient, Text = Format(_options.SmsTemplate, code) },
                 cancellationToken);
+    }
+
+    private async Task SendEmailAsync(string recipient, string code, string purpose, CancellationToken cancellationToken)
+    {
+        var emailSender = Required(_emailSender, nameof(IEmailSender), "AddPinqponqMail");
+        var content = await _messageComposer
+            .ComposeEmailAsync(new OtpMessageContext(recipient, code, purpose), cancellationToken)
+            .ConfigureAwait(false);
+        var message = new EmailMessage
+        {
+            To = recipient,
+            Subject = content.Subject,
+            Body = content.Body,
+            IsBodyHtml = content.IsBodyHtml,
+            PlainTextBody = content.PlainTextBody,
+        };
+
+        await emailSender.SendAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
     private static TSender Required<TSender>(TSender? sender, string contract, string registration)

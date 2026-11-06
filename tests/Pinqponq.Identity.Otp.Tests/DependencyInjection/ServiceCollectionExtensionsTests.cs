@@ -22,6 +22,29 @@ public sealed class ServiceCollectionExtensionsTests
         using var sp = services.BuildServiceProvider();
         Assert.NotNull(sp.GetService<IOtpService>());
         Assert.IsType<AllowAllOtpSendRateLimiter>(sp.GetService<IOtpSendRateLimiter>());
+        Assert.IsType<TemplateOtpMessageComposer>(sp.GetService<IOtpMessageComposer>());
+    }
+
+    [Fact]
+    public async Task A_composer_registered_before_AddPinqponqOtp_builds_the_email()
+    {
+        var mail = new CapturingEmailSender();
+        var services = new ServiceCollection();
+        services.AddSingleton<IOtpStore, InMemoryOtpStore>();
+        services.AddSingleton<Pinqponq.Mail.IEmailSender>(mail);
+        services.AddSingleton<IOtpMessageComposer, FixedSubjectComposer>();
+        services.AddPinqponqOtp(o => o.HashPepper = "0123456789abcdef0123456789abcdef");
+
+        using var provider = services.BuildServiceProvider();
+        await provider.GetRequiredService<IOtpService>().GenerateAndSendAsync("user@example.com");
+
+        Assert.Equal("Fixed subject", Assert.Single(mail.Sent).Subject);
+    }
+
+    private sealed class FixedSubjectComposer : IOtpMessageComposer
+    {
+        public Task<OtpEmailContent> ComposeEmailAsync(OtpMessageContext context, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new OtpEmailContent { Subject = "Fixed subject", Body = context.Code });
     }
 
     /// <summary>

@@ -113,6 +113,7 @@ templates use `{0}` as the code placeholder.
 | `IOtpService` | Scoped | `GenerateAndSendAsync(recipient, channel, purpose, ct)`, `VerifyAsync(recipient, code, purpose, ct)`. Requires the application to register `IOtpStore`. |
 | `IOtpStore` | App-provided | `SaveAsync`, `FindAsync`, `UpdateAsync`, `RemoveAsync`, `TryRemoveAsync`, `TryConsumeAsync`. |
 | `IOtpSendRateLimiter` | Singleton (`AllowAllOtpSendRateLimiter` by default — no-op) | `TryAcquireAsync(key, minInterval, ct)`. Replace with a real limiter (e.g. Redis-backed) to enforce `MinSendInterval`. |
+| `IOtpMessageComposer` | Singleton (`TemplateOtpMessageComposer` by default) | `ComposeEmailAsync(context, ct)` returns the subject and body of a code email. The default fills `EmailSubjectTemplate` and `EmailBodyTemplate` with the code. Register your own implementation, or add [`Pinqponq.Identity.Otp.Mail`](../Pinqponq.Identity.Otp.Mail/README.md), for a branded HTML mail. |
 | `OtpChannel` | Enum | `Auto` (email if recipient contains `@`, else SMS), `Sms`, `Email`. |
 | `OtpVerifyStatus` | Enum | `Success`, `NotFound`, `Expired`, `TooManyAttempts`, `Mismatch`. |
 | `OtpRecord` | Model | `Key`, `CodeHash`, `Recipient`, `ExpiresAt`, `Attempts`, `CreatedAt`. The raw code is never persisted. |
@@ -230,6 +231,9 @@ public sealed class MyOtpStore : IOtpStore
   needed when routing codes to the SMS channel.
 - [Pinqponq.Mail](../Pinqponq.Mail/README.md) — SMTP mail sending
   (`IEmailSender`), needed when routing codes to the email channel.
+- [Pinqponq.Identity.Otp.Mail](../Pinqponq.Identity.Otp.Mail/README.md) —
+  a branded HTML code email with texts per language, built on
+  `IOtpMessageComposer`.
 - [Pinqponq.Identity](../Pinqponq.Identity/README.md) — JWT/refresh-token/
   password primitives, typically issued right after a successful OTP
   verification.

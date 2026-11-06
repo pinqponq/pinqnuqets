@@ -45,6 +45,7 @@ dotnet run --project samples/Pinqponq.Playground
 |---|---|---|
 | **Pinqponq.Identity** | JWT issue/validate (HMAC+RSA), refresh token issue/rotate/revoke, PBKDF2 password hash/verify | [README](src/Pinqponq.Identity/README.md) |
 | **Pinqponq.Identity.Otp** | OTP generate/send/verify; mail/sms channel routing; storage interface (`IOtpStore`) | [README](src/Pinqponq.Identity.Otp/README.md) |
+| **Pinqponq.Identity.Otp.Mail** | Branded HTML email for OTP codes: texts per language with an English default, lifetime from `OtpOptions`, plain-text version, replaceable layout (`IOtpMailTemplate`) and language lookup (`IOtpMailLanguageResolver`) | [README](src/Pinqponq.Identity.Otp.Mail/README.md) |
 | **Pinqponq.Auth.Totp** | RFC 6238 TOTP 2FA; `otpauth://` provisioning URI | [README](src/Pinqponq.Auth.Totp/README.md) |
 | **Pinqponq.Auth.ApiKey** | `[RequireApiKey]` action filter: shared-secret header check for service-to-service endpoints, named keys, constant-time comparison | [README](src/Pinqponq.Auth.ApiKey/README.md) |
 | **Pinqponq.Auth.Sso.Abstractions** | `IExternalAuthProvider` contract | [README](src/Pinqponq.Auth.Sso.Abstractions/README.md) |

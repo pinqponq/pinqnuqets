@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
             ServiceDescriptor.Singleton<IValidateOptions<OtpOptions>, OtpOptionsValidator>());
 
         services.TryAddSingleton<IOtpSendRateLimiter, AllowAllOtpSendRateLimiter>();
+        services.TryAddSingleton<IOtpMessageComposer, TemplateOtpMessageComposer>();
 
         // A factory rather than the implementation type: ASP.NET Core validates every
         // type-registered descriptor when it builds the container in Development, and the
@@ -53,6 +54,7 @@ public static class ServiceCollectionExtensions
             sp.GetService<ISmsSender>(),
             sp.GetService<IEmailSender>(),
             sp.GetRequiredService<IOtpSendRateLimiter>(),
+            sp.GetRequiredService<IOtpMessageComposer>(),
             sp.GetRequiredService<IOptions<OtpOptions>>()));
 
         return services;
