@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Pinqponq.ErrorHandling` 1.3.0: `AddPinqponqResponseCodeExceptions(configure)` answers exceptions whose message is
+  the response code. `AddResponseCodes(Type)` (its `public const string` fields) and `AddResponseCodes(IEnumerable<string>)`
+  register the codes. `UnauthorizedAccessException` is answered 401, `KeyNotFoundException` 404, `ArgumentException`,
+  `FormatException` and `InvalidOperationException` 400, each with the message as the code; `Map<TException>(status)`
+  adds or replaces a mapping and `RemoveMapping<TException>()` removes one, and the most specific type wins.
+  `UnknownMessageBehavior` decides a message that is not a registered code: `AnswerInternalError` (default) answers 500
+  `general_error`, `PassMessageThrough` keeps the status and the message. With `AnswerInternalError` and no code
+  registered the host stops on startup. It runs as an `IExceptionResolver`, so a resolver registered earlier wins.
 - `Pinqponq.Hosting.Cors` 1.0.0: CORS policy from a configured origin allowlist. `AddPinqponqCors(configure)` or
   `AddPinqponqCors(section)` registers CORS and a policy built from `AllowedOrigins`, `AllowCredentials`,
   `AllowedHeaders` and `AllowedMethods` (empty means any), `ExposedHeaders` and `PreflightMaxAge`. The policy is
@@ -151,6 +159,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Pinqponq.ErrorHandling` 1.3.0: on .NET 8, `UsePinqponqErrorHandling()` built the middleware without the registered
+  `IExceptionResolver`s and the error localization options, so no resolver ran and no message was localized. The
+  middleware now always gets both.
 - `Pinqponq.Database.Mssql` 1.0.3: `Microsoft.Data.SqlClient` 7.1.1 pulled
   `System.Security.Cryptography.Pkcs` 8.0.1 (`net8.0`) and 9.0.18 (`net9.0`, `net10.0`), which
   carry GHSA-2fmv-rv2c-59x7 (moderate) and GHSA-846f-f764-76mx (high); restore failed with
