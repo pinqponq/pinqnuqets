@@ -120,3 +120,7 @@ Packages are published to nuget.org by CI. Nobody uploads them by hand.
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Security vulnerability reporting: [SECURITY.md](SECURITY.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+## pinq-doq submodule
+
+`.pinq-doq/` is a Git submodule that points to `pinqponq/pinqdoq`, a private repository. Clone this repository without `--recurse-submodules`. Without access to `pinqponq/pinqdoq`, `git submodule update` fails for `.pinq-doq/`, and you can skip it: the rules and skills from it are already committed under `.claude/rules/` and `.claude/skills/`, so the project builds and runs without the submodule.
