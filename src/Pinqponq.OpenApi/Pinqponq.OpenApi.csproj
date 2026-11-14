@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- .NET 10 only: AddOpenApi and Microsoft.OpenApi 2.x are the API this package is written
+         against. .NET 9 ships Microsoft.OpenApi 1.x with different types, and .NET 8 has no
+         built-in OpenAPI document generation. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>1.0.0</Version>
+    <PackageId>Pinqponq.OpenApi</PackageId>
+    <Title>Pinqponq OpenApi</Title>
+    <Description>ASP.NET Core OpenAPI and Scalar reference set up in one call: Bearer and API key security schemes published only on operations that need them, server URL taken from the request, document served only in the configured environments, and an override point for product changes.</Description>
+    <PackageTags>$(PackageTags);openapi;scalar;swagger;api-documentation;aspnetcore</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pinqponq.OpenApi.Tests" />
+  </ItemGroup>
+
+</Project>
