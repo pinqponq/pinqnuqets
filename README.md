@@ -49,6 +49,7 @@ dotnet run --project samples/Pinqponq.Playground
 | **Pinqponq.Auth.ApiKey** | `[RequireApiKey]` action filter: shared-secret header check for service-to-service endpoints, named keys, constant-time comparison | [README](src/Pinqponq.Auth.ApiKey/README.md) |
 | **Pinqponq.Auth.Sso.Abstractions** | `IExternalAuthProvider` contract | [README](src/Pinqponq.Auth.Sso.Abstractions/README.md) |
 | **Pinqponq.Auth.Sso.Google** | Google id_token validation (`Google.Apis.Auth`) | [README](src/Pinqponq.Auth.Sso.Google/README.md) |
+| **Pinqponq.Auth.Sso.Firebase** | Firebase ID token validation (Sign in with Apple, Google sign-in through Firebase) with cached keys | [README](src/Pinqponq.Auth.Sso.Firebase/README.md) |
 | **Pinqponq.Cache** | Redis: get/set/remove/exists, distributed lock, health-check | [README](src/Pinqponq.Cache/README.md) |
 | **Pinqponq.Sms** | NetGSM SMS sending (`ISmsSender`) + retry | [README](src/Pinqponq.Sms/README.md) |
 | **Pinqponq.Mail** | SMTP mail sending (`IEmailSender`, System.Net.Mail) | [README](src/Pinqponq.Mail/README.md) |
