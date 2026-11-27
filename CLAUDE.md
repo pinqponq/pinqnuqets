@@ -18,3 +18,7 @@ To pull newer standards later, tell Claude: **update rules**.
 - The pull request lists, for each package, what the package kept, what was left in the product, and why.
 - Reviewers: a product-specific constant or default in a `pinqnuqets` change is a blocker.
 
+pinq-doq is managed by the pinqdoq CLI here: `.pinq-doq/`, `.claude/rules/` and the `pinq_*` skills are
+ignored local copies. If `.claude/rules/common.md` is missing, stop and set up the CLI
+(https://github.com/pinqponq/pinqdoq, `tasks/migrate-to-cli.md`) before writing code. Never add the
+submodule back and never edit the copies.
